@@ -13,10 +13,10 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 
 ## M1 — Databáze a entity
 
-- [ ] `V1__init_schema.sql` přesně podle `docs/03-datovy-model.md`
-- [ ] JPA entity a repository pro všechny tabulky (včetně `accesscode` — jen entity + repo)
-- [ ] `ddl-auto=validate` projde
-- [ ] Integrační test s Testcontainers: migrace proběhnou na čisté DB, kontext nastartuje
+- [x] `V1__init_schema.sql` přesně podle `docs/03-datovy-model.md`
+- [x] JPA entity a repository pro všechny tabulky (včetně `accesscode` — jen entity + repo)
+- [x] `ddl-auto=validate` projde
+- [x] Integrační test s Testcontainers: migrace proběhnou na čisté DB, kontext nastartuje
 
 ## M2 — Obsah demo hry a čtení her
 
