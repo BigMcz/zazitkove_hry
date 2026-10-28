@@ -9,6 +9,7 @@ import java.util.UUID;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.CreateBatchRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -17,6 +18,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,9 +42,22 @@ public class AccessCodeAdminController {
         this.publicUrl = publicUrl;
     }
 
+    /** @param partnerId only batches of this partner; all when missing */
     @GetMapping("/batches")
-    public List<BatchSummary> batches() {
-        return adminService.listBatches(null);
+    public List<BatchSummary> batches(@RequestParam(required = false) UUID partnerId) {
+        return adminService.listBatches(partnerId, false);
+    }
+
+    /** The printed cards were handed over to the partner — from now on the codes work. */
+    @PostMapping("/batches/{batchId}/handover")
+    public BatchSummary handOver(@PathVariable UUID batchId) {
+        return adminService.handOver(batchId);
+    }
+
+    /** Undo a handover marked by mistake (only while no code has been used). */
+    @DeleteMapping("/batches/{batchId}/handover")
+    public BatchSummary undoHandOver(@PathVariable UUID batchId) {
+        return adminService.undoHandOver(batchId);
     }
 
     @PostMapping("/batches")
@@ -66,7 +81,15 @@ public class AccessCodeAdminController {
     }
 
     @GetMapping("/reports/monthly-activations")
-    public List<MonthlyActivation> monthlyActivations(@RequestParam @Min(2020) @Max(2100) int year) {
-        return adminService.monthlyActivations(year, null);
+    public List<MonthlyActivation> monthlyActivations(@RequestParam @Min(2020) @Max(2100) int year,
+            @RequestParam(required = false) UUID partnerId) {
+        return adminService.monthlyActivations(year, partnerId);
+    }
+
+    /** Key figures of all partners (partnerId missing) or one partner, incl. the operator's profit. */
+    @GetMapping("/dashboard")
+    public Summary dashboard(@RequestParam @Min(2020) @Max(2100) int year,
+            @RequestParam(required = false) UUID partnerId) {
+        return adminService.summary(year, partnerId);
     }
 }

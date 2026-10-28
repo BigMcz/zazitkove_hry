@@ -22,8 +22,22 @@ public class Partner {
     @Column(nullable = false, length = 200)
     private String name;
 
+    /** IČ */
+    @Column(length = 20)
+    private String companyId;
+
+    /** DIČ */
+    @Column(length = 20)
+    private String vatId;
+
     @Column(length = 200)
     private String contactEmail;
+
+    @Column(length = 200)
+    private String contactPerson;
+
+    @Column(length = 50)
+    private String phone;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -39,6 +53,38 @@ public class Partner {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
+    }
+
+    public String getVatId() {
+        return vatId;
+    }
+
+    public void setVatId(String vatId) {
+        this.vatId = vatId;
+    }
+
+    public String getContactPerson() {
+        return contactPerson;
+    }
+
+    public void setContactPerson(String contactPerson) {
+        this.contactPerson = contactPerson;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getContactEmail() {

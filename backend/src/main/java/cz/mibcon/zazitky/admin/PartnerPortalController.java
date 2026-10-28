@@ -5,8 +5,9 @@ import java.util.List;
 import cz.mibcon.zazitky.accesscode.AccessCodeAdminService;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.ChangeOwnPasswordRequest;
-import cz.mibcon.zazitky.admin.PartnerUserDtos.ShareDto;
+import cz.mibcon.zazitky.admin.PartnerAdminDtos.ShareDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -30,10 +31,13 @@ public class PartnerPortalController {
 
     private final AccessCodeAdminService accessCodes;
     private final PartnerUserService partnerUsers;
+    private final PartnerAdminService partners;
 
-    public PartnerPortalController(AccessCodeAdminService accessCodes, PartnerUserService partnerUsers) {
+    public PartnerPortalController(AccessCodeAdminService accessCodes, PartnerUserService partnerUsers,
+            PartnerAdminService partners) {
         this.accessCodes = accessCodes;
         this.partnerUsers = partnerUsers;
+        this.partners = partners;
     }
 
     @GetMapping("/reports/monthly-activations")
@@ -42,18 +46,28 @@ public class PartnerPortalController {
         return accessCodes.monthlyActivations(year, partner.partnerId());
     }
 
-    /** Printed codes of the castle; our development batches (multi-session) are left out as in the report. */
+    /**
+     * Deliveries of cards to the castle: only handed-over batches (cards still in production are not
+     * the castle's yet); our development batches (multi-session) are left out as in the report.
+     */
     @GetMapping("/batches")
     public List<BatchSummary> batches(@AuthenticationPrincipal PartnerUserDetails partner) {
-        return accessCodes.listBatches(partner.partnerId()).stream()
+        return accessCodes.listBatches(partner.partnerId(), true).stream()
                 .filter(batch -> !batch.multiSession())
                 .toList();
+    }
+
+    /** Own key figures: cards in stock and delivered, activations and money; without the operator's profit. */
+    @GetMapping("/summary")
+    public Summary summary(@AuthenticationPrincipal PartnerUserDetails partner,
+            @RequestParam @Min(2020) @Max(2100) int year) {
+        return accessCodes.summary(year, partner.partnerId()).withoutProfit();
     }
 
     /** Own share history including planned changes. */
     @GetMapping("/shares")
     public List<ShareDto> shares(@AuthenticationPrincipal PartnerUserDetails partner) {
-        return partnerUsers.listShares(partner.partnerId());
+        return partners.listShares(partner.partnerId());
     }
 
     @PostMapping("/password")

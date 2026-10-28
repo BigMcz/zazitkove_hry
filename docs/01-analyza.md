@@ -121,7 +121,7 @@ flowchart TD
 | # | Otázka | Stav |
 |---|---|---|
 | Q1 | Hosting ostrého provozu (VPS s Dockerem, cloud, SAP BTP?) | otevřeno |
-| Q2 | Formát a délka přístupového kódu, tisk na lístek, QR s předvyplněným kódem | rozhodnuto: 8 znaků bez 0/O/1/I/L, tisk `ABCD-2345`; kartičky z CSV (sloupec s odkazem `?kod=` pro QR); generování v administraci |
+| Q2 | Formát a délka přístupového kódu, tisk na lístek, QR s předvyplněným kódem | rozhodnuto: 8 znaků bez 0/O/1/I/L, tisk `ABCD-2345`; kartičky z CSV (sloupec s odkazem `?kod=` pro QR); generování v administraci u konkrétního hradu. Postup: vygenerovat → vyrobit → po předání hradu označit dávku jako předanou; do té doby kódy nefungují (ochrana proti zneužití ve výrobě) a hrad je nevidí. Hrad vidí svůj sklad kartiček (předané a neaktivované) a převzaté dávky — podklad pro inventuru. Na kartičkách není cena. |
 | Q3 | Platnost kódu (jen den nákupu? 24 h od aktivace?) | rozhodnuto: 5 h od aktivace (= prvního spuštění hry), nastavitelné na dávce; hra končí nejpozději s kódem. Opakované zadání kódu pokračuje ve stejné hře (i na jiném telefonu). Prodej = aktivace, stav `SOLD` se nepoužívá. Demo hra jen pro vývoj přes kód `DEMO-KATA` bez expirace. |
 | Q4 | Offline režim — nutný? (signál v hradbách) Pokud ano, jak řešit ověření odpovědí (hashe na klientovi) | otevřeno |
 | Q5 | Jazykové mutace — samostatné hry na jazyk, nebo překladové tabulky | otevřeno |

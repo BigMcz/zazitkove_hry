@@ -2,22 +2,34 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { ApiError } from '../api/client.ts'
 
+/** Which API a shared view reads from: the operator's (all partners) or the castle's (own data only). */
+export type Scope = 'admin' | 'partner'
+
 export const adminKeys = {
   session: ['admin', 'session'] as const,
   games: ['admin', 'games'] as const,
-  batches: (scope: Scope) => ['admin', 'batches', scope] as const,
-  report: (scope: Scope, year: number) => ['admin', 'report', scope, year] as const,
+  batches: (scope: Scope, partnerId?: string) => ['admin', 'batches', scope, partnerId ?? 'all'] as const,
+  report: (scope: Scope, year: number, partnerId?: string) =>
+    ['admin', 'report', scope, year, partnerId ?? 'all'] as const,
+  summary: (scope: Scope, year: number, partnerId?: string) =>
+    ['admin', 'summary', scope, year, partnerId ?? 'all'] as const,
   partners: ['admin', 'partners'] as const,
+  partner: (partnerId: string) => ['admin', 'partners', partnerId] as const,
   ownShares: ['admin', 'own-shares'] as const,
   partnerUsers: ['admin', 'partner-users'] as const,
 }
 
-/** Which API a shared view reads from: the operator's (all partners) or the castle's (own data only). */
-export type Scope = 'admin' | 'partner'
-
 export const thisYear = Number(
   new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Europe/Prague' }).format(new Date()),
 )
+
+/** Years offered in the year selectors: this year and the two before. */
+export const selectableYears = [thisYear, thisYear - 1, thisYear - 2]
+
+/** Data of the administration except the login state — refreshed after a change that affects several views. */
+export function invalidateAdminData(queryClient: QueryClient): Promise<void> {
+  return queryClient.invalidateQueries({ queryKey: ['admin'], predicate: (query) => query.queryKey[1] !== 'session' })
+}
 
 /**
  * After logout or an expired session: forget the loaded data and ask the server again who is

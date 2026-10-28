@@ -28,16 +28,27 @@ export interface PartnerShare {
 export interface Partner {
   id: string
   name: string
+  /** IČ */
+  companyId: string | null
+  /** DIČ */
+  vatId: string | null
   contactEmail: string | null
+  contactPerson: string | null
+  phone: string | null
   /** Share valid today; null when none is set yet. */
   currentSharePct: number | null
   /** All shares by validFrom, including planned ones. */
   shares: PartnerShare[]
 }
 
-export interface UpdatePartnerRequest {
+/** Create or update a partner; only the name is required. */
+export interface PartnerRequest {
   name: string
+  companyId: string | null
+  vatId: string | null
   contactEmail: string | null
+  contactPerson: string | null
+  phone: string | null
 }
 
 export interface SetShareRequest {
@@ -76,6 +87,7 @@ export interface AdminGame {
 
 export interface BatchSummary {
   id: string
+  partnerId: string
   gameTitle: string
   partnerName: string
   quantity: number
@@ -85,7 +97,11 @@ export interface BatchSummary {
   note: string | null
   unitPriceCzk: number | null
   createdAt: string
+  /** null = still in production, the codes do not work yet */
+  handedOverAt: string | null
   activatedCount: number
+  /** Cards not used yet — for a handed-over batch the cards the partner should still have. */
+  notActivatedCount: number
 }
 
 export interface CreateBatchRequest {
@@ -106,10 +122,34 @@ export interface MonthlyActivation {
   partnerShareCzk: number | null
 }
 
+/** Key figures of a year; development batches are left out. */
+export interface Summary {
+  year: number
+  activatedThisMonth: number
+  activatedInYear: number
+  revenueCzk: number | null
+  partnerShareCzk: number | null
+  /** Revenue minus the partners' share; only for the operator. */
+  profitCzk?: number | null
+  /** Handed over and not activated: cards the castle(s) should still have. */
+  cardsInStock: number
+  /** Generated, not handed over yet. */
+  cardsInProduction: number
+  /** All cards ever handed over. */
+  cardsDelivered: number
+}
+
 function csrfHeader(): Record<string, string> {
   const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)
   return match ? { 'X-XSRF-TOKEN': decodeURIComponent(match[1]) } : {}
 }
+
+const withPartner = (path: string, partnerId?: string) =>
+  partnerId ? `${path}${path.includes('?') ? '&' : '?'}partnerId=${encodeURIComponent(partnerId)}` : path
+
+const partnerPath = (partnerId: string) => `/admin/partners/${encodeURIComponent(partnerId)}`
+
+const batchPath = (batchId: string) => `/admin/batches/${encodeURIComponent(batchId)}`
 
 export const adminApi = {
   /** Also issues the XSRF-TOKEN cookie needed for the login. */
@@ -124,40 +164,48 @@ export const adminApi = {
 
   logout: () => apiRequest<void>('/admin/logout', { method: 'POST', headers: csrfHeader() }),
 
+  /** Key figures of all partners, or of one partner. */
+  dashboard: (year: number, partnerId?: string) =>
+    apiRequest<Summary>(withPartner(`/admin/dashboard?year=${year}`, partnerId)),
+
   games: () => apiRequest<AdminGame[]>('/admin/games'),
 
-  batches: () => apiRequest<BatchSummary[]>('/admin/batches'),
+  batches: (partnerId?: string) => apiRequest<BatchSummary[]>(withPartner('/admin/batches', partnerId)),
 
   createBatch: (request: CreateBatchRequest) =>
     apiRequest<BatchSummary>('/admin/batches', { method: 'POST', body: request, headers: csrfHeader() }),
 
-  monthlyActivations: (year: number) =>
-    apiRequest<MonthlyActivation[]>(`/admin/reports/monthly-activations?year=${year}`),
+  /** The printed cards were handed over to the partner — from now on the codes work. */
+  handOver: (batchId: string) =>
+    apiRequest<BatchSummary>(`${batchPath(batchId)}/handover`, { method: 'POST', headers: csrfHeader() }),
 
-  codesCsvUrl: (batchId: string) => `/api/v1/admin/batches/${encodeURIComponent(batchId)}/codes.csv`,
+  undoHandOver: (batchId: string) =>
+    apiRequest<BatchSummary>(`${batchPath(batchId)}/handover`, { method: 'DELETE', headers: csrfHeader() }),
+
+  codesCsvUrl: (batchId: string) => `/api/v1${batchPath(batchId)}/codes.csv`,
+
+  monthlyActivations: (year: number, partnerId?: string) =>
+    apiRequest<MonthlyActivation[]>(withPartner(`/admin/reports/monthly-activations?year=${year}`, partnerId)),
 
   partners: () => apiRequest<Partner[]>('/admin/partners'),
 
-  updatePartner: (partnerId: string, request: UpdatePartnerRequest) =>
-    apiRequest<Partner>(`/admin/partners/${encodeURIComponent(partnerId)}`, {
-      method: 'PUT',
-      body: request,
-      headers: csrfHeader(),
-    }),
+  partner: (partnerId: string) => apiRequest<Partner>(partnerPath(partnerId)),
+
+  createPartner: (request: PartnerRequest) =>
+    apiRequest<Partner>('/admin/partners', { method: 'POST', body: request, headers: csrfHeader() }),
+
+  updatePartner: (partnerId: string, request: PartnerRequest) =>
+    apiRequest<Partner>(partnerPath(partnerId), { method: 'PUT', body: request, headers: csrfHeader() }),
 
   /** A share for an existing date replaces it. */
   setPartnerShare: (partnerId: string, request: SetShareRequest) =>
-    apiRequest<Partner>(`/admin/partners/${encodeURIComponent(partnerId)}/shares`, {
-      method: 'POST',
-      body: request,
-      headers: csrfHeader(),
-    }),
+    apiRequest<Partner>(`${partnerPath(partnerId)}/shares`, { method: 'POST', body: request, headers: csrfHeader() }),
 
   deletePartnerShare: (partnerId: string, shareId: string) =>
-    apiRequest<Partner>(
-      `/admin/partners/${encodeURIComponent(partnerId)}/shares/${encodeURIComponent(shareId)}`,
-      { method: 'DELETE', headers: csrfHeader() },
-    ),
+    apiRequest<Partner>(`${partnerPath(partnerId)}/shares/${encodeURIComponent(shareId)}`, {
+      method: 'DELETE',
+      headers: csrfHeader(),
+    }),
 
   partnerUsers: () => apiRequest<PartnerUser[]>('/admin/partner-users'),
 
@@ -181,6 +229,8 @@ export const adminApi = {
 
 /** API for castle staff; the server limits everything to the partner of the logged-in account. */
 export const partnerApi = {
+  summary: (year: number) => apiRequest<Summary>(`/partner/summary?year=${year}`),
+
   batches: () => apiRequest<BatchSummary[]>('/partner/batches'),
 
   shares: () => apiRequest<PartnerShare[]>('/partner/shares'),

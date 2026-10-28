@@ -47,6 +47,12 @@ public class AccessCodeBatch {
     @Column(nullable = false)
     private boolean multiSession;
 
+    /**
+     * When the printed cards were handed over to the partner. Until then the codes are in production
+     * and cannot be used; the partner sees only handed-over batches.
+     */
+    private Instant handedOverAt;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -109,6 +115,14 @@ public class AccessCodeBatch {
 
     public void setMultiSession(boolean multiSession) {
         this.multiSession = multiSession;
+    }
+
+    public Instant getHandedOverAt() {
+        return handedOverAt;
+    }
+
+    public void setHandedOverAt(Instant handedOverAt) {
+        this.handedOverAt = handedOverAt;
     }
 
     public Instant getCreatedAt() {

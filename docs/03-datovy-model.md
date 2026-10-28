@@ -44,7 +44,11 @@ erDiagram
     partner {
         uuid id PK
         varchar name
+        varchar company_id
+        varchar vat_id
         varchar contact_email
+        varchar contact_person
+        varchar phone
         timestamptz created_at
     }
     partner_share {
@@ -118,6 +122,7 @@ erDiagram
         varchar note
         int validity_hours
         boolean multi_session
+        timestamptz handed_over_at
         timestamptz created_at
     }
     access_code {
@@ -169,7 +174,7 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `partner` | Správa hradu/zámku — smluvní partner | Podíl na tržbě je v `partner_share` (od V5) |
+| `partner` | Správa hradu/zámku — smluvní partner | Firemní údaje: `company_id` (IČ, 8 číslic, unikátní), `vat_id` (DIČ), `contact_person`, `contact_email`, `phone`; podíl na tržbě je v `partner_share` (od V5) |
 | `partner_share` | Podíl partnera z tržby platný od data | `valid_from` (den podle Europe/Prague) — platí do dalšího záznamu; unikátní `(partner_id, valid_from)`; aktivovaný kód se vyúčtuje podle záznamu s nejvyšším `valid_from` ≤ den aktivace; budoucí datum = naplánovaná změna |
 | `location` | Konkrétní místo (hrad Loket + město) | GPS pro mapu a budoucí ověřování polohy |
 | `game` | Jedna hra (příběh) | `slug` pro hezké URL; `status`: `DRAFT`, `PUBLISHED`, `ARCHIVED`; `language` zatím `cs` |
@@ -182,7 +187,7 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy) |
+| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy); `handed_over_at` = kdy byly vytištěné kartičky předány partnerovi — do té doby je dávka „ve výrobě“, její kódy nefungují a partner ji nevidí |
 | `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
 
 ### Přístupy
@@ -229,7 +234,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3 + V4 + V5 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
+Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
 
 ### V1
 
@@ -484,6 +489,28 @@ ALTER TABLE access_code_batch DROP COLUMN revenue_share_pct;
 ALTER TABLE partner DROP COLUMN revenue_share_pct;
 ```
 
+### V6
+
+Soubor `backend/src/main/resources/db/migration/V6__partner_company_and_batch_handover.sql`:
+
+```sql
+-- =========================================================
+-- Firemní údaje partnera a předání dávky kódů partnerovi
+-- =========================================================
+ALTER TABLE partner
+    ADD COLUMN company_id     VARCHAR(20),    -- IČ
+    ADD COLUMN vat_id         VARCHAR(20),    -- DIČ
+    ADD COLUMN contact_person VARCHAR(200),
+    ADD COLUMN phone          VARCHAR(50);
+CREATE UNIQUE INDEX uq_partner_company_id ON partner(company_id) WHERE company_id IS NOT NULL;
+
+-- Kódy dávky fungují až po předání partnerovi (do té doby jsou ve výrobě a nesmí jít použít).
+ALTER TABLE access_code_batch ADD COLUMN handed_over_at TIMESTAMPTZ;
+
+-- Dosavadní dávky už jsou v oběhu
+UPDATE access_code_batch SET handed_over_at = created_at;
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -504,3 +531,4 @@ ALTER TABLE partner DROP COLUMN revenue_share_pct;
 | V3 | Tabulka `partner_user` — účty správy hradů pro přehled aktivací |
 | V4 | `access_code_batch.revenue_share_pct` — podíl partnera zafixovaný na dávce (stávající dávky převzaly aktuální podíl partnera) |
 | V5 | Podíl s platností od data: tabulka `partner_share` (dosavadní podíly převedeny jako platné od založení partnera); zrušeny `partner.revenue_share_pct` a `access_code_batch.revenue_share_pct` |
+| V6 | Firemní údaje partnera (`company_id`, `vat_id`, `contact_person`, `phone`), `access_code_batch.handed_over_at` — kódy fungují až po předání (stávající dávky převedeny jako předané) |

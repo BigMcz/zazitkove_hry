@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import cz.mibcon.zazitky.accesscode.domain.AccessCode;
+import cz.mibcon.zazitky.accesscode.domain.AccessCodeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -17,4 +18,6 @@ public interface AccessCodeRepository extends JpaRepository<AccessCode, UUID> {
     List<String> findExistingCodes(Collection<String> codes);
 
     List<AccessCode> findByBatchIdOrderByCode(UUID batchId);
+
+    boolean existsByBatchIdAndStatusNot(UUID batchId, AccessCodeStatus status);
 }

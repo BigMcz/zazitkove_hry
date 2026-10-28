@@ -45,6 +45,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 │   ├── domain/              # PartnerUser (účet správy hradu)
 │   ├── AdminSecurityConfig  # Spring Security: role ADMIN (konfigurace) a PARTNER (DB)
 │   ├── AdminSessionController # /api/v1/admin/session
+│   ├── PartnerAdminService, PartnerAdminController # hrady: firemní údaje, historie podílů (/api/v1/admin/partners)
 │   ├── PartnerUserService, PartnerUserAdminController # správa účtů hradů (/api/v1/admin/partner-users)
 │   └── PartnerPortalController # /api/v1/partner/** — přehled hradu, jen data vlastního partnera
 ├── game/                    # čtení obsahu
@@ -65,7 +66,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
     ├── AccessCodeFormat     # normalizace, formát ABCD-2345, generování (SecureRandom)
     ├── AccessCodeService    # ověření, aktivace, expirace kódu
     ├── AccessCodeController # /api/v1/access-codes/check
-    ├── AccessCodeAdminService + AccessCodeAdminController # dávky, CSV, měsíční přehled (/api/v1/admin/**)
+    ├── AccessCodeAdminService + AccessCodeAdminController # dávky, předání, CSV, měsíční přehled, souhrn (/api/v1/admin/**)
     └── InvalidCodeException (404), CodeExpiredException (410)
 ```
 
@@ -75,7 +76,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 
 ### Herní logika (`SessionService`)
 
-1. **start(code, teamName)** — `AccessCodeService` ověří kód (neznámý/zrušený nebo hra není `PUBLISHED` → 404 `invalid-code`, vypršelý → 410 `code-expired`) a při prvním použití ho aktivuje (`ACTIVATED`, `activated_at`, `valid_until = activated_at + batch.validity_hours`). Pokud kód už má rozehranou (`IN_PROGRESS`, nevypršelou) nebo dokončenou relaci, vrátí ji i s tokenem (pokračování na jiném zařízení) — kromě dávek s `multi_session`, kde každé zadání založí novou hru. Jinak vytvoří `game_session` (`IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = min(now + session_validity_hours, valid_until kódu)`) a `session_progress` pro první stanoviště (`ACTIVE`). Opuštěnou hru (`ABANDONED`) lze během platnosti kódu začít znovu.
+1. **start(code, teamName)** — `AccessCodeService` ověří kód (neznámý/zrušený, dávka ještě nepředaná partnerovi, nebo hra není `PUBLISHED` → 404 `invalid-code`, vypršelý → 410 `code-expired`) a při prvním použití ho aktivuje (`ACTIVATED`, `activated_at`, `valid_until = activated_at + batch.validity_hours`). Pokud kód už má rozehranou (`IN_PROGRESS`, nevypršelou) nebo dokončenou relaci, vrátí ji i s tokenem (pokračování na jiném zařízení) — kromě dávek s `multi_session`, kde každé zadání založí novou hru. Jinak vytvoří `game_session` (`IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = min(now + session_validity_hours, valid_until kódu)`) a `session_progress` pro první stanoviště (`ACTIVE`). Opuštěnou hru (`ABANDONED`) lze během platnosti kódu začít znovu.
 2. **getState(token)** — vrátí aktuální stav; pokud je relace `IN_PROGRESS` a `expires_at <= now`, nastaví `EXPIRED` a vrátí 410 (změna stavu se uloží, `noRollbackFor`).
 3. **submitAnswer(token, stationId, answer)** — v transakci:
    - stanoviště musí být aktuálně `ACTIVE` v dané relaci (jinak 409);
@@ -109,7 +110,7 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Odpověď na neaktivní stanoviště, hra není rozehraná | 409 | `invalid-state` |
 | Relace vypršela | 410 | `session-expired` |
 | Chybí/nesedí token relace | 401 | `invalid-token` |
-| Neznámý nebo zrušený přístupový kód | 404 | `invalid-code` |
+| Neznámý, zrušený nebo ještě nepředaný („ve výrobě“) přístupový kód | 404 | `invalid-code` |
 | Přístupový kód vypršel | 410 | `code-expired` |
 | Příliš mnoho pokusů o kód / přihlášení z jedné IP | 429 | `too-many-requests` |
 | Admin/partner API bez přihlášení / špatné heslo nebo zablokovaný účet | 401 | `unauthorized` / `invalid-credentials` |
@@ -232,12 +233,16 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | POST | `/admin/login` | Form `username`, `password` → `200` stejné tělo jako `/admin/session` / `401`; limit 5 pokusů/min na IP; platí pro obě role |
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
-| GET | `/admin/batches` | Dávky kódů s počtem aktivovaných |
-| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry |
+| GET | `/admin/dashboard?year=2026[&partnerId=…]` | Souhrn za rok (všechny hrady nebo jeden): `activatedThisMonth`, `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (= tržba − podíl hradů), `cardsInStock` (předané a neaktivované), `cardsInProduction`, `cardsDelivered`; vývojové dávky se nepočítají |
+| GET | `/admin/batches[?partnerId=…]` | Dávky kódů: `handedOverAt` (null = ve výrobě), `activatedCount`, `notActivatedCount` |
+| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry; dávka je **ve výrobě** — kódy nefungují |
+| POST | `/admin/batches/{id}/handover` | Kartičky byly předány partnerovi → od teď kódy fungují a partner dávku vidí |
+| DELETE | `/admin/batches/{id}/handover` | Vrátit předání (omyl) — jen dokud z dávky nikdo nic nepoužil, jinak `409` |
 | GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
-| GET | `/admin/reports/monthly-activations?year=2026` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
-| GET | `/admin/partners` | Partneři (hrady): `id`, `name`, `contactEmail`, `currentSharePct` (platný dnes), `shares` (`id`, `validFrom`, `sharePct`, včetně naplánovaných) |
-| PUT | `/admin/partners/{id}` | Upravit hrad: `name`, `contactEmail` (nepovinný, e-mail) → `200` |
+| GET | `/admin/reports/monthly-activations?year=2026[&partnerId=…]` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
+| GET | `/admin/partners`, `/admin/partners/{id}` | Partneři (hrady): `id`, `name`, `companyId` (IČ), `vatId` (DIČ), `contactEmail`, `contactPerson`, `phone`, `currentSharePct` (platný dnes), `shares` (`id`, `validFrom`, `sharePct`, včetně naplánovaných) |
+| POST | `/admin/partners` | Přidat partnera: `name` (povinné), `companyId` (8 číslic, unikátní), `vatId` (např. CZ12345678), `contactEmail`, `contactPerson`, `phone` → `201`; podíl se nastaví zvlášť |
+| PUT | `/admin/partners/{id}` | Upravit firemní údaje (stejná pole jako POST) → `200` |
 | POST | `/admin/partners/{id}/shares` | Podíl od data: `validFrom` (YYYY-MM-DD), `sharePct` (0–100, max. 2 desetinná místa) → `200` + hrad; stejné datum nahradí existující podíl; datum v minulosti změní vyúčtování už aktivovaných kódů (UI upozorní) |
 | DELETE | `/admin/partners/{id}/shares/{shareId}` | Smazat podíl (např. chybně naplánovaný) → `200` + hrad |
 | GET | `/admin/partner-users` | Účty hradů (`username`, `displayName`, `partnerName`, `enabled`, `createdAt`, `lastLoginAt`) |
@@ -250,7 +255,8 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | Metoda | Cesta | Popis |
 |---|---|---|
 | GET | `/partner/reports/monthly-activations?year=2026` | Jako přehled správce, jen řádky vlastního partnera |
-| GET | `/partner/batches` | Dávky kódů vlastního partnera s počtem aktivovaných (bez CSV, bez vývojových dávek) |
+| GET | `/partner/summary?year=2026` | Vlastní souhrn: kartiček na skladě (předané a neaktivované), převzato celkem, aktivace, tržba, podíl (bez zisku provozovatele) |
+| GET | `/partner/batches` | Převzaté dávky (jen předané, bez vývojových): datum předání, kusů, aktivováno, zbývá (`notActivatedCount`) — podklad pro inventuru kartiček |
 | GET | `/partner/shares` | Vlastní podíly včetně naplánovaných (`validFrom`, `sharePct`) |
 | POST | `/partner/password` | Změna vlastního hesla `{ "currentPassword", "newPassword" }` → `204`; špatné současné heslo → `400` |
 
@@ -268,10 +274,11 @@ React + TypeScript (strict), Vite, React Router, TanStack Query (stav serveru), 
 frontend/src/
 ├── api/            # fetch klient (+ X-Session-Token), typy DTO, query hooks
 ├── pages/          # HomePage (zadání kódu), StartPage, StationPage, RewardPage, FinalePage
-├── admin/          # AdminPage (přihlášení, pohled podle role; správce v záložkách ?sekce=kody|aktivace|hrady),
-│                   # Tabs, Partners (kontakt a historie podílů hradů), PasswordButton (ikonka v hlavičce hradu),
-│                   # NewBatchForm, BatchList, MonthlyReport,
-│                   # PartnerUsers (správa účtů hradů), ChangePasswordForm, adminApi (CSRF hlavička)
+├── admin/          # AdminPage (přihlášení; správce: levé menu PartnerNav + /admin = Dashboard,
+│                   # /admin/partneri/:id = PartnerDetail se záložkami ?sekce=prehled|kody|podily|udaje|ucty;
+│                   # hrad: CastleOverview + PasswordButton v hlavičce), StatCards (karty souhrnu), YearSelect,
+│                   # PartnerForm (firemní údaje), ShareHistory, NewBatchForm, BatchList (stav a předání dávek),
+│                   # MonthlyReport, PartnerUsers, Tabs, ChangePasswordForm, adminApi (CSRF hlavička)
 ├── components/     # ProgressBar, AnswerInput (TEXT/NUMBER/CHOICE), HintList, StoryText, ErrorBanner
 ├── session/        # tokenStorage (localStorage s try/catch), SessionTokenProvider, usePlaySession
 ├── queryClient.ts  # TanStack Query (bez retry u 4xx)
@@ -288,7 +295,8 @@ frontend/src/
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |
 | `/play/finale` | Finále |
-| `/admin` | Administrace |
+| `/admin` | Administrace — správce: dashboard; hrad: přehled hradu |
+| `/admin/partneri/:partnerId` | Detail hradu (jen správce) |
 
 Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduje, které stanoviště je odemčené.
 

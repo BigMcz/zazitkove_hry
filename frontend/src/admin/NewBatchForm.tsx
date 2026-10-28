@@ -4,11 +4,13 @@ import ErrorBanner from '../components/ErrorBanner.tsx'
 import { buttonPrimary, input } from '../components/ui.ts'
 import { adminApi, type CreateBatchRequest } from './adminApi.ts'
 import Section from './Section.tsx'
-import { adminKeys, fieldLabel, useLoggedOutOn401 } from './shared.ts'
+import { adminKeys, fieldLabel, invalidateAdminData, useLoggedOutOn401 } from './shared.ts'
 
-export default function NewBatchForm() {
+/** Generates a batch of codes for one partner's game; the batch starts "in production". */
+export default function NewBatchForm({ partnerId }: { partnerId: string }) {
   const queryClient = useQueryClient()
-  const games = useQuery({ queryKey: adminKeys.games, queryFn: adminApi.games })
+  const allGames = useQuery({ queryKey: adminKeys.games, queryFn: adminApi.games })
+  const games = allGames.data?.filter((game) => game.partnerId === partnerId)
   const [gameId, setGameId] = useState('')
   const [quantity, setQuantity] = useState('100')
   const [validityHours, setValidityHours] = useState('5')
@@ -18,12 +20,12 @@ export default function NewBatchForm() {
     mutationFn: (request: CreateBatchRequest) => adminApi.createBatch(request),
     onSuccess: () => {
       setNote('')
-      return queryClient.invalidateQueries({ queryKey: adminKeys.batches('admin') })
+      return invalidateAdminData(queryClient)
     },
   })
-  useLoggedOutOn401(games.error ?? createBatch.error)
+  useLoggedOutOn401(allGames.error ?? createBatch.error)
 
-  const selectedGame = gameId || games.data?.[0]?.id || ''
+  const selectedGame = gameId || games?.[0]?.id || ''
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -39,15 +41,21 @@ export default function NewBatchForm() {
   return (
     <Section title="Nová dávka kódů">
       <p className="text-stone-700">
-        Vygenerované kódy jsou nové (nepoužité). Za prodaný se kód považuje až ve chvíli, kdy ho hráč zadá.
+        Nová dávka je <strong>ve výrobě</strong> — kódy začnou fungovat, až dávku po předání hradu označíte jako
+        předanou. Za prodaný se kód považuje až ve chvíli, kdy ho hráč zadá.
       </p>
+      {games?.length === 0 && (
+        <p role="status" className="font-semibold text-amber-900">
+          Hrad zatím nemá žádnou hru, pro kterou by šly kódy vygenerovat.
+        </p>
+      )}
       <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
         <label className={`${fieldLabel} sm:col-span-2`}>
           Hra
           <select value={selectedGame} onChange={(event) => setGameId(event.target.value)} className={input}>
-            {games.data?.map((game) => (
+            {games?.map((game) => (
               <option key={game.id} value={game.id}>
-                {game.title} — {game.partnerName}
+                {game.title}
                 {game.status !== 'PUBLISHED' ? ` (${game.status})` : ''}
               </option>
             ))}
@@ -104,7 +112,7 @@ export default function NewBatchForm() {
         )}
         {createBatch.isSuccess && (
           <p role="status" className="font-semibold text-emerald-800 sm:col-span-2">
-            Dávka {createBatch.data.quantity} kódů je vytvořená. CSV pro tisk stáhneš v seznamu dávek.
+            Dávka {createBatch.data.quantity} kódů je vytvořená (ve výrobě). CSV pro tisk stáhnete v seznamu dávek.
           </p>
         )}
         <button

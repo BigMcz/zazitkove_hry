@@ -146,6 +146,8 @@ class AdminApiTest {
                         .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"quantity\":3,\"validityHours\":5,\"unitPriceCzk\":200}"))
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         UUID batchId = UUID.fromString(JsonPath.read(body, "$.id"));
+        mvc.perform(post("/api/v1/admin/batches/{id}/handover", batchId).with(admin()).with(csrf()))
+                .andExpect(status().isOk());
         List<String> codes = jdbc.queryForList("SELECT code FROM access_code WHERE batch_id = ?", String.class, batchId);
         for (String code : codes.subList(0, 2)) {
             mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)

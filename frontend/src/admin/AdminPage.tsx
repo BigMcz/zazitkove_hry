@@ -1,41 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { buttonPrimary, input } from '../components/ui.ts'
 import { adminApi, type AdminSession } from './adminApi.ts'
-import BatchList from './BatchList.tsx'
-import MonthlyReport from './MonthlyReport.tsx'
-import NewBatchForm from './NewBatchForm.tsx'
-import PartnerUsers from './PartnerUsers.tsx'
-import Partners from './Partners.tsx'
+import CastleOverview from './CastleOverview.tsx'
+import Dashboard from './Dashboard.tsx'
+import PartnerDetail from './PartnerDetail.tsx'
+import PartnerNav from './PartnerNav.tsx'
 import PasswordButton from './PasswordButton.tsx'
-import Tabs, { type Tab } from './Tabs.tsx'
 import { adminKeys, endSession, linkButton } from './shared.ts'
 
 /**
- * One login for two roles: the operator (batches of codes, CSV, partner accounts, report of all
- * partners) and castle staff (their printed codes and monthly activations for invoicing).
+ * One login for two roles. The operator gets a dashboard with a left menu of castles (partners) and a
+ * detail of each castle; castle staff get the overview of their own castle only.
  */
 export default function AdminPage() {
   const session = useQuery({ queryKey: adminKeys.session, queryFn: adminApi.session })
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pt-6 pb-12">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-6 pb-12">
       {session.isPending && <p role="status">Načítám…</p>}
       {session.isError && <ErrorBanner message={session.error.message} onRetry={() => void session.refetch()} />}
       {session.data && <Content session={session.data} />}
     </main>
   )
 }
-
-type AdminTab = 'kody' | 'aktivace' | 'hrady'
-
-const adminTabs: Tab<AdminTab>[] = [
-  { id: 'kody', label: 'Kódy a tisk' },
-  { id: 'aktivace', label: 'Aktivace a fakturace' },
-  { id: 'hrady', label: 'Hrady a účty' },
-]
 
 function Content({ session }: { session: AdminSession }) {
   if (!session.username) {
@@ -47,41 +37,26 @@ function Content({ session }: { session: AdminSession }) {
         <Header title={session.partnerName ?? 'Přehled hradu'} username={session.username}>
           <PasswordButton />
         </Header>
-        <MonthlyReport scope="partner" />
-        <BatchList scope="partner" />
+        <CastleOverview />
       </>
     )
   }
   return (
     <>
       <Header title="Administrace" username={session.username} />
-      <AdminTabs />
+      <div className="grid gap-6 md:grid-cols-[15rem_1fr]">
+        <aside className="md:border-r md:border-stone-300 md:pr-4">
+          <PartnerNav />
+        </aside>
+        <div className="flex min-w-0 flex-col gap-6">
+          <Routes>
+            <Route index element={<Dashboard />} />
+            <Route path="partneri/:partnerId" element={<PartnerDetail />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Routes>
+        </div>
+      </div>
     </>
-  )
-}
-
-/** The active tab is kept in the URL (?sekce=…), so it survives a reload. */
-function AdminTabs() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const requested = searchParams.get('sekce')
-  const active = adminTabs.find((tab) => tab.id === requested)?.id ?? 'kody'
-
-  return (
-    <Tabs tabs={adminTabs} active={active} onChange={(id) => setSearchParams({ sekce: id }, { replace: true })}>
-      {active === 'kody' && (
-        <>
-          <NewBatchForm />
-          <BatchList scope="admin" />
-        </>
-      )}
-      {active === 'aktivace' && <MonthlyReport scope="admin" />}
-      {active === 'hrady' && (
-        <>
-          <Partners />
-          <PartnerUsers />
-        </>
-      )}
-    </Tabs>
   )
 }
 

@@ -1,44 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, partnerApi } from './adminApi.ts'
-import { formatDate, formatMoney, formatMonth, formatNumber, formatPercent, todayInPrague } from './format.ts'
+import { formatMoney, formatMonth, formatNumber } from './format.ts'
 import Section from './Section.tsx'
-import { adminKeys, linkButton, thisYear, useLoggedOutOn401, type Scope } from './shared.ts'
+import { adminKeys, useLoggedOutOn401, type Scope } from './shared.ts'
 
-/** Activated (= sold) codes per month — the basis for invoicing between the operator and the castle. */
-/** For the castle: its current share and a planned change, if any. */
-function OwnShares() {
-  const shares = useQuery({ queryKey: adminKeys.ownShares, queryFn: partnerApi.shares })
-  if (!shares.data || shares.data.length === 0) {
-    return null
-  }
-  const today = todayInPrague()
-  const current = shares.data.filter((share) => share.validFrom <= today).at(-1)
-  const planned = shares.data.filter((share) => share.validFrom > today)
-  return (
-    <p className="text-stone-800">
-      {current && (
-        <>
-          Váš podíl z tržby: <strong>{formatPercent(current.sharePct)}</strong> (od {formatDate(current.validFrom)})
-        </>
-      )}
-      {planned.map((share) => (
-        <span key={share.id}>
-          {' '}
-          · od {formatDate(share.validFrom)}: <strong>{formatPercent(share.sharePct)}</strong>
-        </span>
-      ))}
-    </p>
-  )
+interface MonthlyReportProps {
+  scope: Scope
+  year: number
+  /** Operator: only this partner (the partner column is then hidden); all partners when missing. */
+  partnerId?: string
 }
 
-export default function MonthlyReport({ scope }: { scope: Scope }) {
+/** Activated (= sold) codes per month — the basis for invoicing between the operator and the castle. */
+export default function MonthlyReport({ scope, year, partnerId }: MonthlyReportProps) {
   const isAdmin = scope === 'admin'
-  const [year, setYear] = useState(thisYear)
+  const showPartner = isAdmin && !partnerId
   const report = useQuery({
-    queryKey: adminKeys.report(scope, year),
-    queryFn: () => (isAdmin ? adminApi.monthlyActivations(year) : partnerApi.monthlyActivations(year)),
+    queryKey: adminKeys.report(scope, year, partnerId),
+    queryFn: () => (isAdmin ? adminApi.monthlyActivations(year, partnerId) : partnerApi.monthlyActivations(year)),
   })
   useLoggedOutOn401(report.error)
 
@@ -52,27 +32,12 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
     : null
 
   return (
-    <Section title="Aktivované kódy po měsících">
+    <Section title={`Aktivace po měsících ${year}`}>
       <p className="text-stone-700">
         {isAdmin
-          ? 'Podklad pro fakturaci: aktivace = prodaný kód. Podíl hradu podle podílu platného v den aktivace. Měsíce podle českého času, vývojové kódy se nepočítají.'
+          ? 'Podklad pro fakturaci: aktivace = prodaný kód, podíl hradu podle podílu platného v den aktivace. Měsíce podle českého času, vývojové kódy se nepočítají.'
           : 'Kód se počítá jako prodaný ve chvíli, kdy ho hráč poprvé zadá. Měsíce podle českého času.'}
       </p>
-      <label className="flex items-center gap-3 font-semibold">
-        Rok
-        <select
-          value={year}
-          onChange={(event) => setYear(Number(event.target.value))}
-          className="min-h-11 rounded-xl border-2 border-stone-400 bg-white px-3 text-lg"
-        >
-          {[thisYear, thisYear - 1, thisYear - 2].map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      {!isAdmin && <OwnShares />}
       {report.isPending && <p role="status">Načítám…</p>}
       {report.isError && <ErrorBanner message={report.error.message} onRetry={() => void report.refetch()} />}
       {report.data?.length === 0 && <p>V roce {year} zatím nebyl aktivován žádný kód.</p>}
@@ -82,18 +47,18 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
             <thead className="border-b border-stone-300 text-stone-700">
               <tr>
                 <th className="py-2 pr-3">Měsíc</th>
-                {isAdmin && <th className="py-2 pr-3">Partner</th>}
+                {showPartner && <th className="py-2 pr-3">Partner</th>}
                 <th className="py-2 pr-3">Hra</th>
                 <th className="py-2 pr-3 text-right">Aktivováno</th>
                 <th className="py-2 pr-3 text-right">Tržba</th>
-                <th className="py-2 text-right">{isAdmin ? 'Podíl partnera' : 'Váš podíl'}</th>
+                <th className="py-2 text-right">{isAdmin ? 'Podíl hradu' : 'Váš podíl'}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={`${row.month}-${row.partnerName}-${row.gameTitle}`} className="border-b border-stone-200">
                   <td className="py-2 pr-3 whitespace-nowrap">{formatMonth(row.month)}</td>
-                  {isAdmin && <td className="py-2 pr-3">{row.partnerName}</td>}
+                  {showPartner && <td className="py-2 pr-3">{row.partnerName}</td>}
                   <td className="py-2 pr-3">{row.gameTitle}</td>
                   <td className="py-2 pr-3 text-right">{formatNumber(row.activatedCount)}</td>
                   <td className="py-2 pr-3 text-right whitespace-nowrap">{formatMoney(row.revenueCzk)}</td>
@@ -103,7 +68,7 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
             </tbody>
             <tfoot className="font-bold">
               <tr>
-                <td className="py-2 pr-3" colSpan={isAdmin ? 3 : 2}>
+                <td className="py-2 pr-3" colSpan={showPartner ? 3 : 2}>
                   Celkem {year}
                 </td>
                 <td className="py-2 pr-3 text-right">{formatNumber(totalCount)}</td>
@@ -114,9 +79,6 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
           </table>
         </div>
       )}
-      <button type="button" onClick={() => void report.refetch()} className={`${linkButton} self-start`}>
-        Obnovit
-      </button>
     </Section>
   )
 }

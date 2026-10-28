@@ -7,18 +7,26 @@ import { formatDateTime } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, fieldLabel, linkButton, useLoggedOutOn401 } from './shared.ts'
 
-/** Accounts of castle staff: they log in at the same address and see only their castle. */
-export default function PartnerUsers() {
-  const users = useQuery({ queryKey: adminKeys.partnerUsers, queryFn: adminApi.partnerUsers })
-  useLoggedOutOn401(users.error)
+/**
+ * Accounts of castle staff: they log in at the same address and see only their castle.
+ *
+ * @param partnerId only the accounts of this partner (new accounts are created for it); all when missing
+ */
+export default function PartnerUsers({ partnerId }: { partnerId?: string }) {
+  const allUsers = useQuery({ queryKey: adminKeys.partnerUsers, queryFn: adminApi.partnerUsers })
+  useLoggedOutOn401(allUsers.error)
+  const users = {
+    ...allUsers,
+    data: partnerId ? allUsers.data?.filter((user) => user.partnerId === partnerId) : allUsers.data,
+  }
 
   return (
-    <Section title="Účty hradů (partnerů)">
+    <Section title={partnerId ? 'Přístupy do administrace' : 'Přístupy hradů do administrace'}>
       <p className="text-stone-700">
-        Správa hradu se přihlašuje na této stránce a vidí jen své vytištěné kódy a měsíční počty aktivací. Počáteční
-        heslo jim předejte bezpečně, mohou si ho pak změnit.
+        Správa hradu se přihlašuje na stránce /admin a vidí jen svůj sklad kartiček, převzaté dávky a měsíční počty
+        aktivací. Počáteční heslo předejte bezpečně, mohou si ho pak změnit.
       </p>
-      <NewPartnerUserForm />
+      <NewPartnerUserForm fixedPartnerId={partnerId} />
       {users.isPending && <p role="status">Načítám…</p>}
       {users.isError && <ErrorBanner message={users.error.message} onRetry={() => void users.refetch()} />}
       {users.data?.length === 0 && <p>Zatím žádné účty.</p>}
@@ -28,7 +36,7 @@ export default function PartnerUsers() {
             <thead className="border-b border-stone-300 text-stone-700">
               <tr>
                 <th className="py-2 pr-3">Jméno</th>
-                <th className="py-2 pr-3">Partner</th>
+                {!partnerId && <th className="py-2 pr-3">Partner</th>}
                 <th className="py-2 pr-3">Stav</th>
                 <th className="py-2 pr-3">Poslední přihlášení</th>
                 <th className="py-2">Akce</th>
@@ -36,7 +44,7 @@ export default function PartnerUsers() {
             </thead>
             <tbody>
               {users.data.map((user) => (
-                <PartnerUserRow key={user.id} user={user} />
+                <PartnerUserRow key={user.id} user={user} showPartner={!partnerId} />
               ))}
             </tbody>
           </table>
@@ -46,7 +54,7 @@ export default function PartnerUsers() {
   )
 }
 
-function NewPartnerUserForm() {
+function NewPartnerUserForm({ fixedPartnerId }: { fixedPartnerId?: string }) {
   const queryClient = useQueryClient()
   const partners = useQuery({ queryKey: adminKeys.partners, queryFn: adminApi.partners })
   const [partnerId, setPartnerId] = useState('')
@@ -64,7 +72,7 @@ function NewPartnerUserForm() {
   })
   useLoggedOutOn401(partners.error ?? create.error)
 
-  const selectedPartner = partnerId || partners.data?.[0]?.id || ''
+  const selectedPartner = fixedPartnerId || partnerId || partners.data?.[0]?.id || ''
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -73,16 +81,18 @@ function NewPartnerUserForm() {
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 border-b border-stone-200 pb-5 sm:grid-cols-2">
-      <label className={fieldLabel}>
-        Partner
-        <select value={selectedPartner} onChange={(event) => setPartnerId(event.target.value)} className={input}>
-          {partners.data?.map((partner) => (
-            <option key={partner.id} value={partner.id}>
-              {partner.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!fixedPartnerId && (
+        <label className={fieldLabel}>
+          Partner
+          <select value={selectedPartner} onChange={(event) => setPartnerId(event.target.value)} className={input}>
+            {partners.data?.map((partner) => (
+              <option key={partner.id} value={partner.id}>
+                {partner.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className={fieldLabel}>
         Přihlašovací jméno
         <input
@@ -140,7 +150,7 @@ function NewPartnerUserForm() {
   )
 }
 
-function PartnerUserRow({ user }: { user: PartnerUser }) {
+function PartnerUserRow({ user, showPartner }: { user: PartnerUser; showPartner: boolean }) {
   const queryClient = useQueryClient()
   const [settingPassword, setSettingPassword] = useState(false)
   const [password, setPassword] = useState('')
@@ -169,7 +179,7 @@ function PartnerUserRow({ user }: { user: PartnerUser }) {
         <span className="font-semibold">{user.username}</span>
         {user.displayName && <span className="block text-stone-600">{user.displayName}</span>}
       </td>
-      <td className="py-2 pr-3">{user.partnerName}</td>
+      {showPartner && <td className="py-2 pr-3">{user.partnerName}</td>}
       <td className="py-2 pr-3">{user.enabled ? 'aktivní' : <strong className="text-red-800">zablokovaný</strong>}</td>
       <td className="py-2 pr-3 whitespace-nowrap">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : '—'}</td>
       <td className="py-2">

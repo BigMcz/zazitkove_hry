@@ -40,11 +40,15 @@ public class AccessCodeService {
         return new CodeCheckDto(AccessCodeFormat.format(code.getCode()), game, resumes, code.getValidUntil());
     }
 
-    /** The code a game can be played with right now, otherwise 404 (unknown) or 410 (expired). */
+    /**
+     * The code a game can be played with right now, otherwise 404 (unknown, cancelled, or still in
+     * production — not handed over to the partner yet) or 410 (expired).
+     */
     public AccessCode findPlayable(String rawCode) {
         AccessCode code = codes.findByCode(AccessCodeFormat.normalize(rawCode))
                 .orElseThrow(InvalidCodeException::new);
         if (code.getStatus() == AccessCodeStatus.CANCELLED
+                || code.getBatch().getHandedOverAt() == null
                 || code.getBatch().getGame().getStatus() != GameStatus.PUBLISHED) {
             throw new InvalidCodeException();
         }

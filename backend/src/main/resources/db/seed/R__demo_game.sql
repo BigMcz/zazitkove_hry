@@ -26,8 +26,8 @@ DELETE FROM game WHERE id = '00000000-0000-0000-0000-000000000003';
 DELETE FROM location WHERE id = '00000000-0000-0000-0000-000000000002';
 DELETE FROM partner WHERE id = '00000000-0000-0000-0000-000000000001';
 
-INSERT INTO partner (id, name)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner');
+INSERT INTO partner (id, name, contact_person, contact_email)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner', 'Jan Kastelán', 'demo@example.cz');
 
 -- Podíl Demo partnera 50 % od začátku roku 2026 (historie podílů, viz partner_share)
 INSERT INTO partner_share (id, partner_id, valid_from, share_pct)
@@ -122,12 +122,13 @@ INSERT INTO station_choice (id, station_id, order_no, text) VALUES
 ('00000000-0000-0000-0004-000000000034', '00000000-0000-0000-0001-000000000003', 4, 'Klíč');
 
 -- ---------------------------------------------------------
--- Vývojový přístupový kód DEMO-KATA: nevyprší, každé zadání založí novou hru
+-- Vývojový přístupový kód DEMO-KATA: nevyprší, každé zadání založí novou hru, dávka je rovnou „předaná“
 -- (kód se ukládá bez pomlčky, viz AccessCodeFormat)
 -- ---------------------------------------------------------
-INSERT INTO access_code_batch (id, partner_id, game_id, quantity, validity_hours, multi_session, note)
+INSERT INTO access_code_batch (id, partner_id, game_id, quantity, validity_hours, multi_session, note, handed_over_at)
 VALUES ('00000000-0000-0000-0005-000000000001', '00000000-0000-0000-0000-000000000001',
-        '00000000-0000-0000-0000-000000000003', 1, NULL, TRUE, 'Vývojový kód (bez expirace, každé zadání = nová hra)');
+        '00000000-0000-0000-0000-000000000003', 1, NULL, TRUE, 'Vývojový kód (bez expirace, každé zadání = nová hra)',
+        now());
 
 INSERT INTO access_code (id, batch_id, code)
 VALUES ('00000000-0000-0000-0006-000000000001', '00000000-0000-0000-0005-000000000001', 'DEMOKATA');

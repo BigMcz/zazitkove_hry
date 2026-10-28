@@ -16,7 +16,7 @@ export default function App() {
       <Route path="/play" element={<StationPage />} />
       <Route path="/play/reward" element={<RewardPage />} />
       <Route path="/play/finale" element={<FinalePage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/*" element={<AdminPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

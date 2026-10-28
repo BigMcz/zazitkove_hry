@@ -6,4 +6,8 @@ import cz.mibcon.zazitky.game.domain.Partner;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PartnerRepository extends JpaRepository<Partner, UUID> {
+
+    boolean existsByCompanyId(String companyId);
+
+    boolean existsByCompanyIdAndIdNot(String companyId, UUID id);
 }
