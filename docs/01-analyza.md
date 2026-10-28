@@ -129,3 +129,5 @@ flowchart TD
 | Q7 | Jak ověřovat, že je hráč skutečně na místě (GPS, QR, nic) | otevřeno |
 | Q8 | Kdy se plní `accepted_answer.normalized_value`? | rozhodnuto (M2): v seedu ručně + test shody s `TextNormalizer`; budoucí admin dopočítá při zápisu |
 | Q9 | Opakované spuštění seedu (`R__demo_game.sql`) smaže i rozehrané relace demo hry | akceptováno pro dev profil |
+| Q10 | Jak dostat build frontendu do JAR (frontend-maven-plugin vs. krok v buildu) | rozhodnuto (M5): `pom.xml` bere `../frontend/dist` jako resource, Docker build ve dvou fázích; Maven nepotřebuje Node |
+| Q11 | Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) | otevřeno — v prototypu jen záznam pokusů, nutné před ostrým provozem |

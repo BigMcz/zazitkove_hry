@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Dev server Vite poslouchá i v lokální síti (`host: true`), takže jde otevřít z telefonu přes IP počítače.
+Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Demo hru otevřeš na http://localhost:5173.
 
 ## Build a testy
 
@@ -33,6 +33,37 @@ Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Dev server Vite poslouchá i
 cd backend && ./mvnw verify                 # build + testy (vyžaduje běžící Docker kvůli Testcontainers)
 cd frontend && npm run build && npm test
 ```
+
+## Produkční build (jeden JAR s frontendem)
+
+```bash
+cd frontend && npm ci && npm run build      # → frontend/dist
+cd backend && ./mvnw package                # pom.xml přibalí frontend/dist do static/
+java -jar target/zazitky-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev   # aplikace i API na :8080
+```
+
+Bez `frontend/dist` vznikne JAR jen s backendem. V profilu `prod` je potřeba nastavit `DB_URL`, `DB_USER` a `DB_PASSWORD`.
+
+## Docker
+
+```bash
+docker build -t zazitky .                       # multi-stage: Node → Maven → JRE (testy se v image nespouští)
+docker compose --profile app up -d --build      # aplikace na :8080 proti PostgreSQL z compose, včetně demo hry
+docker compose --profile app stop app
+```
+
+## Hraní na telefonu v lokální síti
+
+Telefon musí být ve stejné Wi-Fi jako počítač.
+
+1. Spusť aplikaci jedním ze způsobů výše — buď produkční JAR / Docker (port **8080**), nebo vývojově backend + `npm run dev` (port **5173**, Vite poslouchá i v síti).
+2. Zjisti IP počítače: Windows `ipconfig` (řádek *IPv4 Address* u Wi-Fi adaptéru), macOS/Linux `ipconfig getifaddr en0` / `hostname -I`.
+3. Na telefonu otevři `http://<IP-počítače>:8080` (případně `:5173`).
+4. Pokud se stránka nenačte, povol port ve firewallu. Windows (PowerShell jako správce):
+   ```powershell
+   New-NetFirewallRule -DisplayName "Zazitky dev" -Direction Inbound -Protocol TCP -LocalPort 8080,5173 -Action Allow -Profile Private
+   ```
+   Wi-Fi síť musí být v systému nastavená jako *soukromá*. Pravidlo jde později odebrat: `Remove-NetFirewallRule -DisplayName "Zazitky dev"`.
 
 ## Profily backendu
 
@@ -45,7 +76,8 @@ cd frontend && npm run build && npm test
 
 ```
 ├── docs/                 # analýza, architektura, datový model, demo hra, plán
-├── docker-compose.yml    # PostgreSQL pro lokální vývoj
+├── docker-compose.yml    # PostgreSQL pro lokální vývoj (+ volitelně celá aplikace, profil app)
+├── Dockerfile            # image celé aplikace
 ├── backend/              # Spring Boot 4 (Java 21, Maven)
 └── frontend/             # React + TypeScript + Vite, Tailwind, React Router, TanStack Query
 ```

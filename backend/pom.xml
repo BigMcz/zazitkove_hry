@@ -90,6 +90,16 @@
 	</dependencies>
 
 	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+			<resource>
+				<!-- Frontend build (cd frontend && npm run build) served by SpaWebConfig; skipped when not built -->
+				<directory>${project.basedir}/../frontend/dist</directory>
+				<targetPath>static</targetPath>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

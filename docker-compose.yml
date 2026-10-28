@@ -1,4 +1,4 @@
-# PostgreSQL pro lokální vývoj. Přihlašovací údaje platí jen lokálně.
+# PostgreSQL pro lokální vývoj (docker compose up -d). Přihlašovací údaje platí jen lokálně.
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,6 +17,24 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+
+  # Celá aplikace z Dockerfile (profil prod + demo hra). Spouští se jen explicitně:
+  #   docker compose --profile app up -d --build
+  app:
+    profiles: [app]
+    build: .
+    container_name: zazitky-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zazitky
+      DB_USER: zazitky
+      DB_PASSWORD: zazitky
+      # V ostrém provozu jen db/migration; tady i demo hra
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed
+    ports:
+      - "8080:8080"
 
 volumes:
   zazitky-pgdata:

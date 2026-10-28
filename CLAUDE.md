@@ -52,6 +52,7 @@ cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 cd backend && ./mvnw verify                # build + testy
 cd frontend && npm install && npm run dev  # Vite dev server, /api proxy na :8080
 cd frontend && npm run build && npm test
+docker compose --profile app up -d --build # celá aplikace z Dockerfile na :8080
 ```
 
 ## Konvence

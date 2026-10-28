@@ -28,10 +28,9 @@ flowchart LR
 
 ### Technologie
 
-- Java 21 LTS (případně 25 LTS), aktuální stabilní Spring Boot 3.x/4.x, Maven Wrapper
-- Starters: `web`, `data-jpa`, `validation`, `actuator`
-- `flyway-core` + `flyway-database-postgresql`, `postgresql` driver
-- Testy: `spring-boot-starter-test`, Testcontainers (`postgresql`, `junit-jupiter`)
+- Java 21 LTS, Spring Boot 4.1 (Hibernate 7, Jackson 3), Maven Wrapper
+- Starters: `webmvc`, `data-jpa`, `validation`, `actuator`, `flyway` (ve Spring Boot 4 má Flyway vlastní starter) + `flyway-database-postgresql`, `postgresql` driver
+- Testy: `spring-boot-starter-*-test` (např. `webmvc-test`, `data-jpa-test`), `spring-boot-testcontainers`, Testcontainers (`testcontainers-postgresql`, `testcontainers-junit-jupiter`)
 - Lombok **nepoužívat** — DTO jsou `record`, entity s ručními gettery/settery.
 
 ### Balíčky (package-by-feature)
@@ -39,18 +38,23 @@ flowchart LR
 ```
 cz.mibcon.zazitky            # (název balíčku lze upravit)
 ├── ZazitkyApplication.java
-├── common/                  # ProblemDetail handler, normalizace textu, konfigurace, Clock bean
-├── game/                    # Partner, Location, Game, Station, Hint, AcceptedAnswer — čtení obsahu
-│   ├── domain/              # JPA entity
-│   ├── GameRepository.java ...
+├── common/                  # ApiExceptionHandler (ProblemDetail), ApiException + NotFound/InvalidState,
+│                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend + SPA fallback)
+├── game/                    # čtení obsahu
+│   ├── domain/              # Partner, Location, Game, Station, Hint, AcceptedAnswer, StationChoice + enumy
+│   ├── *Repository.java     # jedno repository na tabulku
 │   ├── GameService.java
-│   └── GameController.java  # /api/v1/games
-├── session/                 # GameSession, SessionProgress, AnswerAttempt — herní logika
-│   ├── domain/
+│   ├── GameController.java  # /api/v1/games
+│   └── GameSummaryDto, GameDetailDto
+├── session/                 # herní logika
+│   ├── domain/              # GameSession, SessionProgress, AnswerAttempt + enumy
 │   ├── SessionService.java
 │   ├── AnswerEvaluator.java # normalizace + porovnání odpovědí
-│   └── SessionController.java # /api/v1/sessions
-└── accesscode/              # AccessCodeBatch, AccessCode — v prototypu jen entity + repo
+│   ├── SessionController.java # /api/v1/sessions
+│   ├── SessionDtos.java     # request/response recordy
+│   └── InvalidTokenException (401), SessionExpiredException (410)
+└── accesscode/              # v prototypu jen entity + repo
+    └── domain/              # AccessCodeBatch, AccessCode
 ```
 
 ### Vrstvy uvnitř feature
@@ -60,15 +64,17 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 ### Herní logika (`SessionService`)
 
 1. **start(gameId, teamName)** — ověří, že hra je `PUBLISHED`; vytvoří `game_session` se stavem `IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = now + session_validity_hours`; vytvoří `session_progress` pro první stanoviště se stavem `ACTIVE`.
-2. **getState(token)** — vrátí aktuální stav; pokud `expires_at < now`, nastaví `EXPIRED`.
+2. **getState(token)** — vrátí aktuální stav; pokud je relace `IN_PROGRESS` a `expires_at <= now`, nastaví `EXPIRED` a vrátí 410 (změna stavu se uloží, `noRollbackFor`).
 3. **submitAnswer(token, stationId, answer)** — v transakci:
    - stanoviště musí být aktuálně `ACTIVE` v dané relaci (jinak 409);
-   - zapíše `answer_attempt` (vždy, i při chybě);
+   - zapíše `answer_attempt` (každý vyhodnocený pokus, i špatný; požadavek odmítnutý 401/404/409/410 se nezapisuje);
    - `AnswerEvaluator` normalizuje vstup a porovná s `accepted_answer.normalized_value`;
    - při úspěchu: progress → `SOLVED`, `solved_at`; další stanoviště → `ACTIVE`; pokud žádné není, relace → `COMPLETED`, `finished_at`.
 4. **revealHint(token, stationId)** — zvýší `hints_used` (max. počet nápověd stanoviště) a připočte penalizaci do `penalty_seconds` relace; vrátí odkryté nápovědy.
 
-Souběh: dvojité odeslání z jednoho telefonu ošetřit optimistickým zamykáním (`@Version` na `game_session`).
+5. **abandon(token)** — `IN_PROGRESS` → `ABANDONED`; opakované volání je bez efektu, u `COMPLETED` 409.
+
+Časy se berou z beanu `Clock` (testovatelnost). Souběh: dvojité odeslání z jednoho telefonu ošetřuje optimistické zamykání — `@Version` na `game_session` a načítání relace s `OPTIMISTIC_FORCE_INCREMENT` u všech zápisových operací.
 
 ### Normalizace odpovědí (`TextNormalizer` v `common`)
 
@@ -204,7 +210,8 @@ frontend/src/
 ├── api/            # fetch klient (+ X-Session-Token), typy DTO, query hooks
 ├── pages/          # HomePage, GameIntroPage, StationPage, RewardPage, FinalePage
 ├── components/     # ProgressBar, AnswerInput (TEXT/NUMBER/CHOICE), HintList, StoryText, ErrorBanner
-├── session/        # useSessionToken (localStorage s try/catch)
+├── session/        # tokenStorage (localStorage s try/catch), SessionTokenProvider, usePlaySession
+├── queryClient.ts  # TanStack Query (bez retry u 4xx)
 ├── App.tsx         # routy
 └── main.tsx
 ```
@@ -232,7 +239,9 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 
 ### Vývoj
 
-Vite dev server na `:5173` s proxy `/api → http://localhost:8080`. V produkci se `npm run build` výstup kopíruje do `backend/src/main/resources/static` (Maven `frontend-maven-plugin` nebo krok v CI — rozhodnout v M5) a SPA fallback (`/play/**` → `index.html`) zajistí jednoduchý controller nebo `WebMvcConfigurer`.
+Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
+
+**Produkční build (rozhodnuto v M5):** `backend/pom.xml` přidává `../frontend/dist` jako resource do `static/` — bez frontend pluginu v Mavenu, backendové testy tak nepotřebují Node. Postup: `cd frontend && npm run build`, pak `cd backend && ./mvnw package`; když `dist` neexistuje, JAR je jen backend. `Dockerfile` dělá totéž ve dvou fázích. `SpaWebConfig` servíruje statické soubory a pro klientské routy (cesta bez tečky, mimo `/api/` a `/actuator/`) vrací `index.html`; `index.html` má `Cache-Control: no-cache`, hashované `/assets/**` cache na rok (`immutable`).
 
 ## 5. Bezpečnost
 
@@ -243,10 +252,12 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`. V produkci 
 - Admin rozhraní (budoucí): Spring Security, oddělené `/api/v1/admin/**`.
 - HTTPS v ostrém provozu povinné.
 
-## 6. Nasazení (výhled)
+## 6. Nasazení
 
-- Build: `./mvnw verify` → spustitelný JAR s vloženým frontendem; případně Docker image (`Dockerfile` multi-stage).
-- Provoz: Docker Compose (app + PostgreSQL) na VPS za reverzní proxy (Caddy/Nginx s Let's Encrypt), nebo spravovaná PostgreSQL v cloudu. Varianta SAP BTP Cloud Foundry zůstává otevřená (viz Q1 v analýze).
+- Build: `npm run build` + `./mvnw package` → spustitelný JAR s vloženým frontendem, nebo Docker image z `Dockerfile` (multi-stage: Node → Maven → JRE, běží pod neprivilegovaným uživatelem, profil `prod`, `HEALTHCHECK` na `/actuator/health`). V image se nespouští testy (Testcontainers potřebují Docker) — spouští se předem / v CI.
+- Lokální ověření image: `docker compose --profile app up -d --build` (aplikace na `:8080` proti PostgreSQL z compose, včetně demo hry přes `SPRING_FLYWAY_LOCATIONS`).
+- Výhled provozu:
+  - Docker Compose (app + PostgreSQL) na VPS za reverzní proxy (Caddy/Nginx s Let's Encrypt), nebo spravovaná PostgreSQL v cloudu. Varianta SAP BTP Cloud Foundry zůstává otevřená (viz Q1 v analýze).
 - Monitoring: Actuator `/actuator/health` pro proxy/orchestraci, logy na stdout.
 - Zálohy DB: denní `pg_dump`.
 
@@ -257,4 +268,7 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`. V produkci 
 | Unit | `TextNormalizer`, `AnswerEvaluator`, výpočet času a penalizací | JUnit 5 |
 | Integrace | Celý průchod demo hrou přes REST (start → odpovědi → nápovědy → finále), chybové stavy | `@SpringBootTest` + MockMvc + Testcontainers PostgreSQL |
 | Migrace | Flyway proběhne na čisté DB, `ddl-auto=validate` projde | Testcontainers |
-| Frontend | `AnswerInput`, `HintList`, routování podle stavu | Vitest + Testing Library |
+| Souběh | Dvě překrývající se změny jedné relace → druhá selže | `TransactionTemplate` + Testcontainers |
+| SPA | Klientské routy vrací `index.html`, `/api` a chybějící soubory 404 | MockMvc |
+| Frontend | `AnswerInput`, `HintList`, `formatDuration`, `tokenStorage`, toky v `App` (obnova po reloadu, 410 → úvod, odměna → finále) | Vitest + Testing Library (mock `fetch`) |
+| Ruční | Průchod demo hrou na šířce 360 px | Playwright / DevTools, skutečný telefon |
