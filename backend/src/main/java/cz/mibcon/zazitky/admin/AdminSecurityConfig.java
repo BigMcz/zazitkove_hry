@@ -1,7 +1,6 @@
 package cz.mibcon.zazitky.admin;
 
 import java.io.IOException;
-import java.util.Map;
 
 import cz.mibcon.zazitky.common.ApiExceptionHandler;
 import cz.mibcon.zazitky.common.RateLimiter;
@@ -20,6 +19,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
@@ -35,18 +36,21 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Two filter chains:
  * <ul>
- * <li>{@code /api/v1/admin/**} — one admin account from configuration, form login with a session
- * cookie, CSRF protection for the SPA (token in the {@code XSRF-TOKEN} cookie, sent back in the
- * {@code X-XSRF-TOKEN} header), all errors as {@code ProblemDetail}.</li>
+ * <li>{@code /api/v1/admin/**} and {@code /api/v1/partner/**} — form login with a session cookie,
+ * CSRF protection for the SPA (token in the {@code XSRF-TOKEN} cookie, sent back in the
+ * {@code X-XSRF-TOKEN} header), all errors as {@code ProblemDetail}. Two kinds of accounts:
+ * the admin (role ADMIN, one account from configuration) and castle staff (role PARTNER,
+ * {@code partner_user} table, only the partner API with the data of their partner).</li>
  * <li>everything else — public player API and the frontend; no cookies are used there (the session
  * is identified by the {@code X-Session-Token} header), so neither CSRF nor an HTTP session.</li>
  * </ul>
- * Partner accounts (castle staff checking monthly activations) will need users with roles in the DB.
  */
 @Configuration(proxyBeanMethods = false)
 public class AdminSecurityConfig {
 
     static final String ADMIN_API = "/api/v1/admin/**";
+    static final String PARTNER_API = "/api/v1/partner/**";
+    static final String ADMIN_ROLE = "ADMIN";
     static final String LOGIN_URL = "/api/v1/admin/login";
     static final String LOGOUT_URL = "/api/v1/admin/logout";
     static final String SESSION_URL = "/api/v1/admin/session";
@@ -56,16 +60,30 @@ public class AdminSecurityConfig {
     @Bean
     @Order(1)
     SecurityFilterChain adminFilterChain(HttpSecurity http, ObjectMapper json,
-            @Qualifier("adminLoginRateLimiter") RateLimiter loginRateLimiter) throws Exception {
-        http.securityMatcher(ADMIN_API)
+            @Qualifier("adminLoginRateLimiter") RateLimiter loginRateLimiter, PartnerUserService partnerUsers,
+            PasswordEncoder encoder, @Value("${app.admin.username:admin}") String adminUsername,
+            @Value("${app.admin.password:}") String adminPassword) throws Exception {
+        DaoAuthenticationProvider adminProvider =
+                new DaoAuthenticationProvider(adminUsers(adminUsername, adminPassword, encoder));
+        adminProvider.setPasswordEncoder(encoder);
+        DaoAuthenticationProvider partnerProvider = new DaoAuthenticationProvider(partnerUsers::loadForLogin);
+        partnerProvider.setPasswordEncoder(encoder);
+
+        http.securityMatcher(ADMIN_API, PARTNER_API)
+                .authenticationManager(new ProviderManager(adminProvider, partnerProvider))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SESSION_URL).permitAll()
-                        .anyRequest().hasRole("ADMIN"))
+                        .requestMatchers(PARTNER_API).hasRole(PartnerUserDetails.ROLE)
+                        .anyRequest().hasRole(ADMIN_ROLE))
                 .csrf(csrf -> csrf.spa())
                 .formLogin(form -> form
                         .loginProcessingUrl(LOGIN_URL)
-                        .successHandler((request, response, authentication) ->
-                                writeJson(response, json, HttpStatus.OK, Map.of("username", authentication.getName())))
+                        .successHandler((request, response, authentication) -> {
+                            if (authentication.getPrincipal() instanceof PartnerUserDetails partner) {
+                                partnerUsers.recordLogin(partner.userId());
+                            }
+                            writeJson(response, json, HttpStatus.OK, AdminSessionController.toDto(authentication));
+                        })
                         .failureHandler((request, response, exception) ->
                                 writeProblem(response, json, HttpStatus.UNAUTHORIZED, "invalid-credentials",
                                         "Nesprávné přihlášení", "Nesprávné jméno nebo heslo.")))
@@ -104,16 +122,14 @@ public class AdminSecurityConfig {
     }
 
     /** Without a configured password there is no admin account, the admin API then cannot be used. */
-    @Bean
-    UserDetailsService adminUsers(@Value("${app.admin.username:admin}") String username,
-            @Value("${app.admin.password:}") String password, PasswordEncoder encoder) {
+    private static UserDetailsService adminUsers(String username, String password, PasswordEncoder encoder) {
         if (password.isBlank()) {
             log.warn("app.admin.password (ADMIN_PASSWORD) is not set, the administration is disabled");
             return new InMemoryUserDetailsManager();
         }
         return new InMemoryUserDetailsManager(User.withUsername(username)
                 .password(encoder.encode(password))
-                .roles("ADMIN")
+                .roles(ADMIN_ROLE)
                 .build());
     }
 

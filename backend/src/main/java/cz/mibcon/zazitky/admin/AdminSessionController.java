@@ -1,7 +1,7 @@
 package cz.mibcon.zazitky.admin;
 
-import java.security.Principal;
-
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,11 +14,22 @@ public class AdminSessionController {
      * admin SPA needs before its first POST (login): reading the token makes Spring Security save it.
      */
     @GetMapping(AdminSecurityConfig.SESSION_URL)
-    public AdminSessionDto session(Principal principal, CsrfToken csrfToken) {
+    public AdminSessionDto session(Authentication authentication, CsrfToken csrfToken) {
         csrfToken.getToken();
-        return new AdminSessionDto(principal == null ? null : principal.getName());
+        return toDto(authentication);
     }
 
-    public record AdminSessionDto(String username) {
+    static AdminSessionDto toDto(Authentication authentication) {
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return new AdminSessionDto(null, null, null);
+        }
+        if (authentication.getPrincipal() instanceof PartnerUserDetails partner) {
+            return new AdminSessionDto(partner.username(), PartnerUserDetails.ROLE, partner.partnerName());
+        }
+        return new AdminSessionDto(authentication.getName(), AdminSecurityConfig.ADMIN_ROLE, null);
+    }
+
+    /** @param role ADMIN or PARTNER; null when nobody is logged in */
+    public record AdminSessionDto(String username, String role, String partnerName) {
     }
 }

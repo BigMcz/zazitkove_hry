@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Demo hru otevřeš na http://localhost:5173 zadáním vývojového kódu **`DEMO-KATA`** (nevyprší, každé zadání založí novou hru). Administrace (generování kódů, CSV pro tisk, měsíční přehled aktivací) je na http://localhost:5173/admin — v profilu `dev` jméno `admin`, heslo `admin`.
+Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Demo hru otevřeš na http://localhost:5173 zadáním vývojového kódu **`DEMO-KATA`** (nevyprší, každé zadání založí novou hru). Administrace (generování kódů, CSV pro tisk, měsíční přehled aktivací) je na http://localhost:5173/admin — v profilu `dev` správce `admin` / `admin`, vývojový účet hradu `hrad` / `hrad-loket` (vidí jen přehled svého hradu).
 
 ## Build a testy
 

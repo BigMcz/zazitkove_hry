@@ -18,9 +18,10 @@ public interface AccessCodeBatchRepository extends JpaRepository<AccessCodeBatch
             join b.game g
             join b.partner p
             left join AccessCode c on c.batch = b
+            where :partnerId is null or p.id = :partnerId
             group by b.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.note, b.unitPriceCzk,
                 b.createdAt
             order by b.createdAt desc
             """)
-    List<BatchSummary> findSummaries();
+    List<BatchSummary> findSummaries(UUID partnerId);
 }

@@ -42,7 +42,7 @@ public class AccessCodeAdminController {
 
     @GetMapping("/batches")
     public List<BatchSummary> batches() {
-        return adminService.listBatches();
+        return adminService.listBatches(null);
     }
 
     @PostMapping("/batches")
@@ -67,6 +67,6 @@ public class AccessCodeAdminController {
 
     @GetMapping("/reports/monthly-activations")
     public List<MonthlyActivation> monthlyActivations(@RequestParam @Min(2020) @Max(2100) int year) {
-        return adminService.monthlyActivations(year);
+        return adminService.monthlyActivations(year, null);
     }
 }

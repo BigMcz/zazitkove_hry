@@ -20,6 +20,7 @@ erDiagram
     station ||--o{ accepted_answer : "přijímá"
     station ||--o{ station_choice : "nabízí"
     partner ||--o{ access_code_batch : "odebírá"
+    partner ||--o{ partner_user : "přihlašuje"
     game ||--o{ access_code_batch : "pro hru"
     access_code_batch ||--o{ access_code : "obsahuje"
     game ||--o{ game_session : "hraná v"
@@ -29,6 +30,16 @@ erDiagram
     game_session ||--o{ answer_attempt : "pokusy"
     station ||--o{ answer_attempt : "pokusy"
 
+    partner_user {
+        uuid id PK
+        uuid partner_id FK
+        varchar username UK
+        varchar password_hash
+        varchar display_name
+        boolean enabled
+        timestamptz created_at
+        timestamptz last_login_at
+    }
     partner {
         uuid id PK
         varchar name
@@ -166,6 +177,12 @@ erDiagram
 | `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy) |
 | `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
 
+### Přístupy
+
+| Tabulka | Účel | Poznámky |
+|---|---|---|
+| `partner_user` | Účet správy hradu do administrace (role `PARTNER`) — vidí jen data svého partnera | `username` unikátní, malými písmeny; `password_hash` BCrypt s prefixem `{bcrypt}`; `enabled = false` zablokuje přihlášení; účet správce aplikace (role `ADMIN`) je v konfiguraci, ne v DB |
+
 ### Hraní
 
 | Tabulka | Účel | Poznámky |
@@ -204,7 +221,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2.
+Výsledné schéma = V1 + V2 + V3.
 
 ### V1
 
@@ -388,12 +405,34 @@ CREATE INDEX ix_session_access_code ON game_session(access_code_id);
 CREATE INDEX ix_access_code_activated_at ON access_code(activated_at);
 ```
 
+### V3
+
+Soubor `backend/src/main/resources/db/migration/V3__partner_user.sql`:
+
+```sql
+-- =========================================================
+-- Účty partnerů (správa hradu) pro přehled aktivovaných kódů
+-- Účet správce aplikace je v konfiguraci (ADMIN_USERNAME / ADMIN_PASSWORD), ne v DB.
+-- =========================================================
+CREATE TABLE partner_user (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_id     UUID         NOT NULL REFERENCES partner(id) ON DELETE CASCADE,
+    username       VARCHAR(100) NOT NULL UNIQUE,   -- malými písmeny
+    password_hash  VARCHAR(200) NOT NULL,          -- {bcrypt}…, DelegatingPasswordEncoder
+    display_name   VARCHAR(200),
+    enabled        BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    last_login_at  TIMESTAMPTZ
+);
+CREATE INDEX ix_partner_user_partner ON partner_user(partner_id);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
 |---|---|---|
 | `db/migration` | `V1__init_schema.sql`, `V2__…` | Všechna prostředí |
-| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) | Jen profil `dev` |
+| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) + vývojový účet hradu `hrad` / `hrad-loket` | Jen profil `dev` |
 
 - Seed demo hry je **repeatable migrace** — spustí se znovu při každé změně obsahu souboru, takže herní texty lze ladit bez nových verzí schématu. Seed musí být idempotentní: nejprve smaže demo partnera/lokalitu/hru podle pevných UUID (kaskádně i stanoviště a relace), pak je vloží znovu.
 - Pevná UUID v seedu (např. `00000000-0000-0000-0000-00000000000x`) usnadní testy a ladění.
@@ -405,3 +444,4 @@ CREATE INDEX ix_access_code_activated_at ON access_code(activated_at);
 |---|---|
 | V1 | Počáteční schéma (obsah, prodej, hraní) |
 | V2 | Přístupové kódy: `access_code_batch.validity_hours`, `access_code_batch.multi_session`; zrušena unikátnost `game_session.access_code_id` (index `ix_session_access_code`); index `ix_access_code_activated_at` pro měsíční přehled |
+| V3 | Tabulka `partner_user` — účty správy hradů pro přehled aktivací |

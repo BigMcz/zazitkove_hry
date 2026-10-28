@@ -42,9 +42,10 @@ public class AccessCodeAdminService {
         this.jdbc = jdbc;
     }
 
+    /** @param partnerId only batches of this partner; null = all */
     @Transactional(readOnly = true)
-    public List<BatchSummary> listBatches() {
-        return batches.findSummaries();
+    public List<BatchSummary> listBatches(UUID partnerId) {
+        return batches.findSummaries(partnerId);
     }
 
     /** New codes are NEW; printing them does not mean they are sold — a code counts as sold when activated. */
@@ -89,9 +90,13 @@ public class AccessCodeAdminService {
         return csv.toString();
     }
 
-    /** Activated codes per month, partner and game; development (multi-session) batches are left out. */
+    /**
+     * Activated codes per month, partner and game; development (multi-session) batches are left out.
+     *
+     * @param partnerId only this partner; null = all
+     */
     @Transactional(readOnly = true)
-    public List<MonthlyActivation> monthlyActivations(int year) {
+    public List<MonthlyActivation> monthlyActivations(int year, UUID partnerId) {
         Timestamp from = Timestamp.from(LocalDate.of(year, 1, 1).atStartOfDay(BILLING_ZONE).toInstant());
         Timestamp to = Timestamp.from(LocalDate.of(year + 1, 1, 1).atStartOfDay(BILLING_ZONE).toInstant());
         return jdbc.query("""
@@ -106,6 +111,7 @@ public class AccessCodeAdminService {
                 JOIN partner p ON p.id = b.partner_id
                 JOIN game g ON g.id = b.game_id
                 WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session
+                  AND (CAST(? AS uuid) IS NULL OR p.id = ?)
                 GROUP BY month, p.name, p.revenue_share_pct, g.title
                 ORDER BY month, p.name, g.title
                 """,
@@ -116,7 +122,7 @@ public class AccessCodeAdminService {
                         rs.getLong("activated_count"),
                         rs.getObject("revenue_czk", Long.class),
                         rs.getBigDecimal("partner_share_czk")),
-                from, to);
+                from, to, partnerId, partnerId);
     }
 
     private Set<String> uniqueNewCodes(int quantity) {

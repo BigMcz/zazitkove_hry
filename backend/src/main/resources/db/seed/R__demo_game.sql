@@ -10,6 +10,7 @@
 --   00000000-0000-0000-0003-0000000000SN  přijímaná odpověď N stanoviště S
 --   00000000-0000-0000-0004-0000000000SN  možnost výběru N stanoviště S
 --   00000000-0000-0000-0005-000000000001  vývojová dávka kódů, 00000000-0000-0000-0006-000000000001 její kód
+--   00000000-0000-0000-0007-000000000001  vývojový účet partnera (smaže se kaskádně s partnerem)
 --
 -- accepted_answer.normalized_value se vyplňuje ručně podle TextNormalizer (TEXT/CHOICE: normalize,
 -- NUMBER: normalizeNumber); shodu hlídá test DemoGameSeedTest.
@@ -125,3 +126,10 @@ VALUES ('00000000-0000-0000-0005-000000000001', '00000000-0000-0000-0000-0000000
 
 INSERT INTO access_code (id, batch_id, code)
 VALUES ('00000000-0000-0000-0006-000000000001', '00000000-0000-0000-0005-000000000001', 'DEMOKATA');
+
+-- ---------------------------------------------------------
+-- Vývojový účet partnera pro administraci hradu: hrad / hrad-loket (jen lokální vývoj)
+-- ---------------------------------------------------------
+INSERT INTO partner_user (id, partner_id, username, password_hash, display_name)
+VALUES ('00000000-0000-0000-0007-000000000001', '00000000-0000-0000-0000-000000000001', 'hrad',
+        '{bcrypt}$2a$10$xgzBVRPfBX5BRJLbpvvpbO77bHzUG9KWgs.O/bI7GcStYQPUUaT/m', 'Pokladna Demo hradu');

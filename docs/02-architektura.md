@@ -41,7 +41,12 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 ├── common/                  # ApiExceptionHandler (ProblemDetail), ApiException + NotFound/InvalidState,
 │                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend + SPA fallback),
 │                            # RateLimiter + RateLimitConfig, TooManyRequestsException (429)
-├── admin/                   # AdminSecurityConfig (Spring Security), AdminSessionController
+├── admin/                   # přístupy do administrace
+│   ├── domain/              # PartnerUser (účet správy hradu)
+│   ├── AdminSecurityConfig  # Spring Security: role ADMIN (konfigurace) a PARTNER (DB)
+│   ├── AdminSessionController # /api/v1/admin/session
+│   ├── PartnerUserService, PartnerUserAdminController # správa účtů hradů (/api/v1/admin/partner-users)
+│   └── PartnerPortalController # /api/v1/partner/** — přehled hradu, jen data vlastního partnera
 ├── game/                    # čtení obsahu
 │   ├── domain/              # Partner, Location, Game, Station, Hint, AcceptedAnswer, StationChoice + enumy
 │   ├── *Repository.java     # jedno repository na tabulku
@@ -107,7 +112,8 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Neznámý nebo zrušený přístupový kód | 404 | `invalid-code` |
 | Přístupový kód vypršel | 410 | `code-expired` |
 | Příliš mnoho pokusů o kód / přihlášení z jedné IP | 429 | `too-many-requests` |
-| Admin API bez přihlášení / špatné heslo | 401 | `unauthorized` / `invalid-credentials` |
+| Admin/partner API bez přihlášení / špatné heslo nebo zablokovaný účet | 401 | `unauthorized` / `invalid-credentials` |
+| Hrad (role `PARTNER`) volá API správce, nebo správce API hradu | 403 | `forbidden` |
 | Admin API bez platného CSRF tokenu | 403 | `forbidden` |
 
 `type` je relativní URI `/problems/<suffix>` (např. `/problems/not-found`), `title` a `detail` jsou česky. Validační chyby těla požadavku obsahují navíc pole `errors: [{ "field", "message" }]`. Neznámá hra nebo nepublikovaná hra vrací 404.
@@ -121,7 +127,7 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Proměnná | Význam |
 |---|---|
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | připojení k PostgreSQL |
-| `ADMIN_USERNAME` (výchozí `admin`), `ADMIN_PASSWORD` | účet administrace; bez hesla je administrace vypnutá |
+| `ADMIN_USERNAME` (výchozí `admin`), `ADMIN_PASSWORD` | účet správce aplikace (role `ADMIN`); bez hesla se správce nepřihlásí (účty hradů v DB fungují dál) |
 | `PUBLIC_URL` | veřejná adresa pro odkazy v CSV s kódy (QR na kartičce), např. `https://hra.example.cz` |
 | `SESSION_COOKIE_SECURE` (výchozí `true`) | session cookie administrace jen přes HTTPS; `false` jen pro lokální test |
 | `FORWARD_HEADERS_STRATEGY` (výchozí `none`) | za reverzní proxy `native`, aby limit pokusů počítal skutečné IP hráčů |
@@ -215,18 +221,34 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 
 ### Administrace (`/api/v1/admin/**`)
 
-Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro SPA: `GET /admin/session` vydá cookie `XSRF-TOKEN`, každý POST ji vrací v hlavičce `X-XSRF-TOKEN`. Zatím jeden účet z konfigurace (role `ADMIN`); účty partnerů viz Q12 v analýze.
+Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro SPA: `GET /admin/session` vydá cookie `XSRF-TOKEN`, každý POST ji vrací v hlavičce `X-XSRF-TOKEN`. Jedno přihlášení pro dvě role:
+
+- `ADMIN` — správce aplikace, jeden účet z konfigurace (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), smí `/api/v1/admin/**`.
+- `PARTNER` — správa hradu, účty v tabulce `partner_user`, smí jen `/api/v1/partner/**`; partner se bere z přihlášení, nikdy z požadavku.
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| GET | `/admin/session` | `{ "username": "admin" }` nebo `{ "username": null }`, vydá CSRF cookie (bez přihlášení) |
-| POST | `/admin/login` | Form `username`, `password` → `200 { "username" }` / `401`; limit 5 pokusů/min na IP |
+| GET | `/admin/session` | `{ "username", "role": "ADMIN" \| "PARTNER", "partnerName" }`, bez přihlášení vše `null`; vydá CSRF cookie |
+| POST | `/admin/login` | Form `username`, `password` → `200` stejné tělo jako `/admin/session` / `401`; limit 5 pokusů/min na IP; platí pro obě role |
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
 | GET | `/admin/batches` | Dávky kódů s počtem aktivovaných |
 | POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry |
 | GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
 | GET | `/admin/reports/monthly-activations?year=2026` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (podle `revenue_share_pct`); vývojové dávky se nepočítají |
+| GET | `/admin/partners` | Partneři pro výběr při zakládání účtu |
+| GET | `/admin/partner-users` | Účty hradů (`username`, `displayName`, `partnerName`, `enabled`, `createdAt`, `lastLoginAt`) |
+| POST | `/admin/partner-users` | Nový účet: `partnerId`, `username` (3–100, písmena bez diakritiky, číslice, `._@-`; ukládá se malými písmeny), `displayName`, `password` (min. 10 znaků) → `201`; obsazené jméno nebo jméno správce → `400` |
+| POST | `/admin/partner-users/{id}/password` | Nové heslo `{ "password" }` → `204` |
+| POST | `/admin/partner-users/{id}/enabled` | `{ "enabled": false }` zablokuje přihlášení (otevřená session doběhne) → `204` |
+
+### Přehled pro hrad (`/api/v1/partner/**`, role `PARTNER`)
+
+| Metoda | Cesta | Popis |
+|---|---|---|
+| GET | `/partner/reports/monthly-activations?year=2026` | Jako přehled správce, jen řádky vlastního partnera |
+| GET | `/partner/batches` | Dávky kódů vlastního partnera s počtem aktivovaných (bez CSV, bez vývojových dávek) |
+| POST | `/partner/password` | Změna vlastního hesla `{ "currentPassword", "newPassword" }` → `204`; špatné současné heslo → `400` |
 
 `choices` u typu `CHOICE` je seznam textů k výběru (které z nich jsou správné, klient nezjistí).
 
@@ -242,7 +264,8 @@ React + TypeScript (strict), Vite, React Router, TanStack Query (stav serveru), 
 frontend/src/
 ├── api/            # fetch klient (+ X-Session-Token), typy DTO, query hooks
 ├── pages/          # HomePage (zadání kódu), StartPage, StationPage, RewardPage, FinalePage
-├── admin/          # AdminPage (přihlášení, dávky, CSV, měsíční přehled), adminApi (CSRF hlavička)
+├── admin/          # AdminPage (přihlášení, pohled podle role), NewBatchForm, BatchList, MonthlyReport,
+│                   # PartnerUsers (správa účtů hradů), ChangePasswordForm, adminApi (CSRF hlavička)
 ├── components/     # ProgressBar, AnswerInput (TEXT/NUMBER/CHOICE), HintList, StoryText, ErrorBanner
 ├── session/        # tokenStorage (localStorage s try/catch), SessionTokenProvider, usePlaySession
 ├── queryClient.ts  # TanStack Query (bez retry u 4xx)
@@ -284,7 +307,7 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 - Token relace = UUID v4 (122 bitů náhody), jen v hlavičce, ne v URL.
 - Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) — zatím jen záznam pokusů, před ostrým provozem limit např. 10 pokusů/min na relaci (Q11).
 - Přístupové kódy: 8 znaků z abecedy bez zaměnitelných znaků (bez 0/O, 1/I/L) → 31⁸ ≈ 8,5 · 10¹¹ kombinací, generované `SecureRandom`; ukládají se v plném znění (kvůli tisku), ověřování s limitem 10 pokusů/min na IP (v paměti, platí pro jednu instanci aplikace).
-- Administrace: Spring Security, oddělený filter chain pro `/api/v1/admin/**` (session cookie `SameSite=Strict`, v prod `Secure`; CSRF; limit pokusů o přihlášení). Veřejné API je bez cookies (token v hlavičce), proto tam CSRF ani HTTP session nejsou.
+- Administrace: Spring Security, oddělený filter chain pro `/api/v1/admin/**` a `/api/v1/partner/**`, role `ADMIN` a `PARTNER`, hesla hradů BCrypt (session cookie `SameSite=Strict`, v prod `Secure`; CSRF; limit pokusů o přihlášení). Veřejné API je bez cookies (token v hlavičce), proto tam CSRF ani HTTP session nejsou.
 - HTTPS v ostrém provozu povinné.
 
 ## 6. Nasazení
@@ -308,4 +331,5 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 | Frontend | `AnswerInput`, `HintList`, `formatDuration`, `tokenStorage`, toky v `App` (obnova po reloadu, 410 → úvod, odměna → finále) | Vitest + Testing Library (mock `fetch`) |
 | Kódy | Aktivace, platnost 5 h, pokračování na jiném zařízení, opuštěná hra, vypršení, vývojový kód, limit pokusů | MockMvc + Testcontainers |
 | Administrace | Přihlášení + CSRF, dávky, CSV, měsíční přehled bez vývojových kódů | MockMvc + `spring-security-test` |
+| Účty hradů | Hrad vidí jen svá data, nedostane se k API správce, zakládání/blokace účtů, reset a změna hesla | MockMvc + Testcontainers |
 | Ruční | Průchod demo hrou na šířce 360 px, administrace se skutečnou CSRF cookie | Playwright / DevTools, skutečný telefon |

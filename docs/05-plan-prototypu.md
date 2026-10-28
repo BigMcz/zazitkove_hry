@@ -74,11 +74,11 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 - [x] Frontend: zadání kódu na úvodu (i z QR `?kod=`), `/start`, `/admin`; zrušen výběr her
 - [x] Vývojový kód `DEMO-KATA` v dev seedu
 - [x] Testy (backend + frontend), ruční průchod v prohlížeči
-- [ ] Administrace pro partnera (Q12): uživatelé s rolemi, partner vidí jen svá data
+- [x] Administrace pro partnera (Q12): `V3__partner_user.sql`, role `ADMIN`/`PARTNER`, správa účtů hradů, přehled hradu jen s vlastními daty, změna hesla
 
 ## Další fáze
 
-1. ~~Přístupové kódy~~ — hotovo (F1), zbývá přístup pro partnera
+1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady
 2. Skutečný obsah pro hrad Loket (průzkum na místě, příběh kata)
 3. Administrace obsahu a statistiky obtížnosti
 4. Ostrý provoz — hosting, HTTPS, zálohy, rate limiting

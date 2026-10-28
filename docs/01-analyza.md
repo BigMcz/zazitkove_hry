@@ -24,7 +24,7 @@ Příklad budoucí hry: příběh loketského kata, kdy hráč prochází hradem
 |---|---|---|
 | **Hráč** | Návštěvník hradu (jednotlivec, rodina, skupina sdílející jeden telefon). Anonymní, bez účtu. | ✅ |
 | **Pokladní** | Vydává kartičky s kódy na pokladně hradu (v aplikaci nic neeviduje — prodej = aktivace kódu hráčem). | — |
-| **Partner** | Správa hradu — smluvní strana, podíl na výnosech, kontrola počtu aktivovaných kódů v měsíci kvůli fakturaci. | ❌ (vlastní přístup je další krok, Q12) |
+| **Partner** | Správa hradu — smluvní strana, podíl na výnosech, kontrola počtu aktivovaných kódů v měsíci kvůli fakturaci. | ✅ vlastní přihlášení do administrace (role `PARTNER`) |
 | **Autor hry / Admin** | Tvoří a ladí obsah her, generuje dávky kódů, sleduje statistiky. | ❌ (obsah přes seed) |
 
 ## 3. Případy užití
@@ -50,7 +50,7 @@ Příklad budoucí hry: příběh loketského kata, kdy hráč prochází hradem
 | UC-11 | Generování dávky kódů pro partnera a hru (export pro tisk) — ✅ hotovo (administrace, CSV) |
 | UC-12 | Administrace obsahu hry (stanoviště, odpovědi, nápovědy, obrázky) |
 | UC-13 | Statistiky obtížnosti — na kterých stanovištích hráči nejvíc chybují, kolik nápověd berou |
-| UC-14 | Přehled pro partnera — aktivované kódy po měsících, podíl na výnosech — přehled hotový v naší administraci, přístup partnera chybí (Q12) |
+| UC-14 | Přehled pro partnera — aktivované kódy po měsících, podíl na výnosech — ✅ hotovo (přehled správce i vlastní přístup hradu) |
 | UC-15 | Ověření polohy (GPS) nebo QR kód na stanovišti |
 | UC-16 | Offline režim |
 | UC-17 | Jazykové mutace her (EN, DE) |
@@ -131,4 +131,4 @@ flowchart TD
 | Q9 | Opakované spuštění seedu (`R__demo_game.sql`) smaže i rozehrané relace demo hry | akceptováno pro dev profil |
 | Q10 | Jak dostat build frontendu do JAR (frontend-maven-plugin vs. krok v buildu) | rozhodnuto (M5): `pom.xml` bere `../frontend/dist` jako resource, Docker build ve dvou fázích; Maven nepotřebuje Node |
 | Q11 | Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) | otevřeno — ověřování kódů a přihlášení do administrace limit má (na IP), odpovědi na úkoly zatím ne; nutné před ostrým provozem |
-| Q12 | Administrace pro partnera (hrad): vlastní přihlášení, vidí jen svá data — měsíční počty aktivovaných kódů pro kontrolu fakturace | rozhodnuto, že bude; zatím jen naše administrace s jedním účtem z konfigurace. Další krok: tabulka uživatelů s rolí `ADMIN`/`PARTNER` a vazbou na `partner`. |
+| Q12 | Administrace pro partnera (hrad): vlastní přihlášení, vidí jen svá data — měsíční počty aktivovaných kódů pro kontrolu fakturace | rozhodnuto a hotovo: jedno přihlášení na `/admin`, role `ADMIN` (správce aplikace, účet z konfigurace) a `PARTNER` (účty hradů v tabulce `partner_user`, zakládá je správce). Hrad vidí měsíční aktivace s tržbou a svým podílem a své dávky kódů (bez CSV a vývojových kódů), může si změnit heslo. |
