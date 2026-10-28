@@ -22,7 +22,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-dvh bg-night text-white">
+    <div className="min-h-dvh bg-night font-display text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-5">
         <SiteHeader />
         <main className="flex flex-col gap-20 pt-10 pb-20 md:gap-28 md:pt-16">

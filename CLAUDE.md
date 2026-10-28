@@ -1,4 +1,4 @@
-# Zážitkový Loket — instrukce pro Claude Code
+# Hradní tajemství — instrukce pro Claude Code
 
 ## O projektu
 

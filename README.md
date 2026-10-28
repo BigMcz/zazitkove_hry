@@ -1,4 +1,4 @@
-# Zážitkový Loket
+# Hradní tajemství
 
 Webová aplikace pro příběhové venkovní hry na hradech a zámcích. Aktuálně ve fázi **prototypu** — viz `docs/`.
 
