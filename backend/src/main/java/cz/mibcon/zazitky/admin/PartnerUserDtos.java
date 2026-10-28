@@ -1,8 +1,13 @@
 package cz.mibcon.zazitky.admin;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -15,7 +20,14 @@ public final class PartnerUserDtos {
     private PartnerUserDtos() {
     }
 
-    public record PartnerDto(UUID id, String name) {
+    /** @param revenueSharePct partner's share in %; applies to batches created from now on */
+    public record PartnerDto(UUID id, String name, String contactEmail, BigDecimal revenueSharePct) {
+    }
+
+    public record UpdatePartnerRequest(
+            @NotBlank @Size(max = 200) String name,
+            @Email @Size(max = 200) String contactEmail,
+            @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal revenueSharePct) {
     }
 
     public record PartnerUserDto(

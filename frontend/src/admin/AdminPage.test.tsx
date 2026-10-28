@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createQueryClient } from '../queryClient.ts'
 import AdminPage from './AdminPage.tsx'
@@ -15,6 +16,7 @@ const batch: BatchSummary = {
   multiSession: false,
   note: 'Sezóna 2027 — tisk 1',
   unitPriceCzk: 150,
+  revenueSharePct: 50,
   createdAt: '2026-10-28T10:00:00Z',
   activatedCount: 12,
 }
@@ -35,6 +37,8 @@ function json(body: unknown, status = 200): Response {
 const adminSession: AdminSession = { username: 'admin', role: 'ADMIN', partnerName: null }
 const partnerSession: AdminSession = { username: 'hrad', role: 'PARTNER', partnerName: 'Demo partner' }
 const anonymous: AdminSession = { username: null, role: null, partnerName: null }
+
+const demoPartner = { id: 'p1', name: 'Demo partner', contactEmail: null, revenueSharePct: 50 }
 
 const partnerUser = {
   id: 'u1',
@@ -61,7 +65,10 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
       session = anonymous
       return new Response(null, { status: 204 })
     }
-    if (path === '/api/v1/admin/partners') return json([{ id: 'p1', name: 'Demo partner' }])
+    if (path === '/api/v1/admin/partners') return json([demoPartner])
+    if (path === '/api/v1/admin/partners/p1' && method === 'PUT') {
+      return json({ ...demoPartner, ...JSON.parse(String(init?.body)) })
+    }
     if (path === '/api/v1/admin/partner-users' && method === 'GET') return json([partnerUser])
     if (path === '/api/v1/admin/partner-users' && method === 'POST') {
       return json({ ...partnerUser, id: 'u2', username: 'novy' }, 201)
@@ -71,7 +78,9 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
     if (path.startsWith('/api/v1/partner/reports/monthly-activations?year=')) return json([reportRow])
     if (path === '/api/v1/partner/password' && method === 'POST') return new Response(null, { status: 204 })
     if (path === '/api/v1/admin/games') {
-      return json([{ id: 'g1', title: 'Tajemství katova klíče', status: 'PUBLISHED', partnerName: 'Demo partner' }])
+      return json([
+        { id: 'g1', title: 'Tajemství katova klíče', status: 'PUBLISHED', partnerId: 'p1', partnerName: 'Demo partner' },
+      ])
     }
     if (path === '/api/v1/admin/batches' && method === 'GET') return json([batch])
     if (path === '/api/v1/admin/batches' && method === 'POST') return json({ ...batch, id: 'b2' }, 201)
@@ -82,10 +91,12 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
   return fetchMock
 }
 
-function renderAdmin() {
+function renderAdmin(url = '/admin') {
   return render(
     <QueryClientProvider client={createQueryClient()}>
-      <AdminPage />
+      <MemoryRouter initialEntries={[url]}>
+        <AdminPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -123,6 +134,44 @@ describe('AdminPage', () => {
     expect(sessionCalls.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('splits the administration into tabs, codes first', async () => {
+    mockAdminApi(true)
+    renderAdmin()
+
+    expect(await screen.findByRole('tab', { name: 'Kódy a tisk', selected: true })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Nová dávka kódů' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Hrady a podíl' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Hrady a účty' }))
+
+    expect(await screen.findByRole('heading', { name: 'Hrady a podíl' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Účty hradů/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Nová dávka kódů' })).not.toBeInTheDocument()
+  })
+
+  it('changes the share of a castle', async () => {
+    const fetchMock = mockAdminApi(true)
+    document.cookie = 'XSRF-TOKEN=csrf-555'
+    renderAdmin('/admin?sekce=hrady')
+
+    const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
+    expect(within(row).getByText('50 %')).toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Upravit' }))
+    const share = screen.getByLabelText('Podíl hradu v procentech')
+    await userEvent.clear(share)
+    await userEvent.type(share, '35')
+    await userEvent.type(screen.getByLabelText('Kontaktní e-mail'), 'pokladna@hrad.cz')
+    await userEvent.click(screen.getByRole('button', { name: 'Uložit' }))
+
+    const update = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/v1/admin/partners/p1' && init?.method === 'PUT')
+    expect(JSON.parse(String(update?.[1]?.body))).toEqual({
+      name: 'Demo partner',
+      contactEmail: 'pokladna@hrad.cz',
+      revenueSharePct: 35,
+    })
+    expect(update?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-555' })
+  })
+
   it('lists batches with a CSV download for printing', async () => {
     mockAdminApi(true)
     renderAdmin()
@@ -132,6 +181,7 @@ describe('AdminPage', () => {
     const row = csv.closest('tr') as HTMLElement
     expect(within(row).getByText('Sezóna 2027 — tisk 1')).toBeInTheDocument()
     expect(within(row).getByText('5 h')).toBeInTheDocument()
+    expect(within(row).getByText('50 %')).toBeInTheDocument()
   })
 
   it('creates a batch for the selected game', async () => {
@@ -140,6 +190,7 @@ describe('AdminPage', () => {
     renderAdmin()
 
     await screen.findByRole('option', { name: /Tajemství katova klíče/ })
+    expect(await screen.findByText(/podíl hradu Demo partner: 50 %/)).toBeInTheDocument()
     const quantity = screen.getByLabelText('Počet kódů')
     await userEvent.clear(quantity)
     await userEvent.type(quantity, '250')
@@ -163,7 +214,7 @@ describe('AdminPage', () => {
   it('creates and disables partner accounts', async () => {
     const fetchMock = mockAdminApi(true)
     document.cookie = 'XSRF-TOKEN=csrf-789'
-    renderAdmin()
+    renderAdmin('/admin?sekce=hrady')
 
     await screen.findByRole('option', { name: 'Demo partner' })
     await userEvent.type(screen.getByLabelText('Přihlašovací jméno'), 'novy')
@@ -197,12 +248,15 @@ describe('AdminPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Demo partner' })).toBeInTheDocument()
     expect(await screen.findByText('říjen 2026')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Váš podíl' })).toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Partner' })).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Vytištěné kódy' })).toBeInTheDocument()
+    // report and printed codes both show the castle's own share
+    expect(screen.getAllByRole('columnheader', { name: 'Váš podíl' })).toHaveLength(2)
+    expect(screen.queryByRole('columnheader', { name: 'Partner' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'CSV' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Nová dávka kódů' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Účty hradů/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Současné heslo')).not.toBeInTheDocument()
 
     const adminCalls = fetchMock.mock.calls
       .map(([url]) => String(url))
@@ -210,19 +264,22 @@ describe('AdminPage', () => {
     expect(adminCalls).toEqual([])
   })
 
-  it('lets castle staff change their password', async () => {
+  it('lets castle staff change their password from the key icon in the header', async () => {
     const fetchMock = mockAdminApi('partner')
     document.cookie = 'XSRF-TOKEN=csrf-321'
     renderAdmin()
 
-    await userEvent.type(await screen.findByLabelText('Současné heslo'), 'hrad-loket')
+    await userEvent.click(await screen.findByRole('button', { name: 'Změnit heslo' }))
+    const dialog = screen.getByRole('dialog', { name: 'Změna hesla' })
+    await userEvent.type(within(dialog).getByLabelText('Současné heslo'), 'hrad-loket')
     await userEvent.type(screen.getByLabelText(/Nové heslo \(min/), 'Nove-heslo-123')
     await userEvent.type(screen.getByLabelText('Nové heslo znovu'), 'Nove-heslo-12')
     expect(screen.getByText('Nová hesla se neshodují.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Změnit heslo' })).toBeDisabled()
+    const submit = within(dialog).getByRole('button', { name: 'Změnit heslo' })
+    expect(submit).toBeDisabled()
 
     await userEvent.type(screen.getByLabelText('Nové heslo znovu'), '3')
-    await userEvent.click(screen.getByRole('button', { name: 'Změnit heslo' }))
+    await userEvent.click(submit)
 
     expect(await screen.findByText('Heslo je změněné.')).toBeInTheDocument()
     const change = fetchMock.mock.calls.find(([url]) => String(url) === '/api/v1/partner/password')
@@ -231,11 +288,14 @@ describe('AdminPage', () => {
       newPassword: 'Nove-heslo-123',
     })
     expect(change?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-321' })
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('shows monthly activations for invoicing', async () => {
     mockAdminApi(true)
-    renderAdmin()
+    renderAdmin('/admin?sekce=aktivace')
 
     const month = await screen.findByText('říjen 2026')
     const row = month.closest('tr') as HTMLElement

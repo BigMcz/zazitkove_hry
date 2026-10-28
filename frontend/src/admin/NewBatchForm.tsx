@@ -3,12 +3,14 @@ import { useState, type FormEvent } from 'react'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { buttonPrimary, input } from '../components/ui.ts'
 import { adminApi, type CreateBatchRequest } from './adminApi.ts'
+import { formatPercent } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, fieldLabel, useLoggedOutOn401 } from './shared.ts'
 
 export default function NewBatchForm() {
   const queryClient = useQueryClient()
   const games = useQuery({ queryKey: adminKeys.games, queryFn: adminApi.games })
+  const partners = useQuery({ queryKey: adminKeys.partners, queryFn: adminApi.partners })
   const [gameId, setGameId] = useState('')
   const [quantity, setQuantity] = useState('100')
   const [validityHours, setValidityHours] = useState('5')
@@ -24,6 +26,8 @@ export default function NewBatchForm() {
   useLoggedOutOn401(games.error ?? createBatch.error)
 
   const selectedGame = gameId || games.data?.[0]?.id || ''
+  const partnerId = games.data?.find((game) => game.id === selectedGame)?.partnerId
+  const partner = partners.data?.find((candidate) => candidate.id === partnerId)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -52,6 +56,12 @@ export default function NewBatchForm() {
               </option>
             ))}
           </select>
+          {partner && (
+            <span className="text-sm font-normal text-stone-700">
+              Do dávky se zapíše podíl hradu {partner.name}: {formatPercent(partner.revenueSharePct)} (mění se v záložce
+              Hrady a účty).
+            </span>
+          )}
         </label>
         <label className={fieldLabel}>
           Počet kódů

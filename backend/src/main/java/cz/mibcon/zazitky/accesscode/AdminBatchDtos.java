@@ -34,6 +34,8 @@ public final class AdminBatchDtos {
             boolean multiSession,
             String note,
             Integer unitPriceCzk,
+            /** Partner's share fixed at creation of the batch. */
+            BigDecimal revenueSharePct,
             Instant createdAt,
             long activatedCount) {
     }
@@ -46,7 +48,7 @@ public final class AdminBatchDtos {
             long activatedCount,
             /** Sum of the unit prices of the activated codes; null when the batches have no price. */
             Long revenueCzk,
-            /** Partner's share of the revenue by {@code partner.revenue_share_pct}. */
+            /** Partner's share of the revenue by the share fixed on each batch. */
             BigDecimal partnerShareCzk) {
     }
 }

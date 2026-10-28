@@ -233,10 +233,11 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
 | GET | `/admin/batches` | Dávky kódů s počtem aktivovaných |
-| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry |
+| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry a do dávky se zapíše jeho aktuální podíl (`revenueSharePct`) |
 | GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
-| GET | `/admin/reports/monthly-activations?year=2026` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (podle `revenue_share_pct`); vývojové dávky se nepočítají |
-| GET | `/admin/partners` | Partneři pro výběr při zakládání účtu |
+| GET | `/admin/reports/monthly-activations?year=2026` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (cena × podíl zafixovaný na dávce); vývojové dávky se nepočítají |
+| GET | `/admin/partners` | Partneři (hrady): `id`, `name`, `contactEmail`, `revenueSharePct` |
+| PUT | `/admin/partners/{id}` | Upravit hrad: `name`, `contactEmail` (nepovinný, e-mail), `revenueSharePct` (0–100, max. 2 desetinná místa) → `200`; nový podíl platí pro dávky vytvořené od teď |
 | GET | `/admin/partner-users` | Účty hradů (`username`, `displayName`, `partnerName`, `enabled`, `createdAt`, `lastLoginAt`) |
 | POST | `/admin/partner-users` | Nový účet: `partnerId`, `username` (3–100, písmena bez diakritiky, číslice, `._@-`; ukládá se malými písmeny), `displayName`, `password` (min. 10 znaků) → `201`; obsazené jméno nebo jméno správce → `400` |
 | POST | `/admin/partner-users/{id}/password` | Nové heslo `{ "password" }` → `204` |
@@ -264,7 +265,9 @@ React + TypeScript (strict), Vite, React Router, TanStack Query (stav serveru), 
 frontend/src/
 ├── api/            # fetch klient (+ X-Session-Token), typy DTO, query hooks
 ├── pages/          # HomePage (zadání kódu), StartPage, StationPage, RewardPage, FinalePage
-├── admin/          # AdminPage (přihlášení, pohled podle role), NewBatchForm, BatchList, MonthlyReport,
+├── admin/          # AdminPage (přihlášení, pohled podle role; správce v záložkách ?sekce=kody|aktivace|hrady),
+│                   # Tabs, Partners (podíl a kontakt hradů), PasswordButton (ikonka v hlavičce hradu),
+│                   # NewBatchForm, BatchList, MonthlyReport,
 │                   # PartnerUsers (správa účtů hradů), ChangePasswordForm, adminApi (CSRF hlavička)
 ├── components/     # ProgressBar, AnswerInput (TEXT/NUMBER/CHOICE), HintList, StoryText, ErrorBanner
 ├── session/        # tokenStorage (localStorage s try/catch), SessionTokenProvider, usePlaySession

@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { buttonPrimary, input } from '../components/ui.ts'
 import { adminApi, type AdminSession } from './adminApi.ts'
 import BatchList from './BatchList.tsx'
-import ChangePasswordForm from './ChangePasswordForm.tsx'
 import MonthlyReport from './MonthlyReport.tsx'
 import NewBatchForm from './NewBatchForm.tsx'
 import PartnerUsers from './PartnerUsers.tsx'
+import Partners from './Partners.tsx'
+import PasswordButton from './PasswordButton.tsx'
+import Tabs, { type Tab } from './Tabs.tsx'
 import { adminKeys, endSession, linkButton } from './shared.ts'
 
 /**
@@ -26,6 +29,14 @@ export default function AdminPage() {
   )
 }
 
+type AdminTab = 'kody' | 'aktivace' | 'hrady'
+
+const adminTabs: Tab<AdminTab>[] = [
+  { id: 'kody', label: 'Kódy a tisk' },
+  { id: 'aktivace', label: 'Aktivace a fakturace' },
+  { id: 'hrady', label: 'Hrady a účty' },
+]
+
 function Content({ session }: { session: AdminSession }) {
   if (!session.username) {
     return <LoginForm />
@@ -33,25 +44,48 @@ function Content({ session }: { session: AdminSession }) {
   if (session.role === 'PARTNER') {
     return (
       <>
-        <Header title={session.partnerName ?? 'Přehled hradu'} username={session.username} />
+        <Header title={session.partnerName ?? 'Přehled hradu'} username={session.username}>
+          <PasswordButton />
+        </Header>
         <MonthlyReport scope="partner" />
         <BatchList scope="partner" />
-        <ChangePasswordForm />
       </>
     )
   }
   return (
     <>
       <Header title="Administrace" username={session.username} />
-      <NewBatchForm />
-      <BatchList scope="admin" />
-      <MonthlyReport scope="admin" />
-      <PartnerUsers />
+      <AdminTabs />
     </>
   )
 }
 
-function Header({ title, username }: { title: string; username: string }) {
+/** The active tab is kept in the URL (?sekce=…), so it survives a reload. */
+function AdminTabs() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requested = searchParams.get('sekce')
+  const active = adminTabs.find((tab) => tab.id === requested)?.id ?? 'kody'
+
+  return (
+    <Tabs tabs={adminTabs} active={active} onChange={(id) => setSearchParams({ sekce: id }, { replace: true })}>
+      {active === 'kody' && (
+        <>
+          <NewBatchForm />
+          <BatchList scope="admin" />
+        </>
+      )}
+      {active === 'aktivace' && <MonthlyReport scope="admin" />}
+      {active === 'hrady' && (
+        <>
+          <Partners />
+          <PartnerUsers />
+        </>
+      )}
+    </Tabs>
+  )
+}
+
+function Header({ title, username, children }: { title: string; username: string; children?: ReactNode }) {
   const queryClient = useQueryClient()
   const logout = useMutation({
     mutationFn: adminApi.logout,
@@ -61,12 +95,13 @@ function Header({ title, username }: { title: string; username: string }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="font-serif text-3xl font-bold">{title}</h1>
-      <p className="flex items-center gap-3 text-sm text-stone-700">
+      <div className="flex items-center gap-3 text-sm text-stone-700">
         {username}
+        {children}
         <button type="button" onClick={() => logout.mutate()} className={linkButton}>
           Odhlásit
         </button>
-      </p>
+      </div>
     </header>
   )
 }

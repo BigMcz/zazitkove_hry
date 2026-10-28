@@ -111,6 +111,7 @@ erDiagram
         varchar note
         int validity_hours
         boolean multi_session
+        numeric revenue_share_pct
         timestamptz created_at
     }
     access_code {
@@ -174,7 +175,7 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy) |
+| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy); `revenue_share_pct` = podíl partnera zkopírovaný z `partner` při vytvoření dávky — měsíční přehled počítá podíl z dávky, takže změna podílu u partnera nepřepíše vyfakturované měsíce |
 | `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
 
 ### Přístupy
@@ -221,7 +222,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3.
+Výsledné schéma = V1 + V2 + V3 + V4.
 
 ### V1
 
@@ -427,6 +428,25 @@ CREATE TABLE partner_user (
 CREATE INDEX ix_partner_user_partner ON partner_user(partner_id);
 ```
 
+### V4
+
+Soubor `backend/src/main/resources/db/migration/V4__batch_revenue_share.sql`:
+
+```sql
+-- =========================================================
+-- Podíl partnera zafixovaný na dávce kódů (jako cena za kód).
+-- Změna partner.revenue_share_pct se tak projeví jen u nových dávek a nepřepíše
+-- zpětně měsíční přehledy, podle kterých se už fakturovalo.
+-- =========================================================
+ALTER TABLE access_code_batch
+    ADD COLUMN revenue_share_pct NUMERIC(5,2) CHECK (revenue_share_pct BETWEEN 0 AND 100);
+
+UPDATE access_code_batch b
+SET revenue_share_pct = p.revenue_share_pct
+FROM partner p
+WHERE p.id = b.partner_id;
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -445,3 +465,4 @@ CREATE INDEX ix_partner_user_partner ON partner_user(partner_id);
 | V1 | Počáteční schéma (obsah, prodej, hraní) |
 | V2 | Přístupové kódy: `access_code_batch.validity_hours`, `access_code_batch.multi_session`; zrušena unikátnost `game_session.access_code_id` (index `ix_session_access_code`); index `ix_access_code_activated_at` pro měsíční přehled |
 | V3 | Tabulka `partner_user` — účty správy hradů pro přehled aktivací |
+| V4 | `access_code_batch.revenue_share_pct` — podíl partnera zafixovaný na dávce (stávající dávky převzaly aktuální podíl partnera) |

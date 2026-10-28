@@ -8,6 +8,7 @@ import java.util.UUID;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.CreatePartnerUserRequest;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.PartnerDto;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.PartnerUserDto;
+import cz.mibcon.zazitky.admin.PartnerUserDtos.UpdatePartnerRequest;
 import cz.mibcon.zazitky.admin.domain.PartnerUser;
 import cz.mibcon.zazitky.common.BadRequestException;
 import cz.mibcon.zazitky.common.NotFoundException;
@@ -55,9 +56,19 @@ public class PartnerUserService {
 
     @Transactional(readOnly = true)
     public List<PartnerDto> listPartners() {
-        return partners.findAll(Sort.by("name")).stream()
-                .map(partner -> new PartnerDto(partner.getId(), partner.getName()))
-                .toList();
+        return partners.findAll(Sort.by("name")).stream().map(PartnerUserService::toDto).toList();
+    }
+
+    /** A new share applies to batches created from now on; existing batches keep theirs. */
+    public PartnerDto updatePartner(UUID partnerId, UpdatePartnerRequest request) {
+        Partner partner = partners.findById(partnerId)
+                .orElseThrow(() -> new NotFoundException("Partner nebyl nalezen."));
+        partner.setName(request.name().strip());
+        partner.setContactEmail(request.contactEmail() == null || request.contactEmail().isBlank()
+                ? null
+                : request.contactEmail().strip());
+        partner.setRevenueSharePct(request.revenueSharePct());
+        return toDto(partner);
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +118,11 @@ public class PartnerUserService {
 
     private static String normalize(String username) {
         return username == null ? "" : username.strip().toLowerCase(Locale.ROOT);
+    }
+
+    private static PartnerDto toDto(Partner partner) {
+        return new PartnerDto(partner.getId(), partner.getName(), partner.getContactEmail(),
+                partner.getRevenueSharePct());
     }
 
     private static PartnerUserDto toDto(PartnerUser user) {

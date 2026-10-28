@@ -23,10 +23,10 @@ public class GameAdminController {
     public List<AdminGameDto> games() {
         return games.findAllWithPartner().stream()
                 .map(game -> new AdminGameDto(game.getId(), game.getTitle(), game.getStatus(),
-                        game.getLocation().getPartner().getName()))
+                        game.getLocation().getPartner().getId(), game.getLocation().getPartner().getName()))
                 .toList();
     }
 
-    public record AdminGameDto(UUID id, String title, GameStatus status, String partnerName) {
+    public record AdminGameDto(UUID id, String title, GameStatus status, UUID partnerId, String partnerName) {
     }
 }

@@ -17,9 +17,18 @@ export interface AdminSession {
   partnerName: string | null
 }
 
-export interface PartnerOption {
+export interface Partner {
   id: string
   name: string
+  contactEmail: string | null
+  /** Partner's share of the revenue in %; applies to batches created from now on. */
+  revenueSharePct: number | null
+}
+
+export interface UpdatePartnerRequest {
+  name: string
+  contactEmail: string | null
+  revenueSharePct: number
 }
 
 export interface PartnerUser {
@@ -47,6 +56,7 @@ export interface AdminGame {
   id: string
   title: string
   status: GameStatus
+  partnerId: string
   partnerName: string
 }
 
@@ -60,6 +70,8 @@ export interface BatchSummary {
   multiSession: boolean
   note: string | null
   unitPriceCzk: number | null
+  /** Partner's share fixed when the batch was created. */
+  revenueSharePct: number | null
   createdAt: string
   activatedCount: number
 }
@@ -112,7 +124,14 @@ export const adminApi = {
 
   codesCsvUrl: (batchId: string) => `/api/v1/admin/batches/${encodeURIComponent(batchId)}/codes.csv`,
 
-  partners: () => apiRequest<PartnerOption[]>('/admin/partners'),
+  partners: () => apiRequest<Partner[]>('/admin/partners'),
+
+  updatePartner: (partnerId: string, request: UpdatePartnerRequest) =>
+    apiRequest<Partner>(`/admin/partners/${encodeURIComponent(partnerId)}`, {
+      method: 'PUT',
+      body: request,
+      headers: csrfHeader(),
+    }),
 
   partnerUsers: () => apiRequest<PartnerUser[]>('/admin/partner-users'),
 

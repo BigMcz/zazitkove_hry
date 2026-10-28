@@ -60,6 +60,8 @@ public class AccessCodeAdminService {
         batch.setValidityHours(request.validityHours());
         batch.setNote(request.note() == null || request.note().isBlank() ? null : request.note().strip());
         batch.setUnitPriceCzk(request.unitPriceCzk());
+        // Fixed now, so that a later change of the partner's share does not rewrite invoiced months.
+        batch.setRevenueSharePct(batch.getPartner().getRevenueSharePct());
         batches.save(batch);
 
         List<AccessCode> newCodes = new ArrayList<>(request.quantity());
@@ -73,7 +75,7 @@ public class AccessCodeAdminService {
 
         return new BatchSummary(batch.getId(), game.getTitle(), batch.getPartner().getName(), batch.getQuantity(),
                 batch.getValidityHours(), batch.isMultiSession(), batch.getNote(), batch.getUnitPriceCzk(),
-                batch.getCreatedAt(), 0);
+                batch.getRevenueSharePct(), batch.getCreatedAt(), 0);
     }
 
     /** CSV for the card printer (UTF-8 with BOM, ";" as in Czech Excel): code and a link with the code prefilled (for a QR code). */
@@ -105,14 +107,14 @@ public class AccessCodeAdminService {
                        g.title AS game_title,
                        count(*) AS activated_count,
                        sum(b.unit_price_czk) AS revenue_czk,
-                       round(sum(b.unit_price_czk) * p.revenue_share_pct / 100, 2) AS partner_share_czk
+                       round(sum(b.unit_price_czk * b.revenue_share_pct / 100), 2) AS partner_share_czk
                 FROM access_code c
                 JOIN access_code_batch b ON b.id = c.batch_id
                 JOIN partner p ON p.id = b.partner_id
                 JOIN game g ON g.id = b.game_id
                 WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session
                   AND (CAST(? AS uuid) IS NULL OR p.id = ?)
-                GROUP BY month, p.name, p.revenue_share_pct, g.title
+                GROUP BY month, p.name, g.title
                 ORDER BY month, p.name, g.title
                 """,
                 (rs, row) -> new MonthlyActivation(

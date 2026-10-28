@@ -19,6 +19,10 @@ export function formatNumber(value: number): string {
   return number.format(value)
 }
 
+export function formatPercent(value: number | null): string {
+  return value === null ? '—' : `${number.format(value)} %`
+}
+
 export function formatMoney(value: number | null): string {
   return value === null ? '—' : money.format(value)
 }
