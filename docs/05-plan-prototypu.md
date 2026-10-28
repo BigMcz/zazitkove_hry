@@ -52,7 +52,7 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 
 - [x] Produkční build: frontend se zabalí do JAR (`static/`), SPA fallback pro klientské routy
 - [x] `Dockerfile` (multi-stage) pro celou aplikaci
-- [ ] Ruční průchod demo hrou na skutečném telefonu v lokální síti
+- [x] Ruční průchod demo hrou na skutečném telefonu v lokální síti (2026-10-28, Docker image na :8080)
 - [x] Aktualizovat dokumentaci podle skutečného stavu (API, datový model, otevřené otázky)
 
 ## Definice hotového prototypu
