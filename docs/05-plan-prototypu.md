@@ -39,14 +39,14 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 
 ## M4 — Frontend
 
-- [ ] API klient + typy DTO + hooky TanStack Query; token v `localStorage` (try/catch)
-- [ ] `HomePage` — seznam her, „Pokračovat ve hře“ při existujícím tokenu
-- [ ] `GameIntroPage` — intro, název týmu, „Začít“
-- [ ] `StationPage` — postup, příběh, úkol, `AnswerInput` (TEXT / NUMBER s numerickou klávesnicí / CHOICE jako velká tlačítka), nápovědy
-- [ ] `RewardPage`, `FinalePage` (souhrn: čas, nápovědy, penalizace)
-- [ ] Obnova hry po reloadu; při 401/410 smazat token a vrátit na úvod s hláškou
-- [ ] Mobile-first vzhled: velká tlačítka, vysoký kontrast, čitelné písmo; vyzkoušet v DevTools na šířce 360 px
-- [ ] Testy komponent (`AnswerInput`, `HintList`)
+- [x] API klient + typy DTO + hooky TanStack Query; token v `localStorage` (try/catch)
+- [x] `HomePage` — seznam her, „Pokračovat ve hře“ při existujícím tokenu
+- [x] `GameIntroPage` — intro, název týmu, „Začít“
+- [x] `StationPage` — postup, příběh, úkol, `AnswerInput` (TEXT / NUMBER s numerickou klávesnicí / CHOICE jako velká tlačítka), nápovědy
+- [x] `RewardPage`, `FinalePage` (souhrn: čas, nápovědy, penalizace)
+- [x] Obnova hry po reloadu; při 401/410 smazat token a vrátit na úvod s hláškou
+- [x] Mobile-first vzhled: velká tlačítka, vysoký kontrast, čitelné písmo; vyzkoušet v DevTools na šířce 360 px
+- [x] Testy komponent (`AnswerInput`, `HintList`)
 
 ## M5 — Dotažení
 

@@ -221,6 +221,15 @@ frontend/src/
 
 Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduje, které stanoviště je odemčené.
 
+### Chování klienta (M4)
+
+- Token relace je v `localStorage` pod klíčem `zazitky.sessionToken`. Když úložiště není dostupné (anonymní okno), hra funguje do obnovení stránky.
+- Stránky `/play*` načítají `GET /sessions/current`. Bez tokenu nebo při `401`/`410` klient token smaže a vrátí hráče na úvod se zprávou ze serveru.
+- Po správné odpovědi klient přejde na `/play/reward` s textem odměny; stav relace se obnoví až tam (jinak by stránka stanoviště přesměrovala dřív, než se odměna zobrazí). Po reloadu odměnové stránky se zobrazí odměna posledního vyřešeného stanoviště.
+- `NUMBER` používá textové pole s `inputMode="numeric"` (numerická klávesnice, ale odpověď typu „56 schodů“ projde). `CHOICE` jsou velká tlačítka, klepnutí rovnou odešle odpověď.
+- Nápověda stojí čas, proto se odkrývá až po potvrzení, které ukazuje výši penalizace (`nextHintPenaltySeconds`).
+- Zahájení nové hry při existujícím tokenu nejdřív zavolá `abandon` na starou relaci.
+
 ### Vývoj
 
 Vite dev server na `:5173` s proxy `/api → http://localhost:8080`. V produkci se `npm run build` výstup kopíruje do `backend/src/main/resources/static` (Maven `frontend-maven-plugin` nebo krok v CI — rozhodnout v M5) a SPA fallback (`/play/**` → `index.html`) zajistí jednoduchý controller nebo `WebMvcConfigurer`.

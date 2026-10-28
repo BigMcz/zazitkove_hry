@@ -1,0 +1,96 @@
+import type {
+  AnswerResult,
+  GameDetail,
+  GameSummary,
+  HintsResult,
+  ProblemDetail,
+  SessionState,
+} from './types.ts'
+
+const BASE_URL = '/api/v1'
+const TOKEN_HEADER = 'X-Session-Token'
+
+/** Failed API call. `status` 0 means the server could not be reached at all. */
+export class ApiError extends Error {
+  readonly status: number
+  readonly type: string | undefined
+
+  constructor(status: number, message: string, type?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.type = type
+  }
+}
+
+/** The session no longer exists for this device (unknown token or expired game). */
+export function isSessionGone(error: unknown): error is ApiError {
+  return error instanceof ApiError && (error.status === 401 || error.status === 410)
+}
+
+interface RequestOptions {
+  method?: 'GET' | 'POST'
+  body?: unknown
+  token?: string | null
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+  if (options.token) {
+    headers[TOKEN_HEADER] = options.token
+  }
+
+  let response: Response
+  try {
+    response = await fetch(BASE_URL + path, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    })
+  } catch {
+    throw new ApiError(0, 'Nepodařilo se spojit se serverem. Zkontroluj připojení k internetu.')
+  }
+
+  if (!response.ok) {
+    let problem: ProblemDetail = {}
+    try {
+      problem = (await response.json()) as ProblemDetail
+    } catch {
+      // not a JSON body (e.g. a proxy error page)
+    }
+    throw new ApiError(
+      response.status,
+      problem.detail ?? 'Něco se pokazilo. Zkus to prosím znovu.',
+      problem.type,
+    )
+  }
+
+  if (response.status === 204) {
+    return undefined as T
+  }
+  return (await response.json()) as T
+}
+
+const station = (stationId: string) => `/sessions/current/stations/${encodeURIComponent(stationId)}`
+
+export const api = {
+  listGames: () => apiRequest<GameSummary[]>('/games'),
+
+  getGame: (gameId: string) => apiRequest<GameDetail>(`/games/${encodeURIComponent(gameId)}`),
+
+  startSession: (gameId: string, teamName: string | null) =>
+    apiRequest<SessionState>('/sessions', { method: 'POST', body: { gameId, teamName } }),
+
+  getSession: (token: string) => apiRequest<SessionState>('/sessions/current', { token }),
+
+  submitAnswer: (token: string, stationId: string, answer: string) =>
+    apiRequest<AnswerResult>(`${station(stationId)}/answers`, { method: 'POST', token, body: { answer } }),
+
+  revealHint: (token: string, stationId: string) =>
+    apiRequest<HintsResult>(`${station(stationId)}/hints`, { method: 'POST', token }),
+
+  abandon: (token: string) => apiRequest<void>('/sessions/current/abandon', { method: 'POST', token }),
+}
