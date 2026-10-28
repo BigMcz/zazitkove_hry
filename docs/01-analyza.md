@@ -127,3 +127,5 @@ flowchart TD
 | Q5 | Jazykové mutace — samostatné hry na jazyk, nebo překladové tabulky | otevřeno |
 | Q6 | Podíl na výnosech a vyúčtování s partnery | otevřeno |
 | Q7 | Jak ověřovat, že je hráč skutečně na místě (GPS, QR, nic) | otevřeno |
+| Q8 | Kdy se plní `accepted_answer.normalized_value`? | rozhodnuto (M2): v seedu ručně + test shody s `TextNormalizer`; budoucí admin dopočítá při zápisu |
+| Q9 | Opakované spuštění seedu (`R__demo_game.sql`) smaže i rozehrané relace demo hry | akceptováno pro dev profil |

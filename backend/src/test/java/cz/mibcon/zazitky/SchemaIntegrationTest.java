@@ -35,13 +35,10 @@ import jakarta.persistence.EntityManager;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class SchemaIntegrationTest {
 
@@ -77,7 +74,9 @@ class SchemaIntegrationTest {
 
     @Test
     void schemaMigrationIsApplied() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(flyway.info().applied())
+                .extracting(migration -> migration.getVersion() == null ? null : migration.getVersion().getVersion())
+                .contains("1");
 
         List<String> tables = jdbc.queryForList(
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'", String.class);

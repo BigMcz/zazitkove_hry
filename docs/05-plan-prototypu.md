@@ -20,11 +20,11 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 
 ## M2 — Obsah demo hry a čtení her
 
-- [ ] `TextNormalizer` + unit testy (diakritika, velikost písmen, mezery, interpunkce, NUMBER)
-- [ ] `R__demo_game.sql` — demo hra podle `docs/04-prototypova-hra.md` (idempotentní, pevná UUID)
-- [ ] Test: každé `accepted_answer.normalized_value` v DB = `TextNormalizer.normalize(value)`
-- [ ] `GET /api/v1/games`, `GET /api/v1/games/{id}` + DTO + testy
-- [ ] `ProblemDetail` handler (404, 400)
+- [x] `TextNormalizer` + unit testy (diakritika, velikost písmen, mezery, interpunkce, NUMBER)
+- [x] `R__demo_game.sql` — demo hra podle `docs/04-prototypova-hra.md` (idempotentní, pevná UUID)
+- [x] Test: každé `accepted_answer.normalized_value` v DB = `TextNormalizer.normalize(value)`
+- [x] `GET /api/v1/games`, `GET /api/v1/games/{id}` + DTO + testy
+- [x] `ProblemDetail` handler (404, 400)
 
 ## M3 — Herní logika a API relací
 

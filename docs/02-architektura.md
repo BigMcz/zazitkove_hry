@@ -78,7 +78,7 @@ trim → toLowerCase(Locale.ROOT) → Normalizer.Form.NFD + odstranit \p{M} (dia
 NUMBER: navíc odstranit vše kromě číslic
 ```
 
-Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value` už v seedu (nebo se dopočítá při startu — rozhodnout v M2; preferovaně generovaná při zápisu přes service, aby budoucí admin nemusel normalizovat ručně).
+Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozhodnuto v M2:** v seedu se vyplňuje ručně a integrační test `DemoGameSeedTest` hlídá, že odpovídá výstupu `TextNormalizer`. Budoucí administrace ji bude dopočítávat při zápisu přes service. Pro typ `NUMBER` se používá `normalizeNumber`, pro `TEXT` a `CHOICE` `normalize`.
 
 ### Chyby
 
@@ -91,6 +91,8 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value` už v s
 | Odpověď na neaktivní stanoviště, hra není rozehraná | 409 | `invalid-state` |
 | Relace vypršela | 410 | `session-expired` |
 | Chybí/nesedí token relace | 401 | `invalid-token` |
+
+`type` je relativní URI `/problems/<suffix>` (např. `/problems/not-found`), `title` a `detail` jsou česky. Validační chyby těla požadavku obsahují navíc pole `errors: [{ "field", "message" }]`. Neznámá hra nebo nepublikovaná hra vrací 404.
 
 ### Konfigurace a profily
 
@@ -109,6 +111,11 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
 |---|---|---|
 | GET | `/games` | Seznam publikovaných her (demo výběr) |
 | GET | `/games/{gameId}` | Detail hry pro úvodní obrazovku (bez stanovišť) |
+
+```json
+// GET /games
+[ { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "Demo hra", "estimatedMinutes": 45 } ]
+```
 
 ```json
 // GET /games/{gameId}
