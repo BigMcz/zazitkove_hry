@@ -17,18 +17,32 @@ export interface AdminSession {
   partnerName: string | null
 }
 
+/** Partner's share of the revenue valid from a day (Europe/Prague) until the next entry. */
+export interface PartnerShare {
+  id: string
+  /** YYYY-MM-DD */
+  validFrom: string
+  sharePct: number
+}
+
 export interface Partner {
   id: string
   name: string
   contactEmail: string | null
-  /** Partner's share of the revenue in %; applies to batches created from now on. */
-  revenueSharePct: number | null
+  /** Share valid today; null when none is set yet. */
+  currentSharePct: number | null
+  /** All shares by validFrom, including planned ones. */
+  shares: PartnerShare[]
 }
 
 export interface UpdatePartnerRequest {
   name: string
   contactEmail: string | null
-  revenueSharePct: number
+}
+
+export interface SetShareRequest {
+  validFrom: string
+  sharePct: number
 }
 
 export interface PartnerUser {
@@ -70,8 +84,6 @@ export interface BatchSummary {
   multiSession: boolean
   note: string | null
   unitPriceCzk: number | null
-  /** Partner's share fixed when the batch was created. */
-  revenueSharePct: number | null
   createdAt: string
   activatedCount: number
 }
@@ -133,6 +145,20 @@ export const adminApi = {
       headers: csrfHeader(),
     }),
 
+  /** A share for an existing date replaces it. */
+  setPartnerShare: (partnerId: string, request: SetShareRequest) =>
+    apiRequest<Partner>(`/admin/partners/${encodeURIComponent(partnerId)}/shares`, {
+      method: 'POST',
+      body: request,
+      headers: csrfHeader(),
+    }),
+
+  deletePartnerShare: (partnerId: string, shareId: string) =>
+    apiRequest<Partner>(
+      `/admin/partners/${encodeURIComponent(partnerId)}/shares/${encodeURIComponent(shareId)}`,
+      { method: 'DELETE', headers: csrfHeader() },
+    ),
+
   partnerUsers: () => apiRequest<PartnerUser[]>('/admin/partner-users'),
 
   createPartnerUser: (request: CreatePartnerUserRequest) =>
@@ -156,6 +182,8 @@ export const adminApi = {
 /** API for castle staff; the server limits everything to the partner of the logged-in account. */
 export const partnerApi = {
   batches: () => apiRequest<BatchSummary[]>('/partner/batches'),
+
+  shares: () => apiRequest<PartnerShare[]>('/partner/shares'),
 
   monthlyActivations: (year: number) =>
     apiRequest<MonthlyActivation[]>(`/partner/reports/monthly-activations?year=${year}`),

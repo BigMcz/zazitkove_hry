@@ -21,6 +21,7 @@ erDiagram
     station ||--o{ station_choice : "nabízí"
     partner ||--o{ access_code_batch : "odebírá"
     partner ||--o{ partner_user : "přihlašuje"
+    partner ||--o{ partner_share : "podíl od data"
     game ||--o{ access_code_batch : "pro hru"
     access_code_batch ||--o{ access_code : "obsahuje"
     game ||--o{ game_session : "hraná v"
@@ -44,7 +45,13 @@ erDiagram
         uuid id PK
         varchar name
         varchar contact_email
-        numeric revenue_share_pct
+        timestamptz created_at
+    }
+    partner_share {
+        uuid id PK
+        uuid partner_id FK
+        date valid_from
+        numeric share_pct
         timestamptz created_at
     }
     location {
@@ -111,7 +118,6 @@ erDiagram
         varchar note
         int validity_hours
         boolean multi_session
-        numeric revenue_share_pct
         timestamptz created_at
     }
     access_code {
@@ -163,7 +169,8 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `partner` | Správa hradu/zámku — smluvní partner | `revenue_share_pct` = podíl partnera v % (výhled) |
+| `partner` | Správa hradu/zámku — smluvní partner | Podíl na tržbě je v `partner_share` (od V5) |
+| `partner_share` | Podíl partnera z tržby platný od data | `valid_from` (den podle Europe/Prague) — platí do dalšího záznamu; unikátní `(partner_id, valid_from)`; aktivovaný kód se vyúčtuje podle záznamu s nejvyšším `valid_from` ≤ den aktivace; budoucí datum = naplánovaná změna |
 | `location` | Konkrétní místo (hrad Loket + město) | GPS pro mapu a budoucí ověřování polohy |
 | `game` | Jedna hra (příběh) | `slug` pro hezké URL; `status`: `DRAFT`, `PUBLISHED`, `ARCHIVED`; `language` zatím `cs` |
 | `station` | Stanoviště hry | Unikátní `(game_id, order_no)`; `task_type`: `TEXT`, `NUMBER`, `CHOICE`; GPS a obrázek volitelné |
@@ -175,7 +182,7 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy); `revenue_share_pct` = podíl partnera zkopírovaný z `partner` při vytvoření dávky — měsíční přehled počítá podíl z dávky, takže změna podílu u partnera nepřepíše vyfakturované měsíce |
+| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy) |
 | `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
 
 ### Přístupy
@@ -222,7 +229,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3 + V4.
+Výsledné schéma = V1 + V2 + V3 + V4 + V5 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
 
 ### V1
 
@@ -447,6 +454,36 @@ FROM partner p
 WHERE p.id = b.partner_id;
 ```
 
+### V5
+
+Soubor `backend/src/main/resources/db/migration/V5__partner_share_history.sql`:
+
+```sql
+-- =========================================================
+-- Podíl partnera s platností od data (historie podílů).
+-- Aktivovaný kód se vyúčtuje podle podílu platného v den aktivace (Europe/Prague):
+-- řádek s nejvyšším valid_from <= datum aktivace. Nahrazuje partner.revenue_share_pct
+-- a podíl zafixovaný na dávce (V4).
+-- =========================================================
+CREATE TABLE partner_share (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_id  UUID         NOT NULL REFERENCES partner(id) ON DELETE CASCADE,
+    valid_from  DATE         NOT NULL,
+    share_pct   NUMERIC(5,2) NOT NULL CHECK (share_pct BETWEEN 0 AND 100),
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uq_partner_share_from UNIQUE (partner_id, valid_from)
+);
+
+-- Dosavadní podíl platí od založení partnera
+INSERT INTO partner_share (partner_id, valid_from, share_pct)
+SELECT id, (created_at AT TIME ZONE 'Europe/Prague')::date, revenue_share_pct
+FROM partner
+WHERE revenue_share_pct IS NOT NULL;
+
+ALTER TABLE access_code_batch DROP COLUMN revenue_share_pct;
+ALTER TABLE partner DROP COLUMN revenue_share_pct;
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -466,3 +503,4 @@ WHERE p.id = b.partner_id;
 | V2 | Přístupové kódy: `access_code_batch.validity_hours`, `access_code_batch.multi_session`; zrušena unikátnost `game_session.access_code_id` (index `ix_session_access_code`); index `ix_access_code_activated_at` pro měsíční přehled |
 | V3 | Tabulka `partner_user` — účty správy hradů pro přehled aktivací |
 | V4 | `access_code_batch.revenue_share_pct` — podíl partnera zafixovaný na dávce (stávající dávky převzaly aktuální podíl partnera) |
+| V5 | Podíl s platností od data: tabulka `partner_share` (dosavadní podíly převedeny jako platné od založení partnera); zrušeny `partner.revenue_share_pct` a `access_code_batch.revenue_share_pct` |

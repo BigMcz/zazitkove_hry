@@ -11,6 +11,7 @@
 --   00000000-0000-0000-0004-0000000000SN  možnost výběru N stanoviště S
 --   00000000-0000-0000-0005-000000000001  vývojová dávka kódů, 00000000-0000-0000-0006-000000000001 její kód
 --   00000000-0000-0000-0007-000000000001  vývojový účet partnera (smaže se kaskádně s partnerem)
+--   00000000-0000-0000-0008-000000000001  podíl partnera (smaže se kaskádně s partnerem)
 --
 -- accepted_answer.normalized_value se vyplňuje ručně podle TextNormalizer (TEXT/CHOICE: normalize,
 -- NUMBER: normalizeNumber); shodu hlídá test DemoGameSeedTest.
@@ -25,8 +26,12 @@ DELETE FROM game WHERE id = '00000000-0000-0000-0000-000000000003';
 DELETE FROM location WHERE id = '00000000-0000-0000-0000-000000000002';
 DELETE FROM partner WHERE id = '00000000-0000-0000-0000-000000000001';
 
-INSERT INTO partner (id, name, revenue_share_pct)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner', 50.00);
+INSERT INTO partner (id, name)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner');
+
+-- Podíl Demo partnera 50 % od začátku roku 2026 (historie podílů, viz partner_share)
+INSERT INTO partner_share (id, partner_id, valid_from, share_pct)
+VALUES ('00000000-0000-0000-0008-000000000001', '00000000-0000-0000-0000-000000000001', DATE '2026-01-01', 50.00);
 
 INSERT INTO location (id, partner_id, name, city)
 VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Demo hrad', 'Loket');

@@ -12,7 +12,7 @@
 | `estimated_minutes` | 20 |
 | `session_validity_hours` | 24 |
 | `status` | `PUBLISHED` |
-| Partner | Demo partner (`revenue_share_pct` 50.00) |
+| Partner | Demo partner (podíl 50 % od 1. 1. 2026, `partner_share`) |
 | Lokalita | Demo hrad, město Loket |
 
 ### Úvodní příběh (`intro_text`)

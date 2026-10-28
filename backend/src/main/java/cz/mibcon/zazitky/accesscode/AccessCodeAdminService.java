@@ -60,8 +60,6 @@ public class AccessCodeAdminService {
         batch.setValidityHours(request.validityHours());
         batch.setNote(request.note() == null || request.note().isBlank() ? null : request.note().strip());
         batch.setUnitPriceCzk(request.unitPriceCzk());
-        // Fixed now, so that a later change of the partner's share does not rewrite invoiced months.
-        batch.setRevenueSharePct(batch.getPartner().getRevenueSharePct());
         batches.save(batch);
 
         List<AccessCode> newCodes = new ArrayList<>(request.quantity());
@@ -75,7 +73,7 @@ public class AccessCodeAdminService {
 
         return new BatchSummary(batch.getId(), game.getTitle(), batch.getPartner().getName(), batch.getQuantity(),
                 batch.getValidityHours(), batch.isMultiSession(), batch.getNote(), batch.getUnitPriceCzk(),
-                batch.getRevenueSharePct(), batch.getCreatedAt(), 0);
+                batch.getCreatedAt(), 0);
     }
 
     /** CSV for the card printer (UTF-8 with BOM, ";" as in Czech Excel): code and a link with the code prefilled (for a QR code). */
@@ -94,6 +92,7 @@ public class AccessCodeAdminService {
 
     /**
      * Activated codes per month, partner and game; development (multi-session) batches are left out.
+     * The partner's share of each code is the one valid on the day of its activation (partner_share).
      *
      * @param partnerId only this partner; null = all
      */
@@ -107,11 +106,19 @@ public class AccessCodeAdminService {
                        g.title AS game_title,
                        count(*) AS activated_count,
                        sum(b.unit_price_czk) AS revenue_czk,
-                       round(sum(b.unit_price_czk * b.revenue_share_pct / 100), 2) AS partner_share_czk
+                       round(sum(b.unit_price_czk * s.share_pct / 100), 2) AS partner_share_czk
                 FROM access_code c
                 JOIN access_code_batch b ON b.id = c.batch_id
                 JOIN partner p ON p.id = b.partner_id
                 JOIN game g ON g.id = b.game_id
+                LEFT JOIN LATERAL (
+                    SELECT ps.share_pct
+                    FROM partner_share ps
+                    WHERE ps.partner_id = b.partner_id
+                      AND ps.valid_from <= (c.activated_at AT TIME ZONE 'Europe/Prague')::date
+                    ORDER BY ps.valid_from DESC
+                    LIMIT 1
+                ) s ON TRUE
                 WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session
                   AND (CAST(? AS uuid) IS NULL OR p.id = ?)
                 GROUP BY month, p.name, g.title

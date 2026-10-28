@@ -13,14 +13,14 @@ public interface AccessCodeBatchRepository extends JpaRepository<AccessCodeBatch
     @Query("""
             select new cz.mibcon.zazitky.accesscode.AdminBatchDtos$BatchSummary(
                 b.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.note, b.unitPriceCzk,
-                b.revenueSharePct, b.createdAt, count(c.activatedAt))
+                b.createdAt, count(c.activatedAt))
             from AccessCodeBatch b
             join b.game g
             join b.partner p
             left join AccessCode c on c.batch = b
             where :partnerId is null or p.id = :partnerId
             group by b.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.note, b.unitPriceCzk,
-                b.revenueSharePct, b.createdAt
+                b.createdAt
             order by b.createdAt desc
             """)
     List<BatchSummary> findSummaries(UUID partnerId);

@@ -28,7 +28,7 @@ export function isSessionGone(error: unknown): error is ApiError {
 }
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   /** JSON body, or URLSearchParams sent as a form (admin login). */
   body?: unknown
   token?: string | null

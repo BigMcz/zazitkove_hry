@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createQueryClient } from '../queryClient.ts'
 import AdminPage from './AdminPage.tsx'
+import { firstOfNextMonth, todayInPrague } from './format.ts'
 import type { AdminSession, BatchSummary, MonthlyActivation } from './adminApi.ts'
 
 const batch: BatchSummary = {
@@ -16,7 +17,6 @@ const batch: BatchSummary = {
   multiSession: false,
   note: 'Sezóna 2027 — tisk 1',
   unitPriceCzk: 150,
-  revenueSharePct: 50,
   createdAt: '2026-10-28T10:00:00Z',
   activatedCount: 12,
 }
@@ -38,7 +38,11 @@ const adminSession: AdminSession = { username: 'admin', role: 'ADMIN', partnerNa
 const partnerSession: AdminSession = { username: 'hrad', role: 'PARTNER', partnerName: 'Demo partner' }
 const anonymous: AdminSession = { username: null, role: null, partnerName: null }
 
-const demoPartner = { id: 'p1', name: 'Demo partner', contactEmail: null, revenueSharePct: 50 }
+const demoShares = [
+  { id: 's1', validFrom: '2026-01-01', sharePct: 25 },
+  { id: 's2', validFrom: '2099-01-01', sharePct: 30 },
+]
+const demoPartner = { id: 'p1', name: 'Demo partner', contactEmail: null, currentSharePct: 25, shares: demoShares }
 
 const partnerUser = {
   id: 'u1',
@@ -69,6 +73,14 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
     if (path === '/api/v1/admin/partners/p1' && method === 'PUT') {
       return json({ ...demoPartner, ...JSON.parse(String(init?.body)) })
     }
+    if (path === '/api/v1/admin/partners/p1/shares' && method === 'POST') {
+      const share = JSON.parse(String(init?.body))
+      return json({ ...demoPartner, shares: [...demoShares, { id: 's3', ...share }] })
+    }
+    if (path === '/api/v1/admin/partners/p1/shares/s2' && method === 'DELETE') {
+      return json({ ...demoPartner, shares: [demoShares[0]] })
+    }
+    if (path === '/api/v1/partner/shares') return json(demoShares)
     if (path === '/api/v1/admin/partner-users' && method === 'GET') return json([partnerUser])
     if (path === '/api/v1/admin/partner-users' && method === 'POST') {
       return json({ ...partnerUser, id: 'u2', username: 'novy' }, 201)
@@ -149,27 +161,71 @@ describe('AdminPage', () => {
     expect(screen.queryByRole('heading', { name: 'Nová dávka kódů' })).not.toBeInTheDocument()
   })
 
-  it('changes the share of a castle', async () => {
+  it('shows the current and planned share of a castle', async () => {
+    mockAdminApi(true)
+    renderAdmin('/admin?sekce=hrady')
+
+    const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
+    expect(within(row).getByText('25 %')).toBeInTheDocument()
+    expect(within(row).getByText('od 1. 1. 2099: 30 %')).toBeInTheDocument()
+  })
+
+  it('adds a share valid from the first of next month by default', async () => {
     const fetchMock = mockAdminApi(true)
     document.cookie = 'XSRF-TOKEN=csrf-555'
     renderAdmin('/admin?sekce=hrady')
 
     const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
-    expect(within(row).getByText('50 %')).toBeInTheDocument()
+    await userEvent.click(within(row).getByRole('button', { name: 'Podíly' }))
+    expect(screen.getByText('platí dnes')).toBeInTheDocument()
+    expect(screen.getByText('naplánováno')).toBeInTheDocument()
+    expect(screen.getByLabelText('Platí od')).toHaveValue(firstOfNextMonth(todayInPrague()))
+
+    await userEvent.type(screen.getByLabelText('Podíl (%)'), '30')
+    await userEvent.click(screen.getByRole('button', { name: 'Přidat podíl' }))
+
+    const add = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/v1/admin/partners/p1/shares' && init?.method === 'POST')
+    expect(JSON.parse(String(add?.[1]?.body))).toEqual({ validFrom: firstOfNextMonth(todayInPrague()), sharePct: 30 })
+    expect(add?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-555' })
+  })
+
+  it('warns when a share starts in the past and offers to replace a share on the same day', async () => {
+    mockAdminApi(true)
+    renderAdmin('/admin?sekce=hrady')
+
+    const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Podíly' }))
+    const date = screen.getByLabelText('Platí od')
+    await userEvent.clear(date)
+    await userEvent.type(date, '2026-01-01')
+
+    expect(screen.getByRole('note')).toHaveTextContent('i měsíců, které už mohly být vyfakturované')
+    expect(screen.getByRole('button', { name: 'Nahradit podíl' })).toBeInTheDocument()
+  })
+
+  it('deletes a planned share', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin?sekce=hrady')
+
+    const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', { name: 'Podíly' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Smazat podíl od 1. 1. 2099' }))
+
+    expect(fetchMock.mock.calls.some(([url, init]) =>
+      String(url) === '/api/v1/admin/partners/p1/shares/s2' && init?.method === 'DELETE')).toBe(true)
+  })
+
+  it('edits the name and contact of a castle', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin?sekce=hrady')
+
+    const row = (await screen.findByText('Demo partner', { selector: 'td' })).closest('tr') as HTMLElement
     await userEvent.click(within(row).getByRole('button', { name: 'Upravit' }))
-    const share = screen.getByLabelText('Podíl hradu v procentech')
-    await userEvent.clear(share)
-    await userEvent.type(share, '35')
     await userEvent.type(screen.getByLabelText('Kontaktní e-mail'), 'pokladna@hrad.cz')
     await userEvent.click(screen.getByRole('button', { name: 'Uložit' }))
 
     const update = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/v1/admin/partners/p1' && init?.method === 'PUT')
-    expect(JSON.parse(String(update?.[1]?.body))).toEqual({
-      name: 'Demo partner',
-      contactEmail: 'pokladna@hrad.cz',
-      revenueSharePct: 35,
-    })
-    expect(update?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-555' })
+    expect(JSON.parse(String(update?.[1]?.body))).toEqual({ name: 'Demo partner', contactEmail: 'pokladna@hrad.cz' })
   })
 
   it('lists batches with a CSV download for printing', async () => {
@@ -181,7 +237,6 @@ describe('AdminPage', () => {
     const row = csv.closest('tr') as HTMLElement
     expect(within(row).getByText('Sezóna 2027 — tisk 1')).toBeInTheDocument()
     expect(within(row).getByText('5 h')).toBeInTheDocument()
-    expect(within(row).getByText('50 %')).toBeInTheDocument()
   })
 
   it('creates a batch for the selected game', async () => {
@@ -190,7 +245,6 @@ describe('AdminPage', () => {
     renderAdmin()
 
     await screen.findByRole('option', { name: /Tajemství katova klíče/ })
-    expect(await screen.findByText(/podíl hradu Demo partner: 50 %/)).toBeInTheDocument()
     const quantity = screen.getByLabelText('Počet kódů')
     await userEvent.clear(quantity)
     await userEvent.type(quantity, '250')
@@ -249,8 +303,9 @@ describe('AdminPage', () => {
     expect(await screen.findByRole('heading', { name: 'Demo partner' })).toBeInTheDocument()
     expect(await screen.findByText('říjen 2026')).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Vytištěné kódy' })).toBeInTheDocument()
-    // report and printed codes both show the castle's own share
-    expect(screen.getAllByRole('columnheader', { name: 'Váš podíl' })).toHaveLength(2)
+    expect(screen.getByRole('columnheader', { name: 'Váš podíl' })).toBeInTheDocument()
+    expect(await screen.findByText(/Váš podíl z tržby:/)).toHaveTextContent('25 % (od 1. 1. 2026)')
+    expect(screen.getByText(/od 1\. 1\. 2099:/)).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Partner' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'CSV' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Nová dávka kódů' })).not.toBeInTheDocument()

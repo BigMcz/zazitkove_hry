@@ -6,6 +6,7 @@ import cz.mibcon.zazitky.accesscode.AccessCodeAdminService;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.ChangeOwnPasswordRequest;
+import cz.mibcon.zazitky.admin.PartnerUserDtos.ShareDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -47,6 +48,12 @@ public class PartnerPortalController {
         return accessCodes.listBatches(partner.partnerId()).stream()
                 .filter(batch -> !batch.multiSession())
                 .toList();
+    }
+
+    /** Own share history including planned changes. */
+    @GetMapping("/shares")
+    public List<ShareDto> shares(@AuthenticationPrincipal PartnerUserDetails partner) {
+        return partnerUsers.listShares(partner.partnerId());
     }
 
     @PostMapping("/password")

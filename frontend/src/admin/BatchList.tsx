@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, partnerApi } from './adminApi.ts'
-import { formatDateTime, formatMoney, formatNumber, formatPercent } from './format.ts'
+import { formatDateTime, formatMoney, formatNumber } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, useLoggedOutOn401, type Scope } from './shared.ts'
 
@@ -31,7 +31,6 @@ export default function BatchList({ scope }: { scope: Scope }) {
                 <th className="py-2 pr-3">Platnost</th>
                 <th className="py-2 pr-3">Poznámka</th>
                 <th className="py-2 pr-3 text-right">Cena</th>
-                <th className="py-2 pr-3 text-right">{isAdmin ? 'Podíl hradu' : 'Váš podíl'}</th>
                 {isAdmin && <th className="py-2">Tisk</th>}
               </tr>
             </thead>
@@ -51,7 +50,6 @@ export default function BatchList({ scope }: { scope: Scope }) {
                   </td>
                   <td className="py-2 pr-3">{batch.note ?? '—'}</td>
                   <td className="py-2 pr-3 text-right whitespace-nowrap">{formatMoney(batch.unitPriceCzk)}</td>
-                  <td className="py-2 pr-3 text-right whitespace-nowrap">{formatPercent(batch.revenueSharePct)}</td>
                   {isAdmin && (
                     <td className="py-2">
                       <a

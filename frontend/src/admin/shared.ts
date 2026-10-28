@@ -8,6 +8,7 @@ export const adminKeys = {
   batches: (scope: Scope) => ['admin', 'batches', scope] as const,
   report: (scope: Scope, year: number) => ['admin', 'report', scope, year] as const,
   partners: ['admin', 'partners'] as const,
+  ownShares: ['admin', 'own-shares'] as const,
   partnerUsers: ['admin', 'partner-users'] as const,
 }
 

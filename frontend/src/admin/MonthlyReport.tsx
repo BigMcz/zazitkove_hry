@@ -2,11 +2,37 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, partnerApi } from './adminApi.ts'
-import { formatMoney, formatMonth, formatNumber } from './format.ts'
+import { formatDate, formatMoney, formatMonth, formatNumber, formatPercent, todayInPrague } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, linkButton, thisYear, useLoggedOutOn401, type Scope } from './shared.ts'
 
 /** Activated (= sold) codes per month — the basis for invoicing between the operator and the castle. */
+/** For the castle: its current share and a planned change, if any. */
+function OwnShares() {
+  const shares = useQuery({ queryKey: adminKeys.ownShares, queryFn: partnerApi.shares })
+  if (!shares.data || shares.data.length === 0) {
+    return null
+  }
+  const today = todayInPrague()
+  const current = shares.data.filter((share) => share.validFrom <= today).at(-1)
+  const planned = shares.data.filter((share) => share.validFrom > today)
+  return (
+    <p className="text-stone-800">
+      {current && (
+        <>
+          Váš podíl z tržby: <strong>{formatPercent(current.sharePct)}</strong> (od {formatDate(current.validFrom)})
+        </>
+      )}
+      {planned.map((share) => (
+        <span key={share.id}>
+          {' '}
+          · od {formatDate(share.validFrom)}: <strong>{formatPercent(share.sharePct)}</strong>
+        </span>
+      ))}
+    </p>
+  )
+}
+
 export default function MonthlyReport({ scope }: { scope: Scope }) {
   const isAdmin = scope === 'admin'
   const [year, setYear] = useState(thisYear)
@@ -29,7 +55,7 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
     <Section title="Aktivované kódy po měsících">
       <p className="text-stone-700">
         {isAdmin
-          ? 'Podklad pro fakturaci: aktivace = prodaný kód. Měsíce podle českého času, vývojové kódy se nepočítají.'
+          ? 'Podklad pro fakturaci: aktivace = prodaný kód. Podíl hradu podle podílu platného v den aktivace. Měsíce podle českého času, vývojové kódy se nepočítají.'
           : 'Kód se počítá jako prodaný ve chvíli, kdy ho hráč poprvé zadá. Měsíce podle českého času.'}
       </p>
       <label className="flex items-center gap-3 font-semibold">
@@ -46,6 +72,7 @@ export default function MonthlyReport({ scope }: { scope: Scope }) {
           ))}
         </select>
       </label>
+      {!isAdmin && <OwnShares />}
       {report.isPending && <p role="status">Načítám…</p>}
       {report.isError && <ErrorBanner message={report.error.message} onRetry={() => void report.refetch()} />}
       {report.data?.length === 0 && <p>V roce {year} zatím nebyl aktivován žádný kód.</p>}

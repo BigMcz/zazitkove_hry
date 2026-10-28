@@ -92,7 +92,6 @@ class SchemaIntegrationTest {
 
         Partner partner = new Partner();
         partner.setName("Test partner");
-        partner.setRevenueSharePct(new BigDecimal("50.00"));
         partners.save(partner);
 
         Location location = new Location();

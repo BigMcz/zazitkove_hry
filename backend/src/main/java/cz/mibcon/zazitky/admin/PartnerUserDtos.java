@@ -2,6 +2,8 @@ package cz.mibcon.zazitky.admin;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.DecimalMax;
@@ -20,14 +22,26 @@ public final class PartnerUserDtos {
     private PartnerUserDtos() {
     }
 
-    /** @param revenueSharePct partner's share in %; applies to batches created from now on */
-    public record PartnerDto(UUID id, String name, String contactEmail, BigDecimal revenueSharePct) {
+    /**
+     * @param currentSharePct share valid today; null when none is set yet
+     * @param shares          all shares by {@code validFrom}, including planned ones
+     */
+    public record PartnerDto(UUID id, String name, String contactEmail, BigDecimal currentSharePct,
+            List<ShareDto> shares) {
+    }
+
+    public record ShareDto(UUID id, LocalDate validFrom, BigDecimal sharePct) {
     }
 
     public record UpdatePartnerRequest(
             @NotBlank @Size(max = 200) String name,
-            @Email @Size(max = 200) String contactEmail,
-            @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal revenueSharePct) {
+            @Email @Size(max = 200) String contactEmail) {
+    }
+
+    /** A share for the same date replaces the existing one. */
+    public record SetShareRequest(
+            @NotNull LocalDate validFrom,
+            @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal sharePct) {
     }
 
     public record PartnerUserDto(

@@ -1,6 +1,5 @@
 package cz.mibcon.zazitky.game.domain;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,9 +25,6 @@ public class Partner {
     @Column(length = 200)
     private String contactEmail;
 
-    @Column(precision = 5, scale = 2)
-    private BigDecimal revenueSharePct;
-
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -51,14 +47,6 @@ public class Partner {
 
     public void setContactEmail(String contactEmail) {
         this.contactEmail = contactEmail;
-    }
-
-    public BigDecimal getRevenueSharePct() {
-        return revenueSharePct;
-    }
-
-    public void setRevenueSharePct(BigDecimal revenueSharePct) {
-        this.revenueSharePct = revenueSharePct;
     }
 
     public Instant getCreatedAt() {

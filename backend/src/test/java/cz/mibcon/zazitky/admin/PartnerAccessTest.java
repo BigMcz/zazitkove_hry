@@ -159,7 +159,7 @@ class PartnerAccessTest {
         UUID location = UUID.randomUUID();
         UUID game = UUID.randomUUID();
         UUID batch = UUID.randomUUID();
-        jdbc.update("INSERT INTO partner (id, name, revenue_share_pct) VALUES (?, ?, 40)", partner, name);
+        jdbc.update("INSERT INTO partner (id, name) VALUES (?, ?)", partner, name);
         jdbc.update("INSERT INTO location (id, partner_id, name) VALUES (?, ?, 'Hrad')", location, partner);
         jdbc.update("INSERT INTO game (id, location_id, slug, title, intro_text, outro_text, status)"
                 + " VALUES (?, ?, ?, 'Jiná hra', 'Intro', 'Outro', 'PUBLISHED')", game, location, "jina-hra-" + suffix);

@@ -1,6 +1,5 @@
 package cz.mibcon.zazitky.accesscode.domain;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -47,10 +46,6 @@ public class AccessCodeBatch {
     /** Every entry of a code starts a new game instead of resuming the running one (development codes). */
     @Column(nullable = false)
     private boolean multiSession;
-
-    /** Partner's share in %, copied from the partner when the batch is created (basis for invoicing). */
-    @Column(precision = 5, scale = 2)
-    private BigDecimal revenueSharePct;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -114,14 +109,6 @@ public class AccessCodeBatch {
 
     public void setMultiSession(boolean multiSession) {
         this.multiSession = multiSession;
-    }
-
-    public BigDecimal getRevenueSharePct() {
-        return revenueSharePct;
-    }
-
-    public void setRevenueSharePct(BigDecimal revenueSharePct) {
-        this.revenueSharePct = revenueSharePct;
     }
 
     public Instant getCreatedAt() {
