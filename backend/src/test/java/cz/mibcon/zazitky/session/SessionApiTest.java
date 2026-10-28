@@ -138,7 +138,7 @@ class SessionApiTest {
     @Test
     void startReturnsTokenAndFirstStation() throws Exception {
         mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"teamName\":\"   \"}"))
+                        .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\",\"teamName\":\"   \"}"))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/sessions/current"))
                 .andExpect(jsonPath("$.token").isString())
@@ -226,13 +226,14 @@ class SessionApiTest {
         mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.type").value("/problems/validation"))
-                .andExpect(jsonPath("$.errors[0].field").value("gameId"));
+                .andExpect(jsonPath("$.errors[0].field").value("code"));
         mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"teamName\":\"" + "x".repeat(101) + "\"}"))
+                        .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\",\"teamName\":\"" + "x".repeat(101) + "\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"gameId\":\"" + UUID.randomUUID() + "\"}"))
-                .andExpect(status().isNotFound());
+                        .content("{\"code\":\"XXXX-XXXX\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.type").value("/problems/invalid-code"));
 
         String token = startGame(null);
         answer(token, STATION_1, "   ")
@@ -273,7 +274,7 @@ class SessionApiTest {
     private String startGame(String teamName) throws Exception {
         String team = teamName == null ? "null" : "\"" + teamName + "\"";
         String body = mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"teamName\":" + team + "}"))
+                        .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\",\"teamName\":" + team + "}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         return JsonPath.read(body, "$.token");

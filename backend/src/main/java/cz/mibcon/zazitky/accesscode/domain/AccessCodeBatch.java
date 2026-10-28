@@ -40,6 +40,13 @@ public class AccessCodeBatch {
     @Column(length = 300)
     private String note;
 
+    /** Validity of a code from its activation; null = the code never expires (development codes). */
+    private Integer validityHours = 5;
+
+    /** Every entry of a code starts a new game instead of resuming the running one (development codes). */
+    @Column(nullable = false)
+    private boolean multiSession;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -86,6 +93,22 @@ public class AccessCodeBatch {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public Integer getValidityHours() {
+        return validityHours;
+    }
+
+    public void setValidityHours(Integer validityHours) {
+        this.validityHours = validityHours;
+    }
+
+    public boolean isMultiSession() {
+        return multiSession;
+    }
+
+    public void setMultiSession(boolean multiSession) {
+        this.multiSession = multiSession;
     }
 
     public Instant getCreatedAt() {

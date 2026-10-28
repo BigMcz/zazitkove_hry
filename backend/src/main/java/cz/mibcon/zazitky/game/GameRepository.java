@@ -7,6 +7,7 @@ import java.util.UUID;
 import cz.mibcon.zazitky.game.domain.Game;
 import cz.mibcon.zazitky.game.domain.GameStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface GameRepository extends JpaRepository<Game, UUID> {
 
@@ -14,5 +15,6 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
 
     Optional<Game> findByIdAndStatus(UUID id, GameStatus status);
 
-    List<Game> findByStatusOrderByTitle(GameStatus status);
+    @Query("select g from Game g join fetch g.location l join fetch l.partner order by g.title")
+    List<Game> findAllWithPartner();
 }

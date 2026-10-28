@@ -1,7 +1,6 @@
 import type {
   AnswerResult,
-  GameDetail,
-  GameSummary,
+  CodeCheck,
   HintsResult,
   ProblemDetail,
   SessionState,
@@ -28,16 +27,22 @@ export function isSessionGone(error: unknown): error is ApiError {
   return error instanceof ApiError && (error.status === 401 || error.status === 410)
 }
 
-interface RequestOptions {
+export interface RequestOptions {
   method?: 'GET' | 'POST'
+  /** JSON body, or URLSearchParams sent as a form (admin login). */
   body?: unknown
   token?: string | null
+  headers?: Record<string, string>
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (options.body !== undefined) {
+  const headers: Record<string, string> = { Accept: 'application/json', ...options.headers }
+  let body: BodyInit | undefined
+  if (options.body instanceof URLSearchParams) {
+    body = options.body
+  } else if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json'
+    body = JSON.stringify(options.body)
   }
   if (options.token) {
     headers[TOKEN_HEADER] = options.token
@@ -45,11 +50,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let response: Response
   try {
-    response = await fetch(BASE_URL + path, {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    })
+    response = await fetch(BASE_URL + path, { method: options.method ?? 'GET', headers, body })
   } catch {
     throw new ApiError(0, 'Nepodařilo se spojit se serverem. Zkontroluj připojení k internetu.')
   }
@@ -77,12 +78,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 const station = (stationId: string) => `/sessions/current/stations/${encodeURIComponent(stationId)}`
 
 export const api = {
-  listGames: () => apiRequest<GameSummary[]>('/games'),
+  checkCode: (code: string) => apiRequest<CodeCheck>('/access-codes/check', { method: 'POST', body: { code } }),
 
-  getGame: (gameId: string) => apiRequest<GameDetail>(`/games/${encodeURIComponent(gameId)}`),
-
-  startSession: (gameId: string, teamName: string | null) =>
-    apiRequest<SessionState>('/sessions', { method: 'POST', body: { gameId, teamName } }),
+  startSession: (code: string, teamName: string | null) =>
+    apiRequest<SessionState>('/sessions', { method: 'POST', body: { code, teamName } }),
 
   getSession: (token: string) => apiRequest<SessionState>('/sessions/current', { token }),
 

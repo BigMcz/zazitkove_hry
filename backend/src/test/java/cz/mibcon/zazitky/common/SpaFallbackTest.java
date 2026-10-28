@@ -2,6 +2,7 @@ package cz.mibcon.zazitky.common;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -57,7 +58,8 @@ class SpaFallbackTest {
 
     @Test
     void apiStillWorks() throws Exception {
-        mvc.perform(get("/api/v1/games"))
+        mvc.perform(post("/api/v1/access-codes/check").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }

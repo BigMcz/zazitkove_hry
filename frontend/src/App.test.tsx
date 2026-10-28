@@ -34,6 +34,15 @@ const inProgress: SessionState = {
   finale: null,
 }
 
+const demoGame = {
+  id: 'g1',
+  title: 'Tajemství katova klíče',
+  subtitle: 'Demo hra',
+  introText: 'Píše se rok 1621.',
+  estimatedMinutes: 20,
+  stationCount: 5,
+}
+
 type Handler = (init?: RequestInit) => Response
 
 function json(body: unknown, status = 200): Response {
@@ -72,28 +81,68 @@ describe('App', () => {
     window.localStorage.clear()
   })
 
-  it('lists games on the home page', async () => {
-    mockApi({
-      'GET /api/v1/games': () =>
-        json([{ id: 'g1', title: 'Tajemství katova klíče', subtitle: 'Demo hra', estimatedMinutes: 20 }]),
+  it('starts a game with a new code: intro, team name, first station', async () => {
+    const fetchMock = mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'ABCD-2345', game: demoGame, resumesGame: false, validUntil: null }),
+      'POST /api/v1/sessions': () => json({ ...inProgress, token: TOKEN }, 201),
+      'GET /api/v1/sessions/current': () => json(inProgress),
     })
     renderApp('/')
 
-    expect(screen.getByRole('heading', { name: 'Zážitkový Loket' })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /Tajemství katova klíče/ })).toHaveAttribute('href', '/games/g1')
     expect(screen.queryByRole('link', { name: 'Pokračovat ve hře' })).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Zadej kód z kartičky'), 'abcd 2345{Enter}')
+
+    expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
+    expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/Název týmu/), 'Kuchtovi')
+    await userEvent.click(screen.getByRole('button', { name: 'Začít hru' }))
+
+    expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
+    expect(tokenStorage.get()).toBe(TOKEN)
+    const bodies = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => init?.body)
+    expect(bodies).toEqual(['{"code":"abcd 2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
+  })
+
+  it('continues the game of a code that is already in use', async () => {
+    mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'ABCD-2345', game: demoGame, resumesGame: true, validUntil: '2026-10-28T15:00:00Z' }),
+      'POST /api/v1/sessions': () => json({ ...inProgress, token: TOKEN }),
+      'GET /api/v1/sessions/current': () => json(inProgress),
+    })
+    renderApp('/?kod=ABCD-2345')
+
+    expect(screen.getByLabelText('Zadej kód z kartičky')).toHaveValue('ABCD-2345')
+    await userEvent.click(screen.getByRole('button', { name: 'Použít kód' }))
+
+    expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
+    expect(tokenStorage.get()).toBe(TOKEN)
+  })
+
+  it('shows why a code cannot be used', async () => {
+    mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ type: '/problems/code-expired', status: 410, detail: 'Platnost tohoto kódu už vypršela.' }, 410),
+    })
+    renderApp('/')
+
+    await userEvent.type(screen.getByLabelText('Zadej kód z kartičky'), 'ABCD-2345{Enter}')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Platnost tohoto kódu už vypršela.')
+    expect(tokenStorage.get()).toBeNull()
   })
 
   it('offers to continue a stored game', async () => {
     tokenStorage.set(TOKEN)
-    mockApi({ 'GET /api/v1/games': () => json([]) })
+    mockApi({})
     renderApp('/')
 
     expect(screen.getByRole('link', { name: 'Pokračovat ve hře' })).toHaveAttribute('href', '/play')
   })
 
   it('sends a player without a game from /play to the home page', async () => {
-    mockApi({ 'GET /api/v1/games': () => json([]) })
+    mockApi({})
     renderApp('/play')
 
     expect(await screen.findByRole('heading', { name: 'Zážitkový Loket' })).toBeInTheDocument()
@@ -177,7 +226,6 @@ describe('App', () => {
     mockApi({
       'GET /api/v1/sessions/current': () =>
         json({ type: '/problems/session-expired', status: 410, detail: 'Platnost rozehrané hry vypršela.' }, 410),
-      'GET /api/v1/games': () => json([]),
     })
     renderApp('/play')
 

@@ -4,13 +4,6 @@ export type TaskType = 'TEXT' | 'NUMBER' | 'CHOICE'
 
 export type SessionStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED' | 'EXPIRED'
 
-export interface GameSummary {
-  id: string
-  title: string
-  subtitle: string | null
-  estimatedMinutes: number | null
-}
-
 export interface GameDetail {
   id: string
   title: string
@@ -18,6 +11,16 @@ export interface GameDetail {
   introText: string
   estimatedMinutes: number | null
   stationCount: number
+}
+
+/** Result of checking an access code typed by the player. */
+export interface CodeCheck {
+  /** Printed form, e.g. ABCD-2345. */
+  code: string
+  game: GameDetail
+  /** The code is already in use: starting with it continues the existing game. */
+  resumesGame: boolean
+  validUntil: string | null
 }
 
 export interface RevealedHint {

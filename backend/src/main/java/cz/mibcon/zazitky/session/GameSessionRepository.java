@@ -13,6 +13,8 @@ public interface GameSessionRepository extends JpaRepository<GameSession, UUID> 
 
     Optional<GameSession> findByToken(UUID token);
 
+    Optional<GameSession> findFirstByAccessCodeIdOrderByStartedAtDesc(UUID accessCodeId);
+
     /**
      * Loads the session for a change and always bumps its version on commit, so that two
      * concurrent requests for the same session cannot both succeed (the second one fails

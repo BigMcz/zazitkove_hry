@@ -5,3 +5,17 @@ spring:
     password: ${DB_PASSWORD}
   flyway:
     locations: classpath:db/migration
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:true}   # false jen pro lokální test bez HTTPS
+  # Za reverzní proxy nastav FORWARD_HEADERS_STRATEGY=native, jinak limit pokusů platí pro IP proxy (= pro všechny)
+  forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
+
+app:
+  public-url: ${PUBLIC_URL:}
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:}

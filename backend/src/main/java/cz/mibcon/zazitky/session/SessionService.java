@@ -7,11 +7,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import cz.mibcon.zazitky.accesscode.AccessCodeService;
+import cz.mibcon.zazitky.accesscode.CodeExpiredException;
+import cz.mibcon.zazitky.accesscode.domain.AccessCode;
 import cz.mibcon.zazitky.common.InvalidStateException;
 import cz.mibcon.zazitky.common.NotFoundException;
-import cz.mibcon.zazitky.game.GameRepository;
 import cz.mibcon.zazitky.game.domain.Game;
-import cz.mibcon.zazitky.game.domain.GameStatus;
 import cz.mibcon.zazitky.game.domain.Hint;
 import cz.mibcon.zazitky.game.domain.Station;
 import cz.mibcon.zazitky.game.domain.StationChoice;
@@ -38,45 +39,75 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code order_no}; exactly one station is ACTIVE while the session is IN_PROGRESS.
  */
 @Service
-// The EXPIRED status must be stored even though the request then fails with 410.
-@Transactional(noRollbackFor = SessionExpiredException.class)
+// The EXPIRED status (of a session or a code) must be stored even though the request then fails with 410.
+@Transactional(noRollbackFor = {SessionExpiredException.class, CodeExpiredException.class})
 public class SessionService {
 
     static final String WRONG_ANSWER_MESSAGE = "To není ono. Zkus to znovu.";
     static final String NOT_A_NUMBER_MESSAGE = "Odpověď musí obsahovat číslo.";
 
-    private final GameRepository games;
+    private final AccessCodeService accessCodes;
     private final GameSessionRepository sessions;
     private final AnswerAttemptRepository attempts;
     private final AnswerEvaluator evaluator;
     private final Clock clock;
 
-    public SessionService(GameRepository games, GameSessionRepository sessions, AnswerAttemptRepository attempts,
-            AnswerEvaluator evaluator, Clock clock) {
-        this.games = games;
+    public SessionService(AccessCodeService accessCodes, GameSessionRepository sessions,
+            AnswerAttemptRepository attempts, AnswerEvaluator evaluator, Clock clock) {
+        this.accessCodes = accessCodes;
         this.sessions = sessions;
         this.attempts = attempts;
         this.evaluator = evaluator;
         this.clock = clock;
     }
 
-    public SessionState start(UUID gameId, String teamName) {
-        Game game = games.findByIdAndStatus(gameId, GameStatus.PUBLISHED)
-                .orElseThrow(() -> new NotFoundException("Hra nebyla nalezena."));
+    /**
+     * Starts a game with an access code. A code already in use continues its game (also on another
+     * device) unless that game was abandoned or the batch starts a new game on every entry.
+     */
+    public StartResult start(String rawCode, String teamName) {
+        AccessCode code = accessCodes.findPlayable(rawCode);
+        Instant now = clock.instant();
+        accessCodes.activateIfNew(code, now);
+
+        if (!code.getBatch().isMultiSession()) {
+            Optional<GameSession> running = sessions.findFirstByAccessCodeIdOrderByStartedAtDesc(code.getId())
+                    .filter(session -> isResumable(session, now));
+            if (running.isPresent()) {
+                return new StartResult(toState(running.get(), true), false);
+            }
+        }
+
+        Game game = code.getBatch().getGame();
         Station firstStation = game.getStations().stream().findFirst()
                 .orElseThrow(() -> new InvalidStateException("Hra nemá žádná stanoviště."));
-        Instant now = clock.instant();
+        Instant expiresAt = now.plus(Duration.ofHours(game.getSessionValidityHours()));
+        if (code.getValidUntil() != null && code.getValidUntil().isBefore(expiresAt)) {
+            expiresAt = code.getValidUntil();
+        }
 
         GameSession session = new GameSession();
         session.setGame(game);
+        session.setAccessCode(code);
         session.setToken(UUID.randomUUID());
         session.setTeamName(teamName == null || teamName.isBlank() ? null : teamName.strip());
         session.setStartedAt(now);
-        session.setExpiresAt(now.plus(Duration.ofHours(game.getSessionValidityHours())));
+        session.setExpiresAt(expiresAt);
         session.addProgress(activate(firstStation, now));
         sessions.save(session);
 
-        return toState(session, true);
+        return new StartResult(toState(session, true), true);
+    }
+
+    public record StartResult(SessionState state, boolean created) {
+    }
+
+    private static boolean isResumable(GameSession session, Instant now) {
+        return switch (session.getStatus()) {
+            case COMPLETED -> true;
+            case IN_PROGRESS -> now.isBefore(session.getExpiresAt());
+            case ABANDONED, EXPIRED -> false;
+        };
     }
 
     public SessionState getState(UUID token) {

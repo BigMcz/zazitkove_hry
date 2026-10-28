@@ -11,3 +11,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+app:
+  admin:
+    password: admin   # jen pro lokální vývoj

@@ -9,11 +9,17 @@
 --   00000000-0000-0000-0002-0000000000SN  nápověda N stanoviště S
 --   00000000-0000-0000-0003-0000000000SN  přijímaná odpověď N stanoviště S
 --   00000000-0000-0000-0004-0000000000SN  možnost výběru N stanoviště S
+--   00000000-0000-0000-0005-000000000001  vývojová dávka kódů, 00000000-0000-0000-0006-000000000001 její kód
 --
 -- accepted_answer.normalized_value se vyplňuje ručně podle TextNormalizer (TEXT/CHOICE: normalize,
 -- NUMBER: normalizeNumber); shodu hlídá test DemoGameSeedTest.
 -- =========================================================
 
+-- Relace a kódy demo hry (i dávky vytvořené v dev administraci), aby šla smazat hra
+DELETE FROM game_session WHERE game_id = '00000000-0000-0000-0000-000000000003';
+DELETE FROM access_code WHERE batch_id IN
+    (SELECT id FROM access_code_batch WHERE game_id = '00000000-0000-0000-0000-000000000003');
+DELETE FROM access_code_batch WHERE game_id = '00000000-0000-0000-0000-000000000003';
 DELETE FROM game WHERE id = '00000000-0000-0000-0000-000000000003';
 DELETE FROM location WHERE id = '00000000-0000-0000-0000-000000000002';
 DELETE FROM partner WHERE id = '00000000-0000-0000-0000-000000000001';
@@ -108,3 +114,14 @@ INSERT INTO station_choice (id, station_id, order_no, text) VALUES
 ('00000000-0000-0000-0004-000000000032', '00000000-0000-0000-0001-000000000003', 2, 'Provaz'),
 ('00000000-0000-0000-0004-000000000033', '00000000-0000-0000-0001-000000000003', 3, 'Lucernu'),
 ('00000000-0000-0000-0004-000000000034', '00000000-0000-0000-0001-000000000003', 4, 'Klíč');
+
+-- ---------------------------------------------------------
+-- Vývojový přístupový kód DEMO-KATA: nevyprší, každé zadání založí novou hru
+-- (kód se ukládá bez pomlčky, viz AccessCodeFormat)
+-- ---------------------------------------------------------
+INSERT INTO access_code_batch (id, partner_id, game_id, quantity, validity_hours, multi_session, note)
+VALUES ('00000000-0000-0000-0005-000000000001', '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000003', 1, NULL, TRUE, 'Vývojový kód (bez expirace, každé zadání = nová hra)');
+
+INSERT INTO access_code (id, batch_id, code)
+VALUES ('00000000-0000-0000-0006-000000000001', '00000000-0000-0000-0005-000000000001', 'DEMOKATA');

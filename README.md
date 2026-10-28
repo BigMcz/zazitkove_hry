@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Demo hru otevřeš na http://localhost:5173.
+Na Windows lze místo `./mvnw` použít `mvnw.cmd`. Demo hru otevřeš na http://localhost:5173 zadáním vývojového kódu **`DEMO-KATA`** (nevyprší, každé zadání založí novou hru). Administrace (generování kódů, CSV pro tisk, měsíční přehled aktivací) je na http://localhost:5173/admin — v profilu `dev` jméno `admin`, heslo `admin`.
 
 ## Build a testy
 
@@ -42,7 +42,7 @@ cd backend && ./mvnw package                # pom.xml přibalí frontend/dist do
 java -jar target/zazitky-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev   # aplikace i API na :8080
 ```
 
-Bez `frontend/dist` vznikne JAR jen s backendem. V profilu `prod` je potřeba nastavit `DB_URL`, `DB_USER` a `DB_PASSWORD`.
+Bez `frontend/dist` vznikne JAR jen s backendem. V profilu `prod` se nastavuje přes proměnné prostředí: `DB_URL`, `DB_USER`, `DB_PASSWORD`, `ADMIN_PASSWORD` (bez něj je administrace vypnutá), `PUBLIC_URL` (adresa do odkazů v CSV s kódy) a za reverzní proxy `FORWARD_HEADERS_STRATEGY=native` — popis v `docs/02-architektura.md`.
 
 ## Docker
 

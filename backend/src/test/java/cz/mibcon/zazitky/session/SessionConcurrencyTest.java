@@ -31,7 +31,7 @@ class SessionConcurrencyTest {
 
     @Test
     void overlappingChangesOfOneSessionAreRejected() {
-        UUID token = sessionService.start(UUID.fromString(SessionApiTest.DEMO_GAME_ID), null).token();
+        UUID token = sessionService.start(IntegrationTest.DEV_CODE, null).state().token();
         TransactionTemplate outer = new TransactionTemplate(transactionManager);
         TransactionTemplate concurrent = new TransactionTemplate(transactionManager);
         concurrent.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);

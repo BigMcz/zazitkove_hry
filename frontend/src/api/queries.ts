@@ -2,17 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client.ts'
 
 export const queryKeys = {
-  games: ['games'] as const,
-  game: (gameId: string) => ['games', gameId] as const,
   session: (token: string | null) => ['session', token] as const,
-}
-
-export function useGames() {
-  return useQuery({ queryKey: queryKeys.games, queryFn: api.listGames })
-}
-
-export function useGame(gameId: string) {
-  return useQuery({ queryKey: queryKeys.game(gameId), queryFn: () => api.getGame(gameId) })
 }
 
 export function useSessionState(token: string | null) {
@@ -26,8 +16,7 @@ export function useSessionState(token: string | null) {
 export function useStartSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ gameId, teamName }: { gameId: string; teamName: string | null }) =>
-      api.startSession(gameId, teamName),
+    mutationFn: ({ code, teamName }: { code: string; teamName: string | null }) => api.startSession(code, teamName),
     onSuccess: (state) => {
       if (state.token) {
         queryClient.setQueryData(queryKeys.session(state.token), state)

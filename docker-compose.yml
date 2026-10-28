@@ -31,8 +31,11 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/zazitky
       DB_USER: zazitky
       DB_PASSWORD: zazitky
-      # V ostrém provozu jen db/migration; tady i demo hra
+      # V ostrém provozu jen db/migration; tady i demo hra s vývojovým kódem DEMO-KATA
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed
+      # Administrace na http://localhost:8080/admin — jen pro lokální test
+      ADMIN_PASSWORD: admin
+      SESSION_COOKIE_SECURE: "false"
     ports:
       - "8080:8080"
 

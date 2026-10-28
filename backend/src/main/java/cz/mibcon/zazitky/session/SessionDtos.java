@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import cz.mibcon.zazitky.game.domain.TaskType;
 import cz.mibcon.zazitky.session.domain.SessionStatus;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -21,7 +20,7 @@ public final class SessionDtos {
     }
 
     public record StartSessionRequest(
-            @NotNull UUID gameId,
+            @NotBlank @Size(max = 30) String code,
             @Size(max = 100) String teamName) {
     }
 

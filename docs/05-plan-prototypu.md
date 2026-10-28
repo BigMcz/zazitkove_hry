@@ -63,9 +63,22 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 4. `./mvnw verify`, `npm run build` a `npm test` procházejí.
 5. V DB existují tabulky pro partnery, dávky a přístupové kódy, připravené pro další fázi.
 
-## Další fáze (po prototypu)
+## F1 — Přístupové kódy
 
-1. Přístupové kódy — generování dávek, zadání kódu místo demo výběru, platnost
+- [x] Rozhodnutí (Q2, Q3): 8 znaků, platnost 5 h od aktivace, prodej = aktivace, pokračování stejné hry, vývojový kód bez expirace
+- [x] `V2__access_code_activation.sql` + ER diagram a DDL v `docs/03-datovy-model.md`
+- [x] Generování kódů (`SecureRandom`, abeceda bez zaměnitelných znaků), normalizace zadání
+- [x] `POST /api/v1/access-codes/check`, `POST /api/v1/sessions` s kódem: aktivace, platnost, pokračování, vypršení (410)
+- [x] Limit pokusů o kód (10/min na IP) a o přihlášení do administrace (5/min na IP)
+- [x] Administrace: Spring Security (jeden účet z konfigurace, CSRF), dávky, CSV pro tisk kartiček, měsíční přehled aktivací pro fakturaci
+- [x] Frontend: zadání kódu na úvodu (i z QR `?kod=`), `/start`, `/admin`; zrušen výběr her
+- [x] Vývojový kód `DEMO-KATA` v dev seedu
+- [x] Testy (backend + frontend), ruční průchod v prohlížeči
+- [ ] Administrace pro partnera (Q12): uživatelé s rolemi, partner vidí jen svá data
+
+## Další fáze
+
+1. ~~Přístupové kódy~~ — hotovo (F1), zbývá přístup pro partnera
 2. Skutečný obsah pro hrad Loket (průzkum na místě, příběh kata)
 3. Administrace obsahu a statistiky obtížnosti
 4. Ostrý provoz — hosting, HTTPS, zálohy, rate limiting

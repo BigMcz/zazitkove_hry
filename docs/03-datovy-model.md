@@ -23,7 +23,7 @@ erDiagram
     game ||--o{ access_code_batch : "pro hru"
     access_code_batch ||--o{ access_code : "obsahuje"
     game ||--o{ game_session : "hraná v"
-    access_code |o--o| game_session : "aktivuje"
+    access_code |o--o{ game_session : "spouští"
     game_session ||--o{ session_progress : "postup"
     station ||--o{ session_progress : "stav"
     game_session ||--o{ answer_attempt : "pokusy"
@@ -98,6 +98,8 @@ erDiagram
         int quantity
         int unit_price_czk
         varchar note
+        int validity_hours
+        boolean multi_session
         timestamptz created_at
     }
     access_code {
@@ -157,18 +159,18 @@ erDiagram
 | `accepted_answer` | Správné varianty odpovědi | `normalized_value` se vyplní aplikací (stejná normalizace jako u vstupu hráče) |
 | `station_choice` | Nabízené možnosti pro `CHOICE` | Správná možnost je zároveň uložena v `accepted_answer` |
 
-### Prodej (v prototypu bez logiky)
+### Prodej
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“ |
-| `access_code` | Jednotlivý kód | `status`: `NEW`, `SOLD`, `ACTIVATED`, `EXPIRED`, `CANCELLED`; `code` unikátní |
+| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy) |
+| `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
 
 ### Hraní
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `game_session` | Jedna rozehraná hra jednoho zařízení/týmu | `token` = identita hráče; `access_code_id` NULL v demo režimu; `version` pro optimistický zámek |
+| `game_session` | Jedna rozehraná hra jednoho týmu (může běžet na více zařízeních se stejným tokenem) | `token` = identita hráče; `access_code_id` = kód, kterým byla hra spuštěna (od V2 není unikátní: nová hra po opuštění nebo vývojový kód); `expires_at` nejpozději s platností kódu; `version` pro optimistický zámek |
 | `session_progress` | Stav stanoviště v rámci relace | Řádek vzniká při odemčení stanoviště; unikátní `(session_id, station_id)` |
 | `answer_attempt` | Každý pokus o odpověď | Analytika obtížnosti; neukládá nic osobního |
 
@@ -190,19 +192,21 @@ stateDiagram-v2
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000','lineColor':'#000000','textColor':'#000000','edgeLabelBackground':'#ffffff'}}}%%
 stateDiagram-v2
     direction LR
-    state "access_code.status (výhled)" as AC {
-        [*] --> NEW
-        NEW --> SOLD : prodán na pokladně
-        SOLD --> ACTIVATED : zadán hráčem
+    state "access_code.status" as AC {
+        [*] --> NEW : vygenerován (tisk)
+        NEW --> ACTIVATED : hráč spustil hru (= prodej)
         ACTIVATED --> EXPIRED : po valid_until
         NEW --> CANCELLED
-        SOLD --> CANCELLED
     }
 ```
 
 `session_progress.status`: `ACTIVE` → `SOLVED` (výhledově i `SKIPPED`).
 
 ## 4. DDL
+
+Výsledné schéma = V1 + V2.
+
+### V1
 
 Soubor `backend/src/main/resources/db/migration/V1__init_schema.sql`:
 
@@ -358,12 +362,38 @@ CREATE INDEX ix_attempt_session ON answer_attempt(session_id);
 CREATE INDEX ix_attempt_station ON answer_attempt(station_id);
 ```
 
+### V2
+
+Soubor `backend/src/main/resources/db/migration/V2__access_code_activation.sql`:
+
+```sql
+-- =========================================================
+-- Přístupové kódy: platnost od aktivace, vývojové kódy, více her na jeden kód
+-- =========================================================
+
+-- Platnost kódu v hodinách od aktivace (valid_until = activated_at + validity_hours).
+-- NULL = kód nevyprší (vývojové kódy).
+ALTER TABLE access_code_batch
+    ADD COLUMN validity_hours INT DEFAULT 5 CHECK (validity_hours > 0);
+
+-- Každé zadání kódu založí novou hru místo pokračování v té rozehrané (vývojové kódy pro opakované testování).
+ALTER TABLE access_code_batch
+    ADD COLUMN multi_session BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Jeden kód může mít víc relací: vývojový kód, nebo nová hra po opuštění té předchozí během platnosti kódu.
+ALTER TABLE game_session DROP CONSTRAINT game_session_access_code_id_key;
+CREATE INDEX ix_session_access_code ON game_session(access_code_id);
+
+-- Měsíční přehled aktivací pro fakturaci.
+CREATE INDEX ix_access_code_activated_at ON access_code(activated_at);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
 |---|---|---|
 | `db/migration` | `V1__init_schema.sql`, `V2__…` | Všechna prostředí |
-| `db/seed` | `R__demo_game.sql` (repeatable) | Jen profil `dev` |
+| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) | Jen profil `dev` |
 
 - Seed demo hry je **repeatable migrace** — spustí se znovu při každé změně obsahu souboru, takže herní texty lze ladit bez nových verzí schématu. Seed musí být idempotentní: nejprve smaže demo partnera/lokalitu/hru podle pevných UUID (kaskádně i stanoviště a relace), pak je vloží znovu.
 - Pevná UUID v seedu (např. `00000000-0000-0000-0000-00000000000x`) usnadní testy a ladění.
@@ -374,3 +404,4 @@ CREATE INDEX ix_attempt_station ON answer_attempt(station_id);
 | Verze | Změna |
 |---|---|
 | V1 | Počáteční schéma (obsah, prodej, hraní) |
+| V2 | Přístupové kódy: `access_code_batch.validity_hours`, `access_code_batch.multi_session`; zrušena unikátnost `game_session.access_code_id` (index `ix_session_access_code`); index `ix_access_code_activated_at` pro měsíční přehled |

@@ -39,13 +39,15 @@ flowchart LR
 cz.mibcon.zazitky            # (název balíčku lze upravit)
 ├── ZazitkyApplication.java
 ├── common/                  # ApiExceptionHandler (ProblemDetail), ApiException + NotFound/InvalidState,
-│                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend + SPA fallback)
+│                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend + SPA fallback),
+│                            # RateLimiter + RateLimitConfig, TooManyRequestsException (429)
+├── admin/                   # AdminSecurityConfig (Spring Security), AdminSessionController
 ├── game/                    # čtení obsahu
 │   ├── domain/              # Partner, Location, Game, Station, Hint, AcceptedAnswer, StationChoice + enumy
 │   ├── *Repository.java     # jedno repository na tabulku
-│   ├── GameService.java
-│   ├── GameController.java  # /api/v1/games
-│   └── GameSummaryDto, GameDetailDto
+│   ├── GameService.java     # detail hry pro úvod (z ověření kódu)
+│   ├── GameAdminController  # /api/v1/admin/games
+│   └── GameDetailDto
 ├── session/                 # herní logika
 │   ├── domain/              # GameSession, SessionProgress, AnswerAttempt + enumy
 │   ├── SessionService.java
@@ -53,8 +55,13 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 │   ├── SessionController.java # /api/v1/sessions
 │   ├── SessionDtos.java     # request/response recordy
 │   └── InvalidTokenException (401), SessionExpiredException (410)
-└── accesscode/              # v prototypu jen entity + repo
-    └── domain/              # AccessCodeBatch, AccessCode
+└── accesscode/              # přístupové kódy
+    ├── domain/              # AccessCodeBatch, AccessCode + AccessCodeStatus
+    ├── AccessCodeFormat     # normalizace, formát ABCD-2345, generování (SecureRandom)
+    ├── AccessCodeService    # ověření, aktivace, expirace kódu
+    ├── AccessCodeController # /api/v1/access-codes/check
+    ├── AccessCodeAdminService + AccessCodeAdminController # dávky, CSV, měsíční přehled (/api/v1/admin/**)
+    └── InvalidCodeException (404), CodeExpiredException (410)
 ```
 
 ### Vrstvy uvnitř feature
@@ -63,7 +70,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 
 ### Herní logika (`SessionService`)
 
-1. **start(gameId, teamName)** — ověří, že hra je `PUBLISHED`; vytvoří `game_session` se stavem `IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = now + session_validity_hours`; vytvoří `session_progress` pro první stanoviště se stavem `ACTIVE`.
+1. **start(code, teamName)** — `AccessCodeService` ověří kód (neznámý/zrušený nebo hra není `PUBLISHED` → 404 `invalid-code`, vypršelý → 410 `code-expired`) a při prvním použití ho aktivuje (`ACTIVATED`, `activated_at`, `valid_until = activated_at + batch.validity_hours`). Pokud kód už má rozehranou (`IN_PROGRESS`, nevypršelou) nebo dokončenou relaci, vrátí ji i s tokenem (pokračování na jiném zařízení) — kromě dávek s `multi_session`, kde každé zadání založí novou hru. Jinak vytvoří `game_session` (`IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = min(now + session_validity_hours, valid_until kódu)`) a `session_progress` pro první stanoviště (`ACTIVE`). Opuštěnou hru (`ABANDONED`) lze během platnosti kódu začít znovu.
 2. **getState(token)** — vrátí aktuální stav; pokud je relace `IN_PROGRESS` a `expires_at <= now`, nastaví `EXPIRED` a vrátí 410 (změna stavu se uloží, `noRollbackFor`).
 3. **submitAnswer(token, stationId, answer)** — v transakci:
    - stanoviště musí být aktuálně `ACTIVE` v dané relaci (jinak 409);
@@ -97,6 +104,11 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Odpověď na neaktivní stanoviště, hra není rozehraná | 409 | `invalid-state` |
 | Relace vypršela | 410 | `session-expired` |
 | Chybí/nesedí token relace | 401 | `invalid-token` |
+| Neznámý nebo zrušený přístupový kód | 404 | `invalid-code` |
+| Přístupový kód vypršel | 410 | `code-expired` |
+| Příliš mnoho pokusů o kód / přihlášení z jedné IP | 429 | `too-many-requests` |
+| Admin API bez přihlášení / špatné heslo | 401 | `unauthorized` / `invalid-credentials` |
+| Admin API bez platného CSRF tokenu | 403 | `forbidden` |
 
 `type` je relativní URI `/problems/<suffix>` (např. `/problems/not-found`), `title` a `detail` jsou česky. Validační chyby těla požadavku obsahují navíc pole `errors: [{ "field", "message" }]`. Neznámá hra nebo nepublikovaná hra vrací 404.
 
@@ -104,34 +116,40 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 
 - `application.yml` — společné; `spring.jpa.hibernate.ddl-auto=validate`, `spring.jpa.open-in-view=false`
 - `application-dev.yml` — lokální DB z docker-compose, Flyway `locations: classpath:db/migration,classpath:db/seed`
-- `application-prod.yml` — jen `db/migration`, připojení z proměnných prostředí (`DB_URL`, `DB_USER`, `DB_PASSWORD`)
+- `application-prod.yml` — jen `db/migration`, nastavení z proměnných prostředí:
+
+| Proměnná | Význam |
+|---|---|
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | připojení k PostgreSQL |
+| `ADMIN_USERNAME` (výchozí `admin`), `ADMIN_PASSWORD` | účet administrace; bez hesla je administrace vypnutá |
+| `PUBLIC_URL` | veřejná adresa pro odkazy v CSV s kódy (QR na kartičce), např. `https://hra.example.cz` |
+| `SESSION_COOKIE_SECURE` (výchozí `true`) | session cookie administrace jen přes HTTPS; `false` jen pro lokální test |
+| `FORWARD_HEADERS_STRATEGY` (výchozí `none`) | za reverzní proxy `native`, aby limit pokusů počítal skutečné IP hráčů |
+
+- `application.yml` — limity `app.access-code.attempts-per-minute` (10) a `app.admin.login-attempts-per-minute` (5).
+- `application-dev.yml` — admin `admin` / `admin` (jen lokálně).
 - Hesla a tajemství nikdy v repozitáři.
 
 ## 3. REST API (v1)
 
 Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou `X-Session-Token: <uuid>`.
 
-### Hry
+### Přístupové kódy
+
+Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný seznam her `GET /games` z prototypu byl zrušen.)
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| GET | `/games` | Seznam publikovaných her (demo výběr) |
-| GET | `/games/{gameId}` | Detail hry pro úvodní obrazovku (bez stanovišť) |
+| POST | `/access-codes/check` | Ověřit kód (neaktivuje ho). Body: `{ "code": "abcd 2345" }` — velikost písmen, mezery a pomlčky nehrají roli. Limit 10 pokusů/min na IP (společně s `POST /sessions`). |
 
 ```json
-// GET /games
-[ { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "Demo hra", "estimatedMinutes": 45 } ]
-```
-
-```json
-// GET /games/{gameId}
+// POST /access-codes/check → 200
 {
-  "id": "4b0c…",
-  "title": "Prokletí loketského kata",
-  "subtitle": "Demo hra",
-  "introText": "Píše se rok 1625…",
-  "estimatedMinutes": 45,
-  "stationCount": 5
+  "code": "ABCD-2345",
+  "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "…", "introText": "Píše se rok 1625…",
+            "estimatedMinutes": 45, "stationCount": 5 },
+  "resumesGame": false,       // true = kód už je použitý, POST /sessions vrátí jeho rozehranou hru
+  "validUntil": null          // po aktivaci konec platnosti; null i u vývojového kódu bez expirace
 }
 ```
 
@@ -139,7 +157,7 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| POST | `/sessions` | Zahájit hru. Body: `{ "gameId": "…", "teamName": "Kuchtovi" }` → `201` + stav relace včetně `token` |
+| POST | `/sessions` | Zahájit hru kódem. Body: `{ "code": "ABCD-2345", "teamName": "Kuchtovi" }` → `201` + stav relace včetně `token`; když kód pokračuje v existující hře, `200` + její stav a token (`teamName` se ignoruje) |
 | GET | `/sessions/current` | Aktuální stav relace (pro obnovu i po každém kroku) |
 | POST | `/sessions/current/stations/{stationId}/answers` | Odeslat odpověď. Body: `{ "answer": "1625" }` |
 | POST | `/sessions/current/stations/{stationId}/hints` | Odkrýt další nápovědu → odkryté nápovědy a nová penalizace |
@@ -195,6 +213,21 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
 6. Odmítnutý požadavek (body 1–5) se nezapisuje do `answer_attempt`; každý vyhodnocený pokus ano.
 7. Každá zápisová operace zvyšuje `game_session.version` (`OPTIMISTIC_FORCE_INCREMENT`), takže ze dvou souběžných požadavků na stejnou relaci uspěje jen jeden, druhý dostane `409 invalid-state`.
 
+### Administrace (`/api/v1/admin/**`)
+
+Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro SPA: `GET /admin/session` vydá cookie `XSRF-TOKEN`, každý POST ji vrací v hlavičce `X-XSRF-TOKEN`. Zatím jeden účet z konfigurace (role `ADMIN`); účty partnerů viz Q12 v analýze.
+
+| Metoda | Cesta | Popis |
+|---|---|---|
+| GET | `/admin/session` | `{ "username": "admin" }` nebo `{ "username": null }`, vydá CSRF cookie (bez přihlášení) |
+| POST | `/admin/login` | Form `username`, `password` → `200 { "username" }` / `401`; limit 5 pokusů/min na IP |
+| POST | `/admin/logout` | `204` |
+| GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
+| GET | `/admin/batches` | Dávky kódů s počtem aktivovaných |
+| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry |
+| GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
+| GET | `/admin/reports/monthly-activations?year=2026` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (podle `revenue_share_pct`); vývojové dávky se nepočítají |
+
 `choices` u typu `CHOICE` je seznam textů k výběru (které z nich jsou správné, klient nezjistí).
 
 ## 4. Frontend
@@ -208,7 +241,8 @@ React + TypeScript (strict), Vite, React Router, TanStack Query (stav serveru), 
 ```
 frontend/src/
 ├── api/            # fetch klient (+ X-Session-Token), typy DTO, query hooks
-├── pages/          # HomePage, GameIntroPage, StationPage, RewardPage, FinalePage
+├── pages/          # HomePage (zadání kódu), StartPage, StationPage, RewardPage, FinalePage
+├── admin/          # AdminPage (přihlášení, dávky, CSV, měsíční přehled), adminApi (CSRF hlavička)
 ├── components/     # ProgressBar, AnswerInput (TEXT/NUMBER/CHOICE), HintList, StoryText, ErrorBanner
 ├── session/        # tokenStorage (localStorage s try/catch), SessionTokenProvider, usePlaySession
 ├── queryClient.ts  # TanStack Query (bez retry u 4xx)
@@ -220,11 +254,12 @@ frontend/src/
 
 | Cesta | Stránka |
 |---|---|
-| `/` | Úvod — seznam her, „Pokračovat ve hře“ pokud je token |
-| `/games/:gameId` | Úvod hry |
+| `/` | Úvod — zadání kódu (předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token |
+| `/start` | Úvod hry z ověřeného kódu, název týmu, „Začít hru“ (kód jen v navigačním stavu, ne v URL) |
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |
 | `/play/finale` | Finále |
+| `/admin` | Administrace |
 
 Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduje, které stanoviště je odemčené.
 
@@ -247,9 +282,9 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 
 - Správné odpovědi a nápovědy, které hráč ještě neodkryl, nikdy neopouštějí server.
 - Token relace = UUID v4 (122 bitů náhody), jen v hlavičce, ne v URL.
-- Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) — v prototypu jen záznam pokusů, v ostrém provozu limit např. 10 pokusů/min na relaci.
-- Přístupové kódy (budoucí): generovat `SecureRandom`, abeceda bez zaměnitelných znaků (bez 0/O, 1/I/L), ukládat v plném znění kvůli tisku, ověřovat s rate limitem na IP.
-- Admin rozhraní (budoucí): Spring Security, oddělené `/api/v1/admin/**`.
+- Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) — zatím jen záznam pokusů, před ostrým provozem limit např. 10 pokusů/min na relaci (Q11).
+- Přístupové kódy: 8 znaků z abecedy bez zaměnitelných znaků (bez 0/O, 1/I/L) → 31⁸ ≈ 8,5 · 10¹¹ kombinací, generované `SecureRandom`; ukládají se v plném znění (kvůli tisku), ověřování s limitem 10 pokusů/min na IP (v paměti, platí pro jednu instanci aplikace).
+- Administrace: Spring Security, oddělený filter chain pro `/api/v1/admin/**` (session cookie `SameSite=Strict`, v prod `Secure`; CSRF; limit pokusů o přihlášení). Veřejné API je bez cookies (token v hlavičce), proto tam CSRF ani HTTP session nejsou.
 - HTTPS v ostrém provozu povinné.
 
 ## 6. Nasazení
@@ -271,4 +306,6 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 | Souběh | Dvě překrývající se změny jedné relace → druhá selže | `TransactionTemplate` + Testcontainers |
 | SPA | Klientské routy vrací `index.html`, `/api` a chybějící soubory 404 | MockMvc |
 | Frontend | `AnswerInput`, `HintList`, `formatDuration`, `tokenStorage`, toky v `App` (obnova po reloadu, 410 → úvod, odměna → finále) | Vitest + Testing Library (mock `fetch`) |
-| Ruční | Průchod demo hrou na šířce 360 px | Playwright / DevTools, skutečný telefon |
+| Kódy | Aktivace, platnost 5 h, pokračování na jiném zařízení, opuštěná hra, vypršení, vývojový kód, limit pokusů | MockMvc + Testcontainers |
+| Administrace | Přihlášení + CSRF, dávky, CSV, měsíční přehled bez vývojových kódů | MockMvc + `spring-security-test` |
+| Ruční | Průchod demo hrou na šířce 360 px, administrace se skutečnou CSRF cookie | Playwright / DevTools, skutečný telefon |
