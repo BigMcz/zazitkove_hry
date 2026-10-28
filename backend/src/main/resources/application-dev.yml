@@ -1,0 +1,13 @@
+# Lokální vývoj proti PostgreSQL z docker-compose.yml (heslo jen pro lokální vývoj)
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zazitky
+    username: zazitky
+    password: zazitky
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
+
+management:
+  endpoint:
+    health:
+      show-details: always

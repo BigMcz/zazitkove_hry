@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply min-h-dvh bg-stone-50 text-stone-900 antialiased;
+}
