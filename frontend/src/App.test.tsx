@@ -23,6 +23,7 @@ const inProgress: SessionState = {
     orderNo: 2,
     title: 'Hradní věž',
     storyText: 'Strážný u věže vzpomíná.',
+    storyAudioUrl: null,
     taskText: 'Kolik schodů kat vystoupal až nahoru?',
     taskType: 'NUMBER',
     choices: null,
@@ -30,7 +31,7 @@ const inProgress: SessionState = {
     nextHintPenaltySeconds: 60,
     revealedHints: [],
   },
-  solvedStations: [{ id: 's1', orderNo: 1, title: 'Katova světnice', rewardText: 'Písmeno K.' }],
+  solvedStations: [{ id: 's1', orderNo: 1, title: 'Katova světnice', rewardText: 'Písmeno K.', rewardAudioUrl: null }],
   finale: null,
 }
 
@@ -39,6 +40,7 @@ const demoGame = {
   title: 'Tajemství katova klíče',
   subtitle: 'Demo hra',
   introText: 'Píše se rok 1621.',
+  introAudioUrl: '/audio/demo/intro-vypravec.mp3',
   estimatedMinutes: 20,
   stationCount: 5,
 }
@@ -95,6 +97,9 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
     expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
+    // The spoken intro tries to start on its own; the button stays for blocked autoplay
+    expect(screen.getByRole('button', { name: 'Poslechnout' })).toBeInTheDocument()
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/audio/demo/intro-vypravec.mp3')
     await userEvent.type(screen.getByLabelText(/Název týmu/), 'Kuchtovi')
     await userEvent.click(screen.getByRole('button', { name: 'Začít hru' }))
 

@@ -37,7 +37,7 @@ INSERT INTO location (id, partner_id, name, city)
 VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Demo hrad', 'Loket');
 
 INSERT INTO game (id, location_id, slug, title, subtitle, intro_text, outro_text,
-                  estimated_minutes, session_validity_hours, language, status)
+                  estimated_minutes, session_validity_hours, language, status, intro_audio_url)
 VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000002',
         'demo-katuv-klic',
         'Tajemství katova klíče',
@@ -46,7 +46,9 @@ VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000
 
 Projdi pět míst, kudy kat naposledy šel, a slož z písmen, kde klíč ukryl.',
         'Klíč ležel celou dobu tam, kde by ho nikdo nehledal — pod prahem katovy vlastní světnice. Mistr Jakub neutekl. Ukryl klíč, aby žalář nemohl otevřít nikdo, kdo by chtěl osvobodit vězně dřív, než soud rozhodne o jejich vině. Díky tobě se klíč vrací na hrad a příběh mistra Jakuba může být konečně vyprávěn celý.',
-        20, 24, 'cs', 'PUBLISHED');
+        20, 24, 'cs', 'PUBLISHED',
+        -- Namluvený úvod (vypravěč); soubor je ve frontend/public/audio/demo/
+        '/audio/demo/intro-vypravec.mp3');
 
 -- ---------------------------------------------------------
 -- Stanoviště

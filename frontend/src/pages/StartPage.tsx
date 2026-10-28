@@ -6,6 +6,7 @@ import type { CodeCheck } from '../api/types.ts'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import Page from '../components/Page.tsx'
 import StoryText from '../components/StoryText.tsx'
+import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary, input, linkSubtle } from '../components/ui.ts'
 import { useSessionToken } from '../session/sessionTokenContext.ts'
 
@@ -62,6 +63,7 @@ export default function StartPage() {
         </p>
       </header>
 
+      {game.introAudioUrl && <VoicePlayer src={game.introAudioUrl} />}
       <StoryText text={game.introText} />
 
       <form onSubmit={(event) => void handleStart(event)} className="flex flex-col gap-3">

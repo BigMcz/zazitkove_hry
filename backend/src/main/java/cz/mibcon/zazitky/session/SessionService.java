@@ -140,7 +140,8 @@ public class SessionService {
             session.setStatus(SessionStatus.COMPLETED);
             session.setFinishedAt(now);
         }
-        return AnswerResult.solved(station.getRewardText(), next.map(Station::getId).orElse(null));
+        return AnswerResult.solved(station.getRewardText(), station.getRewardAudioUrl(),
+                next.map(Station::getId).orElse(null));
     }
 
     public HintsResult revealHint(UUID token, UUID stationId) {
@@ -240,7 +241,8 @@ public class SessionService {
                         .filter(item -> item.getStation().getId().equals(station.getId()))
                         .filter(item -> item.getStatus() == ProgressStatus.SOLVED)
                         .map(item -> new SolvedStation(
-                                station.getId(), station.getOrderNo(), station.getTitle(), station.getRewardText())))
+                                station.getId(), station.getOrderNo(), station.getTitle(), station.getRewardText(),
+                                station.getRewardAudioUrl())))
                 .toList();
 
         CurrentStation current = session.getStatus() != SessionStatus.IN_PROGRESS ? null : progress.stream()
@@ -251,6 +253,7 @@ public class SessionService {
 
         Finale finale = session.getStatus() != SessionStatus.COMPLETED ? null : new Finale(
                 game.getOutroText(),
+                game.getOutroAudioUrl(),
                 Duration.between(session.getStartedAt(), session.getFinishedAt()).toSeconds()
                         + session.getPenaltySeconds(),
                 progress.stream().mapToInt(SessionProgress::getHintsUsed).sum());
@@ -277,6 +280,7 @@ public class SessionService {
                 station.getOrderNo(),
                 station.getTitle(),
                 station.getStoryText(),
+                station.getStoryAudioUrl(),
                 station.getTaskText(),
                 station.getTaskType(),
                 choices,

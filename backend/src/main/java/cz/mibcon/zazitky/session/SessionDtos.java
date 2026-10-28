@@ -53,6 +53,8 @@ public final class SessionDtos {
             int orderNo,
             String title,
             String storyText,
+            /** Spoken story, null = text only. */
+            String storyAudioUrl,
             String taskText,
             TaskType taskType,
             /** Texts to choose from for {@code CHOICE}, otherwise null. */
@@ -67,10 +69,10 @@ public final class SessionDtos {
     public record RevealedHint(int orderNo, String text, int penaltySeconds) {
     }
 
-    public record SolvedStation(UUID id, int orderNo, String title, String rewardText) {
+    public record SolvedStation(UUID id, int orderNo, String title, String rewardText, String rewardAudioUrl) {
     }
 
-    public record Finale(String outroText, long totalSeconds, int hintsUsed) {
+    public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -78,15 +80,16 @@ public final class SessionDtos {
             boolean correct,
             String message,
             String rewardText,
+            String rewardAudioUrl,
             UUID nextStationId,
             Boolean gameCompleted) {
 
         static AnswerResult wrong(String message) {
-            return new AnswerResult(false, message, null, null, null);
+            return new AnswerResult(false, message, null, null, null, null);
         }
 
-        static AnswerResult solved(String rewardText, UUID nextStationId) {
-            return new AnswerResult(true, null, rewardText, nextStationId, nextStationId == null);
+        static AnswerResult solved(String rewardText, String rewardAudioUrl, UUID nextStationId) {
+            return new AnswerResult(true, null, rewardText, rewardAudioUrl, nextStationId, nextStationId == null);
         }
     }
 

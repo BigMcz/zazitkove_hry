@@ -49,6 +49,13 @@ public class Game {
     @Column(nullable = false, columnDefinition = "text")
     private String outroText;
 
+    /** Spoken intro / outro (MP3, path on the web); null = text only. */
+    @Column(length = 500)
+    private String introAudioUrl;
+
+    @Column(length = 500)
+    private String outroAudioUrl;
+
     private Integer estimatedMinutes;
 
     @Column(nullable = false)
@@ -128,6 +135,22 @@ public class Game {
 
     public void setOutroText(String outroText) {
         this.outroText = outroText;
+    }
+
+    public String getIntroAudioUrl() {
+        return introAudioUrl;
+    }
+
+    public void setIntroAudioUrl(String introAudioUrl) {
+        this.introAudioUrl = introAudioUrl;
+    }
+
+    public String getOutroAudioUrl() {
+        return outroAudioUrl;
+    }
+
+    public void setOutroAudioUrl(String outroAudioUrl) {
+        this.outroAudioUrl = outroAudioUrl;
     }
 
     public Integer getEstimatedMinutes() {

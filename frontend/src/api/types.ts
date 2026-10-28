@@ -9,6 +9,8 @@ export interface GameDetail {
   title: string
   subtitle: string | null
   introText: string
+  /** Spoken intro (MP3), null = text only. */
+  introAudioUrl: string | null
   estimatedMinutes: number | null
   stationCount: number
 }
@@ -34,6 +36,8 @@ export interface CurrentStation {
   orderNo: number
   title: string
   storyText: string
+  /** Spoken story (MP3), null = text only. */
+  storyAudioUrl: string | null
   taskText: string
   taskType: TaskType
   choices: string[] | null
@@ -47,10 +51,12 @@ export interface SolvedStation {
   orderNo: number
   title: string
   rewardText: string
+  rewardAudioUrl: string | null
 }
 
 export interface Finale {
   outroText: string
+  outroAudioUrl: string | null
   totalSeconds: number
   hintsUsed: number
 }
@@ -73,6 +79,7 @@ export interface AnswerResult {
   correct: boolean
   message?: string
   rewardText?: string
+  rewardAudioUrl?: string
   nextStationId?: string
   gameCompleted?: boolean
 }

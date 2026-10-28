@@ -8,6 +8,8 @@ public record GameDetailDto(
         String title,
         String subtitle,
         String introText,
+        /** Spoken intro, null = text only. */
+        String introAudioUrl,
         Integer estimatedMinutes,
         long stationCount) {
 }

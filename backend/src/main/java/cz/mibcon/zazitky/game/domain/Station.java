@@ -51,6 +51,13 @@ public class Station {
     @Column(nullable = false, columnDefinition = "text")
     private String rewardText;
 
+    /** Spoken story / reward (MP3, path on the web); null = text only. */
+    @Column(length = 500)
+    private String storyAudioUrl;
+
+    @Column(length = 500)
+    private String rewardAudioUrl;
+
     @Column(length = 500)
     private String imageUrl;
 
@@ -144,6 +151,22 @@ public class Station {
 
     public void setRewardText(String rewardText) {
         this.rewardText = rewardText;
+    }
+
+    public String getStoryAudioUrl() {
+        return storyAudioUrl;
+    }
+
+    public void setStoryAudioUrl(String storyAudioUrl) {
+        this.storyAudioUrl = storyAudioUrl;
+    }
+
+    public String getRewardAudioUrl() {
+        return rewardAudioUrl;
+    }
+
+    public void setRewardAudioUrl(String rewardAudioUrl) {
+        this.rewardAudioUrl = rewardAudioUrl;
     }
 
     public String getImageUrl() {

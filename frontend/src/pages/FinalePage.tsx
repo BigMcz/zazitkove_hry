@@ -3,6 +3,7 @@ import ErrorBanner from '../components/ErrorBanner.tsx'
 import { formatDuration } from '../components/formatDuration.ts'
 import Page from '../components/Page.tsx'
 import StoryText from '../components/StoryText.tsx'
+import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary, card } from '../components/ui.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 
@@ -35,6 +36,7 @@ export default function FinalePage() {
         <h1 className="font-serif text-3xl font-bold text-stone-950">{state.game.title}</h1>
       </header>
 
+      {finale.outroAudioUrl && <VoicePlayer src={finale.outroAudioUrl} />}
       <StoryText text={finale.outroText} />
 
       <section aria-labelledby="summary-heading" className={card}>

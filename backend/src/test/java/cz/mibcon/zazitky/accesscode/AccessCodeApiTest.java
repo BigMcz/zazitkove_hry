@@ -123,7 +123,8 @@ class AccessCodeApiTest {
     void developmentCodeNeverExpiresAndStartsANewGameEveryTime() throws Exception {
         check(IntegrationTest.DEV_CODE)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.resumesGame").value(false));
+                .andExpect(jsonPath("$.resumesGame").value(false))
+                .andExpect(jsonPath("$.game.introAudioUrl").value("/audio/demo/intro-vypravec.mp3"));
 
         String first = token(start("demokata", null).andExpect(status().isCreated()));
         String second = token(start(IntegrationTest.DEV_CODE, null).andExpect(status().isCreated()));

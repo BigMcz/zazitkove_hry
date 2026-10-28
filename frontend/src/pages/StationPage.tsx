@@ -10,11 +10,13 @@ import HintList from '../components/HintList.tsx'
 import Page from '../components/Page.tsx'
 import ProgressBar from '../components/ProgressBar.tsx'
 import StoryText from '../components/StoryText.tsx'
+import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonSecondary, linkSubtle } from '../components/ui.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 
 export interface RewardLocationState {
   rewardText?: string
+  rewardAudioUrl?: string
   gameCompleted?: boolean
 }
 
@@ -81,6 +83,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
           if (result.correct) {
             const rewardState: RewardLocationState = {
               rewardText: result.rewardText,
+              rewardAudioUrl: result.rewardAudioUrl,
               gameCompleted: result.gameCompleted,
             }
             navigate('/play/reward', { state: rewardState })
@@ -117,6 +120,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
 
       <h1 className="font-serif text-3xl font-bold text-stone-950">{station.title}</h1>
 
+      {station.storyAudioUrl && <VoicePlayer src={station.storyAudioUrl} />}
       <StoryText text={station.storyText} />
 
       <section aria-labelledby="task-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">

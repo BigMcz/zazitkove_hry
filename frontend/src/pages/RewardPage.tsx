@@ -2,6 +2,7 @@ import { Link, Navigate, useLocation } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import Page from '../components/Page.tsx'
 import StoryText from '../components/StoryText.tsx'
+import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary } from '../components/ui.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 import type { RewardLocationState } from './StationPage.tsx'
@@ -27,6 +28,7 @@ export default function RewardPage() {
   // After a reload the navigation state is gone, the last solved station has the same reward.
   const lastSolved = state.solvedStations.at(-1)
   const rewardText = fromAnswer?.rewardText ?? lastSolved?.rewardText
+  const rewardAudioUrl = fromAnswer?.rewardText ? fromAnswer.rewardAudioUrl : lastSolved?.rewardAudioUrl
   if (!rewardText) {
     return <Navigate to="/play" replace />
   }
@@ -45,6 +47,11 @@ export default function RewardPage() {
       </header>
 
       <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
+        {rewardAudioUrl && (
+          <div className="mb-3">
+            <VoicePlayer src={rewardAudioUrl} />
+          </div>
+        )}
         <StoryText text={rewardText} />
       </div>
 

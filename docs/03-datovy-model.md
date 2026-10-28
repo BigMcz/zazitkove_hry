@@ -74,6 +74,8 @@ erDiagram
         varchar subtitle
         text intro_text
         text outro_text
+        varchar intro_audio_url
+        varchar outro_audio_url
         int estimated_minutes
         int session_validity_hours
         varchar language
@@ -90,6 +92,8 @@ erDiagram
         text task_text
         varchar task_type
         text reward_text
+        varchar story_audio_url
+        varchar reward_audio_url
         varchar image_url
         numeric latitude
         numeric longitude
@@ -234,7 +238,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
+Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 + V7 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
 
 ### V1
 
@@ -511,6 +515,24 @@ ALTER TABLE access_code_batch ADD COLUMN handed_over_at TIMESTAMPTZ;
 UPDATE access_code_batch SET handed_over_at = created_at;
 ```
 
+### V7
+
+Soubor `backend/src/main/resources/db/migration/V7__audio.sql`:
+
+```sql
+-- =========================================================
+-- Namluvené texty: odkaz na zvukový soubor (MP3) k textům hry.
+-- NULL = text bez zvuku. Cesta je relativní k webu (např. /audio/demo/intro-vypravec.mp3).
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN intro_audio_url VARCHAR(500),
+    ADD COLUMN outro_audio_url VARCHAR(500);
+
+ALTER TABLE station
+    ADD COLUMN story_audio_url  VARCHAR(500),
+    ADD COLUMN reward_audio_url VARCHAR(500);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -532,3 +554,4 @@ UPDATE access_code_batch SET handed_over_at = created_at;
 | V4 | `access_code_batch.revenue_share_pct` — podíl partnera zafixovaný na dávce (stávající dávky převzaly aktuální podíl partnera) |
 | V5 | Podíl s platností od data: tabulka `partner_share` (dosavadní podíly převedeny jako platné od založení partnera); zrušeny `partner.revenue_share_pct` a `access_code_batch.revenue_share_pct` |
 | V6 | Firemní údaje partnera (`company_id`, `vat_id`, `contact_person`, `phone`), `access_code_batch.handed_over_at` — kódy fungují až po předání (stávající dávky převedeny jako předané) |
+| V7 | Namluvené texty: `game.intro_audio_url`, `game.outro_audio_url`, `station.story_audio_url`, `station.reward_audio_url` (cesta k MP3, NULL = jen text) |
