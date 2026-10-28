@@ -28,14 +28,14 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 
 ## M3 — Herní logika a API relací
 
-- [ ] `SessionService`: start, getState, submitAnswer, revealHint, abandon, expirace
-- [ ] `AnswerEvaluator` + unit testy (TEXT, NUMBER, CHOICE, více variant)
-- [ ] Endpointy `/api/v1/sessions…` dle architektury, hlavička `X-Session-Token`
-- [ ] Každý pokus se zapíše do `answer_attempt`; `attempts_count` a `hints_used` se aktualizují
-- [ ] Chybové stavy: 401 (token), 409 (neaktivní stanoviště / hra není rozehraná), 410 (vypršelo)
-- [ ] Optimistický zámek (`@Version`) na `game_session`
-- [ ] Integrační test: celý průchod demo hrou (špatná odpověď → nápověda → správná odpověď … → `COMPLETED`, správný součet penalizací)
-- [ ] Test: odpověď na stanoviště, které ještě není odemčené → 409; v žádné odpovědi API nejsou správné odpovědi ani neodkryté nápovědy
+- [x] `SessionService`: start, getState, submitAnswer, revealHint, abandon, expirace
+- [x] `AnswerEvaluator` + unit testy (TEXT, NUMBER, CHOICE, více variant)
+- [x] Endpointy `/api/v1/sessions…` dle architektury, hlavička `X-Session-Token`
+- [x] Každý pokus se zapíše do `answer_attempt`; `attempts_count` a `hints_used` se aktualizují
+- [x] Chybové stavy: 401 (token), 409 (neaktivní stanoviště / hra není rozehraná), 410 (vypršelo)
+- [x] Optimistický zámek (`@Version`) na `game_session`
+- [x] Integrační test: celý průchod demo hrou (špatná odpověď → nápověda → správná odpověď … → `COMPLETED`, správný součet penalizací)
+- [x] Test: odpověď na stanoviště, které ještě není odemčené → 409; v žádné odpovědi API nejsou správné odpovědi ani neodkryté nápovědy
 
 ## M4 — Frontend
 

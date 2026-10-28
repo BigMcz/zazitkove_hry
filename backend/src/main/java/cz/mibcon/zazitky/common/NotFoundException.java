@@ -1,8 +1,10 @@
 package cz.mibcon.zazitky.common;
 
-public class NotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
 
-    public NotFoundException(String message) {
-        super(message);
+public class NotFoundException extends ApiException {
+
+    public NotFoundException(String detail) {
+        super(HttpStatus.NOT_FOUND, "not-found", "Nenalezeno", detail);
     }
 }

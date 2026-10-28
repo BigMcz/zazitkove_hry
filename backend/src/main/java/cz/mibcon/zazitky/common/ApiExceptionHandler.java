@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -26,9 +27,17 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     static final String TYPE_PREFIX = "/problems/";
 
-    @ExceptionHandler(NotFoundException.class)
-    ProblemDetail handleNotFound(NotFoundException ex) {
-        return problem(HttpStatus.NOT_FOUND, "not-found", "Nenalezeno", ex.getMessage());
+    @ExceptionHandler(ApiException.class)
+    ResponseEntity<ProblemDetail> handleApiException(ApiException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(problem(ex.getStatus(), ex.getTypeSuffix(), ex.getTitle(), ex.getMessage()));
+    }
+
+    /** Two concurrent requests changed the same game session (e.g. double tap on "Odeslat"). */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ProblemDetail handleConcurrentUpdate() {
+        return problem(HttpStatus.CONFLICT, "invalid-state", "Neplatný stav hry",
+                "Hra se mezitím změnila. Načti prosím aktuální stav.");
     }
 
     /** Unifies Spring's built-in 400/404 responses (bad JSON, invalid UUID in path, unknown URL…) with ours. */

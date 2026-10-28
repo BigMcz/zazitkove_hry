@@ -136,8 +136,8 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
 | POST | `/sessions` | Zahájit hru. Body: `{ "gameId": "…", "teamName": "Kuchtovi" }` → `201` + stav relace včetně `token` |
 | GET | `/sessions/current` | Aktuální stav relace (pro obnovu i po každém kroku) |
 | POST | `/sessions/current/stations/{stationId}/answers` | Odeslat odpověď. Body: `{ "answer": "1625" }` |
-| POST | `/sessions/current/stations/{stationId}/hints` | Odkrýt další nápovědu |
-| POST | `/sessions/current/abandon` | Opustit hru |
+| POST | `/sessions/current/stations/{stationId}/hints` | Odkrýt další nápovědu → odkryté nápovědy a nová penalizace |
+| POST | `/sessions/current/abandon` | Opustit hru → `204` (opakované volání je bez efektu) |
 
 ```json
 // GET /sessions/current
@@ -157,7 +157,8 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
     "taskText": "Kolik kroků vede…?",
     "taskType": "NUMBER",
     "choices": null,
-    "hintsAvailable": 2,
+    "hintsAvailable": 1,       // počet ještě neodkrytých nápověd
+    "nextHintPenaltySeconds": 120, // penalizace za další nápovědu, null když už žádná není
     "revealedHints": [ { "orderNo": 1, "text": "…", "penaltySeconds": 60 } ]
   },
   "solvedStations": [ { "id": "…", "orderNo": 1, "title": "…", "rewardText": "…" } ],
@@ -167,9 +168,26 @@ Base path: `/api/v1`. Všechny odpovědi JSON. Relace se identifikuje hlavičkou
 
 ```json
 // POST …/answers  → 200
-{ "correct": false, "message": "To není ono. Zkus to znovu." }
+{ "correct": false, "message": "To není ono. Zkus to znovu." }   // u NUMBER bez číslic: "Odpověď musí obsahovat číslo."
 { "correct": true, "rewardText": "…", "nextStationId": "b2…", "gameCompleted": false }
+// poslední stanoviště: nextStationId chybí, gameCompleted = true
 ```
+
+```json
+// POST …/hints  → 200
+{ "revealedHints": [ { "orderNo": 1, "text": "…", "penaltySeconds": 60 } ],
+  "hintsAvailable": 1, "nextHintPenaltySeconds": 120, "penaltySeconds": 60 }
+```
+
+**Pravidla a stavové kódy relací** (kontroly v tomto pořadí):
+
+1. Chybí, je poškozený nebo neznámý `X-Session-Token` → `401 invalid-token`.
+2. Relace `IN_PROGRESS` s `expires_at <= now` se při jakémkoli přístupu přepne na `EXPIRED` (změna se uloží) → `410 session-expired`; to platí i pro `GET /sessions/current`.
+3. Odpověď / nápověda, když relace není `IN_PROGRESS` (`COMPLETED`, `ABANDONED`) → `409 invalid-state`. `GET /sessions/current` vrací u `COMPLETED` a `ABANDONED` normálně stav (`200`).
+4. Stanoviště, které do hry nepatří → `404 not-found`; stanoviště, které ještě není odemčené nebo už je vyřešené → `409 invalid-state`.
+5. Další nápověda, když už žádná nezbývá → `409 invalid-state`.
+6. Odmítnutý požadavek (body 1–5) se nezapisuje do `answer_attempt`; každý vyhodnocený pokus ano.
+7. Každá zápisová operace zvyšuje `game_session.version` (`OPTIMISTIC_FORCE_INCREMENT`), takže ze dvou souběžných požadavků na stejnou relaci uspěje jen jeden, druhý dostane `409 invalid-state`.
 
 `choices` u typu `CHOICE` je seznam textů k výběru (které z nich jsou správné, klient nezjistí).
 
