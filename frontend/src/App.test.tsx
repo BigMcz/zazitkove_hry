@@ -40,7 +40,7 @@ const demoGame = {
   title: 'Tajemství katova klíče',
   subtitle: 'Demo hra',
   introText: 'Píše se rok 1621.',
-  introAudioUrl: '/audio/demo/intro-vypravec.mp3',
+  introAudioUrl: '/audio/demo/intro.mp3',
   estimatedMinutes: 20,
   stationCount: 5,
 }
@@ -99,7 +99,7 @@ describe('App', () => {
     expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
     // The spoken intro tries to start on its own; the button stays for blocked autoplay
     expect(screen.getByRole('button', { name: 'Poslechnout' })).toBeInTheDocument()
-    expect(document.querySelector('audio')).toHaveAttribute('src', '/audio/demo/intro-vypravec.mp3')
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/audio/demo/intro.mp3')
     await userEvent.type(screen.getByLabelText(/Název týmu/), 'Kuchtovi')
     await userEvent.click(screen.getByRole('button', { name: 'Začít hru' }))
 

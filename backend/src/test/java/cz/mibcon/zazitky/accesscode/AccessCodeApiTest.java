@@ -124,7 +124,7 @@ class AccessCodeApiTest {
         check(IntegrationTest.DEV_CODE)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resumesGame").value(false))
-                .andExpect(jsonPath("$.game.introAudioUrl").value("/audio/demo/intro-vypravec.mp3"));
+                .andExpect(jsonPath("$.game.introAudioUrl").value("/audio/demo/intro.mp3"));
 
         String first = token(start("demokata", null).andExpect(status().isCreated()));
         String second = token(start(IntegrationTest.DEV_CODE, null).andExpect(status().isCreated()));

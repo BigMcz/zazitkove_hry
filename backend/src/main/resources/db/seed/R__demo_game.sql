@@ -47,8 +47,8 @@ VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000
 Projdi pět míst, kudy kat naposledy šel, a slož z písmen, kde klíč ukryl.',
         'Klíč ležel celou dobu tam, kde by ho nikdo nehledal — pod prahem katovy vlastní světnice. Mistr Jakub neutekl. Ukryl klíč, aby žalář nemohl otevřít nikdo, kdo by chtěl osvobodit vězně dřív, než soud rozhodne o jejich vině. Díky tobě se klíč vrací na hrad a příběh mistra Jakuba může být konečně vyprávěn celý.',
         20, 24, 'cs', 'PUBLISHED',
-        -- Namluvený úvod (vypravěč); soubor je ve frontend/public/audio/demo/
-        '/audio/demo/intro-vypravec.mp3');
+        -- Namluvený úvod (vypravěč a kat v jedné nahrávce); soubor je ve frontend/public/audio/demo/
+        '/audio/demo/intro.mp3');
 
 -- ---------------------------------------------------------
 -- Stanoviště
