@@ -133,6 +133,21 @@ describe('App', () => {
     expect(tokenStorage.get()).toBeNull()
   })
 
+  it('shows the landing page texts and steps', async () => {
+    mockApi({})
+    renderApp('/')
+
+    expect(screen.getByRole('heading', { name: /Staré zdi.*Nová pravidla hry/, level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ukažte mi, jak na to' })).toHaveAttribute('href', '#jak-to-funguje')
+    expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      '01 / Kartička je váš klíč',
+      '02 / Odemkněte příběh',
+      '03 / Rozhlédněte se',
+      'Začíná to na pokladně.',
+    ])
+    expect(screen.getByLabelText('Zadej kód z kartičky')).toBeInTheDocument()
+  })
+
   it('offers to continue a stored game', async () => {
     tokenStorage.set(TOKEN)
     mockApi({})
@@ -145,7 +160,7 @@ describe('App', () => {
     mockApi({})
     renderApp('/play')
 
-    expect(await screen.findByRole('heading', { name: 'Zážitkový Loket' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Staré zdi/, level: 1 })).toBeInTheDocument()
   })
 
   it('restores the current station after reload and sends the token', async () => {
@@ -229,7 +244,7 @@ describe('App', () => {
     })
     renderApp('/play')
 
-    expect(await screen.findByRole('heading', { name: 'Zážitkový Loket' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Staré zdi/, level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Platnost rozehrané hry vypršela.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Pokračovat ve hře' })).not.toBeInTheDocument()
     expect(tokenStorage.get()).toBeNull()
