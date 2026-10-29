@@ -36,7 +36,7 @@ painterly historical illustration, early 19th century Bohemia, muted earthy pale
 | `st09.jpg` | 9 Účet z roku 1835 | Úřední dopis s pečetí a mince na stole |
 | `st10.jpg` | 10 Tajenka | Otevřená kronika s brkem, závěrečná atmosféra |
 
-### cover.jpg — Huss s dopisem z účtárny
+### cover.jpg — Huss s dopisem z účtárny ✔ hotovo
 
 ```
 An elderly gentleman in his seventies, Karl Huss, former executioner and now custodian of a castle museum, standing in a 19th century cabinet of curiosities full of mineral collections, coins and old books, holding an official letter with a red wax seal, slightly indignant but dignified expression, dark Biedermeier frock coat and cravat, window light, year 1835
@@ -54,10 +54,12 @@ A medieval Gothic stone castle with a tall square tower standing on a high grani
 A gruff castle jailer in simple early 19th century clothes standing in an arched stone castle gateway, holding a heavy ring of iron keys, half in shadow, the castle courtyard visible behind him, morning light, sense of a castle turned into a prison, 1822
 ```
 
-### st03.jpg — Rozsypaná kronika
+### st03.jpg — Rozsypaná kronika ✔ hotovo
+
+Listy se generují **prázdné**, nápisy (písmeno, událost, datum) do nich dopisuje skript `tools/grafika/st03_listy.py` — AI by data a diakritiku zkomolila. Zdroj `grafika/st03.png`; při změně textů stačí skript spustit znovu.
 
 ```
-Four loose handwritten manuscript pages scattered on the cobblestones of a castle courtyard, a leather-bound chronicle lying open nearby, a quill and an ink pot, wind slightly lifting one page, warm late light, close-up from above, pages show only illegible scribbles
+Four loose blank aged parchment pages scattered on the cobblestones of a castle courtyard, each page clearly visible and lying flat with empty space for writing, a leather-bound chronicle lying open nearby, a quill and an ink pot, warm late light, view from above
 ```
 
 ### st04.jpg — Rozhovor v cele
