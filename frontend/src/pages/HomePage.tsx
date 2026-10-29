@@ -11,7 +11,7 @@ import type { StartLocationState } from './StartPage.tsx'
 
 /**
  * Landing page of StoryHold (design in docs/image.png):
- * hero, entering the code from the card, three steps and how it works on site.
+ * hero, entering the code from the card, three steps, our games and how it works on site.
  */
 export default function HomePage() {
   const location = useLocation()
@@ -31,6 +31,7 @@ export default function HomePage() {
           <Hero />
           <CodeEntry message={message} />
           <Steps />
+          <OurGames />
           <OnSite />
         </main>
         <SiteFooter />
@@ -124,29 +125,24 @@ function PhonePreview() {
   )
 }
 
-/** Entering the code from the card (a QR code on the card opens /?kod=ABCD-2345 with the code filled in). */
-function CodeEntry({ message }: { message?: string }) {
-  const { token, setToken } = useSessionToken()
+/**
+ * Uses an access code: a new code opens the game intro, a code already in use (e.g. on another phone)
+ * continues that game.
+ */
+function useEnterCode() {
+  const { setToken } = useSessionToken()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [code, setCode] = useState(() => formatAccessCode(searchParams.get('kod') ?? '', ''))
   const checkCode = useMutation({ mutationFn: api.checkCode })
   const startSession = useStartSession()
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    const typed = code.trim()
-    if (typed === '') {
-      return
-    }
-    checkCode.mutate(typed, {
+  function enterCode(code: string) {
+    checkCode.mutate(code, {
       onSuccess: (check) => {
         if (!check.resumesGame) {
           const state: StartLocationState = { check }
           navigate('/start', { state })
           return
         }
-        // The code is already in use (e.g. on another phone): continue that game.
         startSession.mutate(
           { code: check.code, teamName: null },
           {
@@ -162,8 +158,27 @@ function CodeEntry({ message }: { message?: string }) {
     })
   }
 
-  const error = checkCode.error ?? startSession.error
-  const pending = checkCode.isPending || startSession.isPending
+  return {
+    enterCode,
+    error: checkCode.error ?? startSession.error,
+    pending: checkCode.isPending || startSession.isPending,
+  }
+}
+
+/** Entering the code from the card (a QR code on the card opens /?kod=ABCD-2345 with the code filled in). */
+function CodeEntry({ message }: { message?: string }) {
+  const { token } = useSessionToken()
+  const [searchParams] = useSearchParams()
+  const [code, setCode] = useState(() => formatAccessCode(searchParams.get('kod') ?? '', ''))
+  const { enterCode, error, pending } = useEnterCode()
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    const typed = code.trim()
+    if (typed !== '') {
+      enterCode(typed)
+    }
+  }
 
   return (
     <section id="kod" className="grid gap-6 rounded-3xl border border-night-line bg-night-card p-6 md:grid-cols-2 md:p-8">
@@ -264,6 +279,66 @@ function Steps() {
           )
         })}
       </ol>
+    </section>
+  )
+}
+
+/** Development code of the demo game (seeded in the dev profile): never expires, every use starts a new game. */
+const DEMO_CODE = 'DEMO-KATA'
+
+const demoFacts = ['Skutečný příběh z roku 1822', '10 zastavení', 'asi 30 minut', 'Namluvený příběh']
+
+function OurGames() {
+  const { enterCode, error, pending } = useEnterCode()
+
+  return (
+    <section id="nase-hry" aria-labelledby="nase-hry-nadpis" className="flex scroll-mt-8 flex-col gap-6">
+      <Eyebrow>Naše hry</Eyebrow>
+      <h2 id="nase-hry-nadpis" className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Příběhy, které se staly.
+      </h2>
+      <article className="mt-4 grid overflow-hidden rounded-3xl border border-night-line bg-night-card md:grid-cols-2">
+        <img
+          src="/images/demo/cover.jpg"
+          alt="Starý kat Karl Huss s úředním dopisem v zámeckém muzeu"
+          className="aspect-[4/3] size-full object-cover"
+        />
+        <div className="flex flex-col items-start gap-5 p-6 md:p-8">
+          <p className="rounded-full bg-lime px-3 py-1 text-xs font-bold tracking-[0.12em] text-night uppercase">
+            Hrad Loket · ukázka zdarma
+          </p>
+          <h3 className="text-3xl font-extrabold tracking-tight">Katova povinnost</h3>
+          <p className="leading-relaxed text-stone-300">
+            Léto 1822. Do loketského žaláře přichází Karl Huss, poslední chebský kat. Muž, který psal kroniku, učil
+            odsouzeného jeho poslední roli a o třináct let později musel vracet přeplatek za popravu.
+          </p>
+          <p className="leading-relaxed text-stone-300">
+            Projděte s ním jeho cestu hradem, poslouchejte jeho vyprávění, rozluštěte deset hádanek a složte tajenku —
+            slovo, podle kterého mistr Huss žil.
+          </p>
+          <ul aria-label="O hře" className="flex flex-wrap gap-2">
+            {demoFacts.map((fact) => (
+              <li key={fact} className="rounded-full border border-night-line px-3 py-1 text-sm text-stone-300">
+                {fact}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => enterCode(DEMO_CODE)}
+            disabled={pending}
+            className="min-h-12 rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {pending ? 'Spouštím…' : 'Zahrát ukázku'}
+          </button>
+          <p className="-mt-2 text-sm text-stone-400">Hned teď a bez kartičky, stačí mobil.</p>
+          {error && (
+            <p role="alert" className="rounded-xl border-l-4 border-red-500 bg-night px-4 py-3 text-red-200">
+              {error.message}
+            </p>
+          )}
+        </div>
+      </article>
     </section>
   )
 }

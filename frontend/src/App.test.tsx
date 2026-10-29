@@ -116,6 +116,19 @@ describe('App', () => {
     expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
   })
 
+  it('starts the demo game from the games section without a card', async () => {
+    const fetchMock = mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'DEMO-KATA', game: demoGame, resumesGame: false, validUntil: null }),
+    })
+    renderApp('/')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zahrát ukázku' }))
+
+    expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][1]?.body).toBe('{"code":"DEMO-KATA"}')
+  })
+
   it('continues the game of a code that is already in use', async () => {
     mockApi({
       'POST /api/v1/access-codes/check': () =>
@@ -155,6 +168,7 @@ describe('App', () => {
       '01 / Kartička je váš klíč',
       '02 / Odemkněte příběh',
       '03 / Rozhlédněte se',
+      'Katova povinnost',
       'Začíná to na pokladně.',
     ])
     expect(screen.getByLabelText('Zadej kód z kartičky')).toBeInTheDocument()
