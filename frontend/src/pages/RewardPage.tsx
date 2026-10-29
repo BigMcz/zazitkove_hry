@@ -1,6 +1,7 @@
 import { Link, Navigate, useLocation } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import Page from '../components/Page.tsx'
+import PuzzleLetters from '../components/PuzzleLetters.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary } from '../components/ui.ts'
@@ -55,6 +56,8 @@ export default function RewardPage() {
         )}
         <StoryText text={rewardText} />
       </div>
+
+      {state.puzzle && <PuzzleLetters puzzle={state.puzzle} highlightLatest />}
 
       {nextText && !completed && (
         <section aria-labelledby="next-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">

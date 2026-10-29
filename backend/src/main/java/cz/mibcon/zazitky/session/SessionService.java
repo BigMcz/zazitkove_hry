@@ -5,7 +5,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import cz.mibcon.zazitky.accesscode.AccessCodeService;
 import cz.mibcon.zazitky.accesscode.CodeExpiredException;
@@ -23,6 +25,7 @@ import cz.mibcon.zazitky.session.SessionDtos.Finale;
 import cz.mibcon.zazitky.session.SessionDtos.GameRef;
 import cz.mibcon.zazitky.session.SessionDtos.HintsResult;
 import cz.mibcon.zazitky.session.SessionDtos.Progress;
+import cz.mibcon.zazitky.session.SessionDtos.Puzzle;
 import cz.mibcon.zazitky.session.SessionDtos.RevealedHint;
 import cz.mibcon.zazitky.session.SessionDtos.SessionState;
 import cz.mibcon.zazitky.session.SessionDtos.SolvedStation;
@@ -251,6 +254,13 @@ public class SessionService {
                 .map(SessionService::toCurrentStation)
                 .orElse(null);
 
+        Set<UUID> solvedIds = progress.stream()
+                .filter(item -> item.getStatus() == ProgressStatus.SOLVED)
+                .map(item -> item.getStation().getId())
+                .collect(Collectors.toSet());
+        UUID lastSolvedId = solved.isEmpty() ? null : solved.getLast().id();
+        Puzzle puzzle = PuzzleLetters.of(session.getId(), stations, solvedIds, lastSolvedId);
+
         Finale finale = session.getStatus() != SessionStatus.COMPLETED ? null : new Finale(
                 game.getOutroText(),
                 game.getOutroAudioUrl(),
@@ -268,6 +278,7 @@ public class SessionService {
                 new Progress(solved.size(), stations.size()),
                 current,
                 solved,
+                puzzle,
                 finale);
     }
 

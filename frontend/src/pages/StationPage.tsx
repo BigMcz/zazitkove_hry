@@ -9,6 +9,7 @@ import { formatDuration } from '../components/formatDuration.ts'
 import HintList from '../components/HintList.tsx'
 import Page from '../components/Page.tsx'
 import ProgressBar from '../components/ProgressBar.tsx'
+import PuzzleLetters from '../components/PuzzleLetters.tsx'
 import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
@@ -116,6 +117,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
       <header className="flex flex-col gap-3">
         <p className="text-sm font-semibold text-stone-600">{state.game.title}</p>
         <ProgressBar current={station.orderNo} total={state.progress.total} />
+        {state.puzzle && <PuzzleLetters puzzle={state.puzzle} />}
         {state.penaltySeconds > 0 && (
           <p className="text-sm text-stone-700">Penalizace za nápovědy: +{formatDuration(state.penaltySeconds)}</p>
         )}

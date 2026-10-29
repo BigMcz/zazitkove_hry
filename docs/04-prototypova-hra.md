@@ -9,7 +9,7 @@
 - **Rámec:** Rok 1835, zámek Kynžvart. Starý Karl Huss, dnes kustod zámeckého muzea, dostal od centrální účetní kanceláře dopis: před lety mu prý špatně spočítali odměnu za popravu na Lokti a má vrátit přeplatek. Huss si vše zapisoval do kroniky a chce si to ověřit. Hráč je jeho **písař**: projde s ním na Lokti cestu z léta 1822 místo po místě.
 - **Hlasy:** **vypravěč** vede hráče a po každém splněném úkolu řekne, kam má jít dál. **Karl Huss** vzpomíná a vypráví. V jednom kroku zazní i **odsouzený Karl Hains** a **žalářník**.
 - **Smyčka kroku:** příběh na místě (hlas) → úkol → odměna: historická zajímavost + písmeno do tajenky + **kam dál** (vypravěč).
-- **Tajenka:** písmena z kroků 1–9 tvoří slovo **POVINNOST**. Huss ho použil, když si odsouzeného přebíral: „Vykonám svoji povinnost co nejbedlivěji.“
+- **Tajenka:** písmena z kroků 1–9 (`station.puzzle_letter`) tvoří slovo **POVINNOST**. Hra je sbírá za hráče a ukazuje je v řádku „Tajenka“ zpřeházená, v posledním kroku je hráč přeskládá. Slovo POVINNOST použil Huss, když si odsouzeného přebíral: „Vykonám svoji povinnost co nejbedlivěji.“
 - **Demo jde hrát kdekoli.** Odpověď je vždy v textu, poslechu nebo obrázku na obrazovce. Ve skutečné hře na hradě se část úkolů přesune na místo (spočítej, najdi, přečti nápis).
 - **Citlivé téma:** poprava se nepopisuje, hra mluví o lidech, právu a době. Vhodné od cca 10 let.
 - **Místa** odpovídají skutečným částem hradu Loket, přesné umístění kroků je potřeba doladit s hradem.
@@ -203,9 +203,9 @@ Nápovědy mají penalizaci 60 s (první) a 120 s (druhá), pokud není uvedeno 
 
 ### 10. Nádvoří — tajenka — `TEXT`
 
-**Příběh (vypravěč):** Prošel jsi celou cestu mistra Husse. V ruce máš devět písmen.
+**Příběh (vypravěč):** Prošel jsi celou cestu mistra Husse. V tajence máš devět písmen, jenže jsou zpřeházená. Přeskládej je a najdeš slovo, podle kterého Huss žil.
 
-**Úkol:** Slož písmena v pořadí, v jakém jsi je získal. Jaké slovo řekl Huss justičnímu radovi, když si přebíral odsouzeného?
+**Úkol:** Jaké slovo řekl Huss justičnímu radovi, když si přebíral odsouzeného?
 
 **Přijímané odpovědi:** `povinnost`
 

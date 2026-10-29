@@ -35,6 +35,7 @@ const inProgress: SessionState = {
     revealedHints: [],
   },
   solvedStations: [{ id: 's1', orderNo: 1, title: 'Katova světnice', rewardText: 'Písmeno K.', rewardAudioUrl: null, nextText: 'Jdi k věži.' }],
+  puzzle: { slots: [null, 'K', null, null], latestSlot: 1 },
   finale: null,
 }
 
@@ -180,6 +181,10 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
     expect(screen.getByText('Stanoviště 2 / 5')).toBeInTheDocument()
+    // Collected letters of the puzzle, the latest one is highlighted only on the reward page
+    expect(screen.getByText('Tajenka 1 / 4')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Tajenka' }).textContent).toBe('K')
+    expect(screen.getByRole('listitem', { name: 'K' })).not.toHaveAttribute('aria-current')
     expect(screen.getByLabelText('Tvoje odpověď')).toHaveAttribute('inputmode', 'numeric')
     const headers = fetchMock.mock.calls[0][1]?.headers as Record<string, string>
     expect(headers['X-Session-Token']).toBe(TOKEN)
@@ -204,6 +209,7 @@ describe('App', () => {
 
     expect(await screen.findByText('Na 56. schodu je písmeno L.')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Kam dál' })).toHaveTextContent('Sestup do sklepení.')
+    expect(await screen.findByRole('listitem', { name: 'K' })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('link', { name: 'Na další stanoviště' })).toHaveAttribute('href', '/play')
   })
 

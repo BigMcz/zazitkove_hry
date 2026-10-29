@@ -99,6 +99,7 @@ erDiagram
         varchar image_alt
         boolean listen_only
         text next_text
+        varchar puzzle_letter
         numeric latitude
         numeric longitude
     }
@@ -242,7 +243,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 + V7 + V8 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
+Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 + V7 + V8 + V9 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
 
 ### V1
 
@@ -557,6 +558,19 @@ ALTER TABLE station
     ADD COLUMN next_text   TEXT;
 ```
 
+### V9
+
+Soubor `backend/src/main/resources/db/migration/V9__station_puzzle_letter.sql`:
+
+```sql
+-- =========================================================
+-- Písmeno do tajenky, které hráč získá vyřešením stanoviště. NULL = stanoviště písmeno nedává.
+-- Aplikace sbírá písmena vyřešených stanovišť a zobrazuje je zpřeházená (pořadí je pevné pro každou hru).
+-- =========================================================
+ALTER TABLE station
+    ADD COLUMN puzzle_letter VARCHAR(5);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -580,3 +594,4 @@ ALTER TABLE station
 | V6 | Firemní údaje partnera (`company_id`, `vat_id`, `contact_person`, `phone`), `access_code_batch.handed_over_at` — kódy fungují až po předání (stávající dávky převedeny jako předané) |
 | V7 | Namluvené texty: `game.intro_audio_url`, `game.outro_audio_url`, `station.story_audio_url`, `station.reward_audio_url` (cesta k MP3, NULL = jen text) |
 | V8 | Obrázky a vedení hráče: `game.cover_image_url`, `station.image_alt` (k `image_url` z V1), `station.listen_only` (poslechová úloha), `station.next_text` (kam jít dál) |
+| V9 | Tajenka: `station.puzzle_letter` — písmeno, které hráč získá vyřešením stanoviště |

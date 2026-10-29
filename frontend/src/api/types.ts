@@ -63,6 +63,13 @@ export interface SolvedStation {
   nextText: string | null
 }
 
+/** Letters of the final puzzle, scrambled; null = slot not collected yet. */
+export interface Puzzle {
+  slots: (string | null)[]
+  /** Slot of the letter from the last solved station. */
+  latestSlot: number | null
+}
+
 export interface Finale {
   outroText: string
   outroAudioUrl: string | null
@@ -81,6 +88,8 @@ export interface SessionState {
   progress: { solved: number; total: number }
   currentStation: CurrentStation | null
   solvedStations: SolvedStation[]
+  /** null when the game has no puzzle. */
+  puzzle: Puzzle | null
   finale: Finale | null
 }
 

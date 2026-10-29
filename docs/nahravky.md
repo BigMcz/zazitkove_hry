@@ -133,7 +133,7 @@ Vrať se na nádvoří a slož tajenku.
 
 `st10-pribeh.mp3` — **vypravěč**
 
-Prošel jsi celou cestu mistra Husse. V ruce máš devět písmen. Slož je v pořadí, v jakém jsi je získal.
+Prošel jsi celou cestu mistra Husse. V tajence máš devět písmen, jenže jsou zpřeházená. Přeskládej je a najdeš slovo, podle kterého Huss žil.
 
 `st10-odmena.mp3` — **Huss**
 

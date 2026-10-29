@@ -39,6 +39,8 @@ public final class SessionDtos {
             Progress progress,
             CurrentStation currentStation,
             List<SolvedStation> solvedStations,
+            /** Collected letters of the final puzzle, null when the game has none. */
+            Puzzle puzzle,
             Finale finale) {
     }
 
@@ -76,6 +78,13 @@ public final class SessionDtos {
 
     public record SolvedStation(
             UUID id, int orderNo, String title, String rewardText, String rewardAudioUrl, String nextText) {
+    }
+
+    /**
+     * Letters of the final puzzle in a scrambled order: one slot per letter, null = not collected yet.
+     * {@code latestSlot} is the slot of the letter from the last solved station (to highlight it).
+     */
+    public record Puzzle(List<String> slots, Integer latestSlot) {
     }
 
     public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed) {

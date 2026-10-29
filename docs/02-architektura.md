@@ -197,6 +197,9 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
     "revealedHints": [ { "orderNo": 1, "text": "…", "penaltySeconds": 60 } ]
   },
   "solvedStations": [ { "id": "…", "orderNo": 1, "title": "…", "rewardText": "…", "rewardAudioUrl": null, "nextText": "…" } ],
+  "puzzle": { "slots": [null, "P", null, null, null, null, null, null, null], "latestSlot": 1 },
+                              // tajenka: písmena vyřešených stanovišť zpřeházeně (pořadí pevné pro hru, odvozené z id relace),
+                              // null = ještě nezískané; latestSlot = písmeno z posledního vyřešeného; null, když hra tajenku nemá
   "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3 }
 }
 ```
@@ -312,6 +315,7 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 - Po správné odpovědi klient přejde na `/play/reward` s textem odměny; stav relace se obnoví až tam (jinak by stránka stanoviště přesměrovala dřív, než se odměna zobrazí). Po reloadu odměnové stránky se zobrazí odměna posledního vyřešeného stanoviště.
 - **Namluvené texty:** úvod hry, příběh stanoviště, odměna a závěr mohou mít zvuk (MP3, pole `introAudioUrl`, `storyAudioUrl`, `rewardAudioUrl`, `outroAudioUrl`; null = jen text). `VoicePlayer` zvuk po otevření stránky zkusí spustit sám (prohlížeč to obvykle dovolí, protože předcházelo klepnutí hráče); když to prohlížeč zablokuje (hlavně iPhone), zůstává tlačítko „Poslechnout“. „Ztlumit“ si zařízení pamatuje v `localStorage` (`zazitky.voiceMuted`) a další texty se pak samy nespouští. Text zůstává na obrazovce jako titulky. Soubory jsou zatím ve `frontend/public/audio/` (zabalí se do JAR, server podporuje Range požadavky, které iPhone pro přehrávání vyžaduje).
 - **Obrázky a vedení hráče:** úvod hry (`coverImageUrl`) a stanoviště (`imageUrl`, `imageAlt`) mohou mít obrázek ve `frontend/public/images/`. Chybí-li soubor (nahrávka nebo obrázek se teprve připravuje), přehrávač i obrázek se skryjí a hra jde dál jen s textem. U poslechové úlohy (`listenOnly`) je text příběhu skrytý za tlačítkem „Zobrazit přepis“; když nahrávka chybí, zobrazí se text rovnou. Pod odměnou je rámeček „Kam dál“ (`nextText`).
+- **Tajenka:** hra si písmena pamatuje za hráče. Na stanovišti i u odměny je řádek „Tajenka“ se získanými písmeny, zpřeházenými, aby poslední krok zůstal hádankou; u odměny je nově získané písmeno zvýrazněné (`puzzle.latestSlot`).
 - `NUMBER` používá textové pole s `inputMode="numeric"` (numerická klávesnice, ale odpověď typu „56 schodů“ projde). `CHOICE` jsou velká tlačítka, klepnutí rovnou odešle odpověď.
 - Nápověda stojí čas, proto se odkrývá až po potvrzení, které ukazuje výši penalizace (`nextHintPenaltySeconds`).
 - Zahájení nové hry při existujícím tokenu nejdřív zavolá `abandon` na starou relaci.

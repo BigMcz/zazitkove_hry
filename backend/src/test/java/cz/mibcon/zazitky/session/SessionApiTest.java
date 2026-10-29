@@ -52,6 +52,10 @@ class SessionApiTest {
     void playsDemoGameFromStartToFinale() throws Exception {
         String token = startGame("Kuchtovi");
         assertNoSecretsInState(token, STATION_1);
+        state(token)
+                .andExpect(jsonPath("$.puzzle.slots", hasSize(9)))
+                .andExpect(jsonPath("$.puzzle.slots[?(@ != null)]").isEmpty())
+                .andExpect(jsonPath("$.puzzle.latestSlot").isEmpty());
 
         // Station 1 (CHOICE): wrong choice, its only hint, then the right choice with different case and spaces
         answer(token, STATION_1, "Tvar hradní věže")
@@ -75,8 +79,11 @@ class SessionApiTest {
                 .andExpect(jsonPath("$.nextStationId").value(STATION_2))
                 .andExpect(jsonPath("$.gameCompleted").value(false));
 
-        // Station 2 (CHOICE): choices are offered as texts, the client sends the chosen text
+        // Station 2 (CHOICE): choices are offered as texts, the client sends the chosen text;
+        // the puzzle has the letter of station 1 in a scrambled slot
         state(token)
+                .andExpect(jsonPath("$.puzzle.slots[?(@ != null)]").value(contains("P")))
+                .andExpect(jsonPath("$.puzzle.latestSlot").isNumber())
                 .andExpect(jsonPath("$.currentStation.taskType").value("CHOICE"))
                 .andExpect(jsonPath("$.currentStation.choices").value(contains("Věznice", "Pivovar", "Kasárna", "Škola")));
         answer(token, STATION_2, "Věznice").andExpect(jsonPath("$.correct").value(true));
@@ -138,6 +145,13 @@ class SessionApiTest {
                 .andExpect(jsonPath("$.finale.hintsUsed").value(3))
                 .andExpect(jsonPath("$.finale.totalSeconds").value(greaterThanOrEqualTo(240)))
                 .andExpect(jsonPath("$.token").doesNotExist());
+
+        // All letters of the puzzle are collected, scrambled
+        String finished = state(token).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        List<String> letters = JsonPath.read(finished, "$.puzzle.slots");
+        assertThat(String.join("", letters)).isNotEqualTo("POVINNOST");
+        assertThat(letters.stream().sorted().toList())
+                .isEqualTo("POVINNOST".chars().mapToObj(Character::toString).sorted().toList());
 
         // Every attempt is logged, progress counters match
         UUID sessionId = sessionId(token);

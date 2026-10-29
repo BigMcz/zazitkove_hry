@@ -72,6 +72,10 @@ public class Station {
     @Column(columnDefinition = "text")
     private String nextText;
 
+    /** Letter of the final puzzle the player gets for solving the station; null = none. */
+    @Column(length = 5)
+    private String puzzleLetter;
+
     @Column(precision = 9, scale = 6)
     private BigDecimal latitude;
 
@@ -210,6 +214,14 @@ public class Station {
 
     public void setNextText(String nextText) {
         this.nextText = nextText;
+    }
+
+    public String getPuzzleLetter() {
+        return puzzleLetter;
+    }
+
+    public void setPuzzleLetter(String puzzleLetter) {
+        this.puzzleLetter = puzzleLetter;
     }
 
     public BigDecimal getLatitude() {
