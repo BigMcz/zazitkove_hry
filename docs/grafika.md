@@ -42,13 +42,13 @@ painterly historical illustration, early 19th century Bohemia, muted earthy pale
 An elderly gentleman in his seventies, Karl Huss, former executioner and now custodian of a castle museum, standing in a 19th century cabinet of curiosities full of mineral collections, coins and old books, holding an official letter with a red wax seal, slightly indignant but dignified expression, dark Biedermeier frock coat and cravat, window light, year 1835
 ```
 
-### st01.jpg — Hrad Loket nad Ohří
+### st01.jpg — Hrad Loket nad Ohří ✔ hotovo
 
 ```
 A medieval Gothic stone castle with a tall square tower standing on a high granite rock, the river Ohře wrapping around the rock in a tight meander like a bent arm, small town roofs below the castle, late summer afternoon, a horse carriage approaching on the road in the foreground, view from a distance, 1822
 ```
 
-### st02.jpg — Žalářník v bráně
+### st02.jpg — Žalářník v bráně ✔ hotovo
 
 ```
 A gruff castle jailer in simple early 19th century clothes standing in an arched stone castle gateway, holding a heavy ring of iron keys, half in shadow, the castle courtyard visible behind him, morning light, sense of a castle turned into a prison, 1822
