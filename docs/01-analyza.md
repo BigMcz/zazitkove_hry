@@ -2,7 +2,7 @@
 
 ## 1. Koncept
 
-Hradní tajemství (pracovně dříve „Zážitkový Loket“) je mobilní webová aplikace pro příběhové hry v exteriéru i interiéru hradů a v přilehlých městech. Hra kombinuje prvky gamebooku (příběh, který se odvíjí s postupem) a únikovky (úkoly a hádanky, jejichž vyřešení odemyká další část příběhu).
+StoryHold (pracovně dříve „Hradní tajemství“ a „Zážitkový Loket“) je mobilní webová aplikace pro příběhové hry v exteriéru i interiéru hradů a v přilehlých městech. Hra kombinuje prvky gamebooku (příběh, který se odvíjí s postupem) a únikovky (úkoly a hádanky, jejichž vyřešení odemyká další část příběhu).
 
 Příklad budoucí hry: příběh loketského kata, kdy hráč prochází hradem a městem pod ním a hledá indicie — třeba letopočet na fasádě domu, nápis na erbu nebo počet oken věže.
 

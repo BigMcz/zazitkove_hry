@@ -1,4 +1,5 @@
-import { Link, Route, Routes } from 'react-router'
+import { useLayoutEffect } from 'react'
+import { Link, Route, Routes, useLocation } from 'react-router'
 import AdminPage from './admin/AdminPage.tsx'
 import Page from './components/Page.tsx'
 import { linkSubtle } from './components/ui.ts'
@@ -10,16 +11,28 @@ import StationPage from './pages/StationPage.tsx'
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/start" element={<StartPage />} />
-      <Route path="/play" element={<StationPage />} />
-      <Route path="/play/reward" element={<RewardPage />} />
-      <Route path="/play/finale" element={<FinalePage />} />
-      <Route path="/admin/*" element={<AdminPage />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/start" element={<StartPage />} />
+        <Route path="/play" element={<StationPage />} />
+        <Route path="/play/reward" element={<RewardPage />} />
+        <Route path="/play/finale" element={<FinalePage />} />
+        <Route path="/admin/*" element={<AdminPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   )
+}
+
+/** Every page (next station, reward, finale) starts at the top, not where the previous one was scrolled. */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
 }
 
 function NotFound() {

@@ -3,12 +3,14 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client.ts'
 import { useStartSession } from '../api/queries.ts'
+import logoUrl from '../assets/storyhold.svg'
+import { formatAccessCode } from '../components/formatAccessCode.ts'
 import { useSessionToken } from '../session/sessionTokenContext.ts'
 import type { HomeLocationState } from '../session/usePlaySession.ts'
 import type { StartLocationState } from './StartPage.tsx'
 
 /**
- * Landing page "Hradní tajemství" (design in docs/image.png, for now without the castle photo):
+ * Landing page of StoryHold (design in docs/image.png, for now without the castle photo):
  * hero, entering the code from the card, three steps and how it works on site.
  */
 export default function HomePage() {
@@ -40,10 +42,7 @@ export default function HomePage() {
 function SiteHeader() {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-night-line py-5">
-      <span className="flex items-center gap-2.5 text-base font-extrabold tracking-wide uppercase">
-        <CastleIcon className="size-6 text-lime" />
-        Hradní tajemství
-      </span>
+      <img src={logoUrl} alt="StoryHold" className="h-7 w-auto" />
       <span className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Historie. Jinak.</span>
     </header>
   )
@@ -119,7 +118,7 @@ function CodeEntry({ message }: { message?: string }) {
   const { token, setToken } = useSessionToken()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [code, setCode] = useState(searchParams.get('kod') ?? '')
+  const [code, setCode] = useState(() => formatAccessCode(searchParams.get('kod') ?? '', ''))
   const checkCode = useMutation({ mutationFn: api.checkCode })
   const startSession = useStartSession()
 
@@ -189,11 +188,11 @@ function CodeEntry({ message }: { message?: string }) {
             autoCapitalize="characters"
             spellCheck={false}
             enterKeyHint="go"
-            maxLength={30}
+            maxLength={9}
             placeholder="ABCD-2345"
             value={code}
-            onChange={(event) => setCode(event.target.value)}
-            className="min-h-14 flex-1 rounded-full border-2 border-night-line bg-night px-5 font-mono text-xl tracking-widest text-white uppercase placeholder:text-stone-600 focus:border-lime focus:outline-none"
+            onChange={(event) => setCode((previous) => formatAccessCode(event.target.value, previous))}
+            className="min-h-14 w-full min-w-0 rounded-full sm:w-60 border-2 border-night-line bg-night px-5 text-center font-mono text-xl tracking-widest text-white uppercase placeholder:text-stone-600 focus:border-lime focus:outline-none"
           />
           <button
             type="submit"
@@ -282,7 +281,7 @@ function OnSite() {
 function SiteFooter() {
   return (
     <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-night-line py-8">
-      <span className="text-sm font-extrabold tracking-wide uppercase">Hradní tajemství</span>
+      <img src={logoUrl} alt="StoryHold" className="h-5 w-auto" />
       <span className="text-sm text-stone-400">Historie čeká na další tah.</span>
     </footer>
   )
@@ -303,15 +302,6 @@ function svgProps(className?: string) {
     strokeLinejoin: 'round' as const,
     'aria-hidden': true,
   }
-}
-
-function CastleIcon({ className }: IconProps) {
-  return (
-    <svg {...svgProps(className)}>
-      <path d="M3 21V9l2-1V5h2v2h2V5h2v3l1 .5L13 8V5h2v2h2V5h2v3l2 1v12z" />
-      <path d="M10 21v-4a2 2 0 0 1 4 0v4" />
-    </svg>
-  )
 }
 
 function TicketIcon({ className }: IconProps) {

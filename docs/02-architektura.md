@@ -298,7 +298,7 @@ frontend/src/
 
 | Cesta | Stránka |
 |---|---|
-| `/` | Úvodní stránka „Hradní tajemství“ podle návrhu `docs/image.png` (zatím bez fotky hradu): úvod, zadání kódu (předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, jak hra probíhá |
+| `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png` (zatím bez fotky hradu): úvod, zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, jak hra probíhá |
 | `/start` | Úvod hry z ověřeného kódu, název týmu, „Začít hru“ (kód jen v navigačním stavu, ne v URL) |
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |

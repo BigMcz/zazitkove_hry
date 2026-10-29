@@ -85,6 +85,7 @@ function renderApp(route: string) {
 describe('App', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     window.localStorage.clear()
   })
 
@@ -112,7 +113,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
     expect(tokenStorage.get()).toBe(TOKEN)
     const bodies = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => init?.body)
-    expect(bodies).toEqual(['{"code":"abcd 2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
+    expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
   })
 
   it('continues the game of a code that is already in use', async () => {
@@ -204,10 +205,12 @@ describe('App', () => {
         }),
     })
     renderApp('/play')
+    const scrollTo = vi.spyOn(window, 'scrollTo')
 
     await userEvent.type(await screen.findByLabelText('Tvoje odpověď'), '56{Enter}')
 
     expect(await screen.findByText('Na 56. schodu je písmeno L.')).toBeInTheDocument()
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
     expect(screen.getByRole('region', { name: 'Kam dál' })).toHaveTextContent('Sestup do sklepení.')
     expect(await screen.findByRole('listitem', { name: 'K' })).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('link', { name: 'Na další stanoviště' })).toHaveAttribute('href', '/play')
