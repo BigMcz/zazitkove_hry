@@ -2,6 +2,7 @@ import { Navigate } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { formatDuration } from '../components/formatDuration.ts'
 import Page from '../components/Page.tsx'
+import { praiseForHints } from '../components/praiseForHints.ts'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary, card } from '../components/ui.ts'
@@ -35,6 +36,13 @@ export default function FinalePage() {
         <p className="text-sm font-semibold tracking-wide text-emerald-800 uppercase">Hra dokončena</p>
         <h1 className="font-serif text-3xl font-bold text-stone-950">{state.game.title}</h1>
       </header>
+
+      <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
+        <p className="font-serif text-2xl font-bold text-emerald-900">Gratulujeme!</p>
+        <p className="mt-1 text-lg text-stone-900">
+          Vyřešili jste všech {state.progress.total} úkolů. {praiseForHints(finale.hintsUsed)}
+        </p>
+      </div>
 
       {finale.outroAudioUrl && <VoicePlayer src={finale.outroAudioUrl} />}
       <StoryText text={finale.outroText} />

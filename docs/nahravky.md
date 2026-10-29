@@ -145,6 +145,8 @@ Povinnost. Vykonám svoji povinnost co nejbedlivěji, podle moci a práva mi pro
 
 `zaver.mp3`
 
-**Huss:** Povinnost. Lidé si o katech vyprávějí hrůzy, ale já jsem nikdy nedělal víc, než mi soud uložil. Psal jsem kroniku, aby si i jiní mohli přečíst, jak to bylo. Přeplatek tedy vrátím. Pořádek musí být.
+**Huss:** Povinnost. Lidé si o katech vyprávějí hrůzy, ale já jsem nikdy nedělal víc, než mi soud uložil. Psal jsem kroniku, aby si i jiní mohli přečíst, jak to bylo. Přeplatek tedy vrátím. Pořádek musí být. A tobě, písaři, děkuji. Prošel jsi se mnou celou cestu, nic jsi nevynechal a na každou hádanku jsi přišel. Kdybych tě měl tenkrát v Chebu, byla by moje kronika hotová o rok dřív.
 
 **Vypravěč:** Karl Huss byl posledním chebským katem. Jeho kronika se dostala do sbírek zámku Kynžvart, kde od roku osmnáct set dvacet sedm působil jako kustod muzea. Díky ní dnes známe i rozhovor, který vedl v loketském žaláři s Karlem Hainsem. A dopis z účtárny? Ten přišel opravdu. Třináct let po popravě.
+
+Gratulujeme, dohrál jsi Katovu povinnost! Teď víš o posledním chebském katovi víc než většina návštěvníků hradu. Až půjdeš kolem loketské věže… vzpomeň si na mistra Husse.

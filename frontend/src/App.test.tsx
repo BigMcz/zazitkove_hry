@@ -341,6 +341,7 @@ describe('App', () => {
 
     expect(await screen.findByText('Klíč ležel pod prahem.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Výsledek týmu Kuchtovi' })).toBeInTheDocument()
+    expect(screen.getByText(/Vyřešili jste všech 5 úkolů\. Nápovědu jste potřebovali jen výjimečně/)).toBeInTheDocument()
     expect(screen.getByText('25 min')).toBeInTheDocument()
     expect(screen.getByText('4 min')).toBeInTheDocument()
   })
