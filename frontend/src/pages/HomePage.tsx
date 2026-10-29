@@ -289,11 +289,32 @@ function OnSite() {
   )
 }
 
+const contact = {
+  name: 'Michal Matúš',
+  phone: '+420 605 403 623',
+  // Shown once the storyhold.cz domain and its mailbox exist, e.g. 'info@storyhold.cz'
+  email: null as string | null,
+}
+
 function SiteFooter() {
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-night-line py-8">
-      <img src={logoUrl} alt="StoryHold" className="h-5 w-auto" />
-      <span className="text-sm text-stone-400">Historie čeká na další tah.</span>
+    <footer className="flex flex-col gap-8 border-t border-night-line py-8 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3">
+        <img src={logoUrl} alt="StoryHold" className="h-6 w-fit" />
+        <span className="text-sm text-stone-400">Historie čeká na další tah.</span>
+      </div>
+      <address className="flex flex-col gap-1 text-sm not-italic sm:items-end">
+        <h2 className="mb-1 text-xs font-bold tracking-[0.18em] text-lime uppercase">Kontakt</h2>
+        <span className="font-bold">{contact.name}</span>
+        <a href={`tel:${contact.phone.replaceAll(' ', '')}`} className="text-stone-300 hover:text-lime">
+          {contact.phone}
+        </a>
+        {contact.email && (
+          <a href={`mailto:${contact.email}`} className="text-stone-300 hover:text-lime">
+            {contact.email}
+          </a>
+        )}
+      </address>
     </footer>
   )
 }

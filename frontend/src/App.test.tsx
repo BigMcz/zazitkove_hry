@@ -158,6 +158,7 @@ describe('App', () => {
       'Začíná to na pokladně.',
     ])
     expect(screen.getByLabelText('Zadej kód z kartičky')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '+420 605 403 623' })).toHaveAttribute('href', 'tel:+420605403623')
   })
 
   it('offers to continue a stored game', async () => {
