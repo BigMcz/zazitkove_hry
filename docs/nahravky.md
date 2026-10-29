@@ -80,7 +80,7 @@ Lidé si o katech vyprávějí hrůzy. I Hains se v cele bál, že ho budu trýz
 
 `st05-odmena.mp3` — **Huss, pak vypravěč**
 
-**Huss:** Ukrutností jsem dalek. Vykonám jen to, co mi soudní úřad ukládá. Nic víc… a nic méně.
+**Huss:** Krutost je mi cizí. Vykonám jen to, co mi soudní úřad ukládá. Nic víc… a nic méně.
 **Vypravěč:** Mučení při vyšetřování zrušila Marie Terezie už v roce sedmnáct set sedmdesát šest. Huss tedy mučírnu znal jen z vyprávění. Písmeno N.
 Vrať se do hradního paláce. Tam Huss trávil s odsouzeným poslední dny.
 

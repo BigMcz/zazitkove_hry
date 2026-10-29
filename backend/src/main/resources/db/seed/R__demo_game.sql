@@ -119,7 +119,7 @@ Hains: „Ano. Toto je obraz mého Spasitele, který mi, jak doufám, bude milos
  'Lidé si o katech vyprávějí hrůzy. I Hains se v cele bál, že ho budu trýznit. Odpověděl jsem mu tak, jak jsem to myslel.',
  'Co Huss odsouzenému slíbil?',
  'CHOICE',
- '„Ukrutností jsem dalek. Vykonám jen to, co mi soudní úřad ukládá. Nic víc a nic méně.“ Mučení při vyšetřování zrušila Marie Terezie už v roce 1776, Huss tedy mučírnu znal jen z vyprávění. Písmeno N.',
+ '„Krutost je mi cizí. Vykonám jen to, co mi soudní úřad ukládá. Nic víc a nic méně.“ Mučení při vyšetřování zrušila Marie Terezie už v roce 1776, Huss tedy mučírnu znal jen z vyprávění. Písmeno N.',
  'Vrať se do hradního paláce. Tam Huss trávil s odsouzeným poslední dny.',
  '/audio/demo/st05-pribeh.mp3', '/audio/demo/st05-odmena.mp3',
  '/images/demo/st05.jpg', 'Opuštěná mučírna s pokrytými nástroji', FALSE),

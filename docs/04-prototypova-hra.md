@@ -134,7 +134,7 @@ Nápovědy mají penalizaci 60 s (první) a 120 s (druhá), pokud není uvedeno 
 **Nápovědy:**
 1. Kat byl jen vykonavatel. Kdo rozhodoval o trestu?
 
-**Odměna:** „Ukrutností jsem dalek. Vykonám jen to, co mi soudní úřad ukládá. Nic víc a nic méně.“ Mučení při vyšetřování zrušila Marie Terezie už v roce 1776, Huss tedy mučírnu znal jen z vyprávění. Písmeno **N**.
+**Odměna:** „Krutost je mi cizí. Vykonám jen to, co mi soudní úřad ukládá. Nic víc a nic méně.“ Mučení při vyšetřování zrušila Marie Terezie už v roce 1776, Huss tedy mučírnu znal jen z vyprávění. Písmeno **N**.
 *Kam dál:* Vrať se do hradního paláce. Tam Huss trávil s odsouzeným poslední dny.
 
 ### 6. Palác — poslední role — `CHOICE`
