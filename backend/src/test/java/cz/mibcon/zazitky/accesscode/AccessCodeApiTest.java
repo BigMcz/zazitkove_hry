@@ -44,8 +44,8 @@ class AccessCodeApiTest {
         check(typed)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.game.title").value("Tajemství katova klíče"))
-                .andExpect(jsonPath("$.game.stationCount").value(5))
+                .andExpect(jsonPath("$.game.title").value("Katova povinnost"))
+                .andExpect(jsonPath("$.game.stationCount").value(10))
                 .andExpect(jsonPath("$.resumesGame").value(false))
                 .andExpect(jsonPath("$.validUntil").isEmpty());
         assertThat(codeRow(code)).containsEntry("status", "NEW");
@@ -124,7 +124,8 @@ class AccessCodeApiTest {
         check(IntegrationTest.DEV_CODE)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resumesGame").value(false))
-                .andExpect(jsonPath("$.game.introAudioUrl").value("/audio/demo/intro.mp3"));
+                .andExpect(jsonPath("$.game.introAudioUrl").value("/audio/demo/intro.mp3"))
+                .andExpect(jsonPath("$.game.coverImageUrl").value("/images/demo/cover.jpg"));
 
         String first = token(start("demokata", null).andExpect(status().isCreated()));
         String second = token(start(IntegrationTest.DEV_CODE, null).andExpect(status().isCreated()));

@@ -61,6 +61,17 @@ public class Station {
     @Column(length = 500)
     private String imageUrl;
 
+    @Column(length = 300)
+    private String imageAlt;
+
+    /** The story is a listening task: its text is shown only on request (transcript). */
+    @Column(nullable = false)
+    private boolean listenOnly;
+
+    /** Narrator's direction where to go after the station is solved; null = none. */
+    @Column(columnDefinition = "text")
+    private String nextText;
+
     @Column(precision = 9, scale = 6)
     private BigDecimal latitude;
 
@@ -175,6 +186,30 @@ public class Station {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getImageAlt() {
+        return imageAlt;
+    }
+
+    public void setImageAlt(String imageAlt) {
+        this.imageAlt = imageAlt;
+    }
+
+    public boolean isListenOnly() {
+        return listenOnly;
+    }
+
+    public void setListenOnly(boolean listenOnly) {
+        this.listenOnly = listenOnly;
+    }
+
+    public String getNextText() {
+        return nextText;
+    }
+
+    public void setNextText(String nextText) {
+        this.nextText = nextText;
     }
 
     public BigDecimal getLatitude() {

@@ -29,6 +29,7 @@ export default function RewardPage() {
   const lastSolved = state.solvedStations.at(-1)
   const rewardText = fromAnswer?.rewardText ?? lastSolved?.rewardText
   const rewardAudioUrl = fromAnswer?.rewardText ? fromAnswer.rewardAudioUrl : lastSolved?.rewardAudioUrl
+  const nextText = fromAnswer?.rewardText ? fromAnswer.nextText : lastSolved?.nextText
   if (!rewardText) {
     return <Navigate to="/play" replace />
   }
@@ -54,6 +55,15 @@ export default function RewardPage() {
         )}
         <StoryText text={rewardText} />
       </div>
+
+      {nextText && !completed && (
+        <section aria-labelledby="next-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">
+          <h2 id="next-heading" className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
+            Kam dál
+          </h2>
+          <p className="mt-1 text-lg font-semibold text-stone-950">{nextText}</p>
+        </section>
+      )}
 
       <Link to={completed ? '/play/finale' : '/play'} replace className={buttonPrimary}>
         {completed ? 'Na závěr příběhu' : 'Na další stanoviště'}

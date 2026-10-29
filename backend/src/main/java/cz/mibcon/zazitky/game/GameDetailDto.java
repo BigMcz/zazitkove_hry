@@ -10,6 +10,8 @@ public record GameDetailDto(
         String introText,
         /** Spoken intro, null = text only. */
         String introAudioUrl,
+        /** Picture on the intro screen, null = none. */
+        String coverImageUrl,
         Integer estimatedMinutes,
         long stationCount) {
 }

@@ -76,6 +76,7 @@ erDiagram
         text outro_text
         varchar intro_audio_url
         varchar outro_audio_url
+        varchar cover_image_url
         int estimated_minutes
         int session_validity_hours
         varchar language
@@ -95,6 +96,9 @@ erDiagram
         varchar story_audio_url
         varchar reward_audio_url
         varchar image_url
+        varchar image_alt
+        boolean listen_only
+        text next_text
         numeric latitude
         numeric longitude
     }
@@ -238,7 +242,7 @@ stateDiagram-v2
 
 ## 4. DDL
 
-Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 + V7 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
+Výsledné schéma = V1 + V2 + V3 + V4 + V5 + V6 + V7 + V8 (V5 ruší `partner.revenue_share_pct` z V1 i `access_code_batch.revenue_share_pct` z V4).
 
 ### V1
 
@@ -533,6 +537,26 @@ ALTER TABLE station
     ADD COLUMN reward_audio_url VARCHAR(500);
 ```
 
+### V8
+
+Soubor `backend/src/main/resources/db/migration/V8__station_media_and_next_step.sql`:
+
+```sql
+-- =========================================================
+-- Obrázky, poslechové úlohy a text „Kam dál“.
+-- cover_image_url / image_url: cesta k obrázku na webu, NULL = bez obrázku (station.image_url je už z V1).
+-- listen_only: příběh je úloha na poslech, text se zobrazí až na vyžádání (přepis).
+-- next_text: rada vypravěče, kam má hráč jít po vyřešení kroku; zobrazí se pod odměnou.
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN cover_image_url VARCHAR(500);
+
+ALTER TABLE station
+    ADD COLUMN image_alt   VARCHAR(300),
+    ADD COLUMN listen_only BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN next_text   TEXT;
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -555,3 +579,4 @@ ALTER TABLE station
 | V5 | Podíl s platností od data: tabulka `partner_share` (dosavadní podíly převedeny jako platné od založení partnera); zrušeny `partner.revenue_share_pct` a `access_code_batch.revenue_share_pct` |
 | V6 | Firemní údaje partnera (`company_id`, `vat_id`, `contact_person`, `phone`), `access_code_batch.handed_over_at` — kódy fungují až po předání (stávající dávky převedeny jako předané) |
 | V7 | Namluvené texty: `game.intro_audio_url`, `game.outro_audio_url`, `station.story_audio_url`, `station.reward_audio_url` (cesta k MP3, NULL = jen text) |
+| V8 | Obrázky a vedení hráče: `game.cover_image_url`, `station.image_alt` (k `image_url` z V1), `station.listen_only` (poslechová úloha), `station.next_text` (kam jít dál) |

@@ -11,6 +11,8 @@ export interface GameDetail {
   introText: string
   /** Spoken intro (MP3), null = text only. */
   introAudioUrl: string | null
+  /** Picture on the intro screen, null = none. */
+  coverImageUrl: string | null
   estimatedMinutes: number | null
   stationCount: number
 }
@@ -38,6 +40,11 @@ export interface CurrentStation {
   storyText: string
   /** Spoken story (MP3), null = text only. */
   storyAudioUrl: string | null
+  /** The story is a listening task: its text is shown only on request. */
+  listenOnly: boolean
+  /** Picture to the story / task, null = none. */
+  imageUrl: string | null
+  imageAlt: string | null
   taskText: string
   taskType: TaskType
   choices: string[] | null
@@ -52,6 +59,8 @@ export interface SolvedStation {
   title: string
   rewardText: string
   rewardAudioUrl: string | null
+  /** Where to go next, null = no direction (last station). */
+  nextText: string | null
 }
 
 export interface Finale {
@@ -80,6 +89,7 @@ export interface AnswerResult {
   message?: string
   rewardText?: string
   rewardAudioUrl?: string
+  nextText?: string
   nextStationId?: string
   gameCompleted?: boolean
 }

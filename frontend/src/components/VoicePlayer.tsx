@@ -5,6 +5,8 @@ interface VoicePlayerProps {
   src: string
   /** Start on its own when the page opens (unless the player muted the voice). */
   autoPlay?: boolean
+  /** The recording cannot be loaded (not recorded yet); the player hides itself. */
+  onUnavailable?: () => void
 }
 
 /**
@@ -12,10 +14,11 @@ interface VoicePlayerProps {
  * above all — often block sound that was not started by a tap; then the player simply taps
  * „Poslechnout“.
  */
-export default function VoicePlayer({ src, autoPlay = true }: VoicePlayerProps) {
+export default function VoicePlayer({ src, autoPlay = true, onUnavailable }: VoicePlayerProps) {
   const audio = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(() => voicePreference.isMuted())
+  const [unavailable, setUnavailable] = useState(false)
 
   useEffect(() => {
     const element = audio.current
@@ -52,12 +55,19 @@ export default function VoicePlayer({ src, autoPlay = true }: VoicePlayerProps) 
     }
   }
 
+  function handleError() {
+    setUnavailable(true)
+    onUnavailable?.()
+  }
+
+  // The element stays mounted (hidden), so that a missing file is not requested again
   return (
-    <div className="flex items-center gap-2">
+    <div hidden={unavailable} className="flex items-center gap-2">
       <audio
         ref={audio}
         src={src}
         preload="auto"
+        onError={handleError}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}

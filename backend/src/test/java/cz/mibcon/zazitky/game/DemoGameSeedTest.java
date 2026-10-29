@@ -45,34 +45,44 @@ class DemoGameSeedTest {
 
     @Test
     void demoGameMatchesSpecification() {
-        Game game = games.findBySlug("demo-katuv-klic").orElseThrow();
+        Game game = games.findBySlug("demo-katova-povinnost").orElseThrow();
 
         assertThat(game.getId()).isEqualTo(DEMO_GAME_ID);
         assertThat(game.getStatus()).isEqualTo(GameStatus.PUBLISHED);
-        assertThat(game.getStations()).extracting(Station::getOrderNo).containsExactly(1, 2, 3, 4, 5);
+        assertThat(game.getStations()).extracting(Station::getOrderNo).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         assertThat(game.getStations()).extracting(Station::getTaskType).containsExactly(
-                TaskType.TEXT, TaskType.NUMBER, TaskType.CHOICE, TaskType.TEXT, TaskType.TEXT);
+                TaskType.CHOICE, TaskType.CHOICE, TaskType.TEXT, TaskType.TEXT, TaskType.CHOICE,
+                TaskType.CHOICE, TaskType.CHOICE, TaskType.NUMBER, TaskType.NUMBER, TaskType.TEXT);
         assertThat(game.getStations()).extracting(station -> station.getHints().size())
-                .containsExactly(2, 2, 1, 2, 1);
+                .containsExactly(1, 1, 2, 1, 1, 1, 1, 1, 2, 1);
         int totalPenalty = game.getStations().stream()
                 .flatMap(station -> station.getHints().stream())
                 .mapToInt(hint -> hint.getPenaltySeconds())
                 .sum();
-        assertThat(totalPenalty).isEqualTo(660);
+        assertThat(totalPenalty).isEqualTo(840);
+        assertThat(game.getStations()).filteredOn(Station::isListenOnly).extracting(Station::getOrderNo)
+                .containsExactly(4, 7);
+        // Every station but the last tells the player where to go next
+        assertThat(game.getStations()).extracting(station -> station.getNextText() != null)
+                .containsExactly(true, true, true, true, true, true, true, true, true, false);
     }
 
     @Test
-    void correctChoiceIsAcceptedAnswer() {
-        Station cellar = games.findBySlug("demo-katuv-klic").orElseThrow().getStations().get(2);
-        List<String> choices = cellar.getChoices().stream()
-                .map(StationChoice::getText)
-                .map(TextNormalizer::normalize)
-                .toList();
-        List<String> accepted = cellar.getAcceptedAnswers().stream()
-                .map(AcceptedAnswer::getNormalizedValue)
+    void everyChoiceStationAcceptsOneOfItsChoices() {
+        List<Station> choiceStations = games.findBySlug("demo-katova-povinnost").orElseThrow().getStations().stream()
+                .filter(station -> station.getTaskType() == TaskType.CHOICE)
                 .toList();
 
-        assertThat(choices).containsExactly("mec", "provaz", "lucernu", "klic");
-        assertThat(accepted).containsAnyElementsOf(choices);
+        assertThat(choiceStations).hasSize(5).allSatisfy(station -> {
+            List<String> choices = station.getChoices().stream()
+                    .map(StationChoice::getText)
+                    .map(TextNormalizer::normalize)
+                    .toList();
+            List<String> accepted = station.getAcceptedAnswers().stream()
+                    .map(AcceptedAnswer::getNormalizedValue)
+                    .toList();
+            assertThat(choices).hasSize(4);
+            assertThat(accepted).isNotEmpty().allSatisfy(answer -> assertThat(choices).contains(answer));
+        });
     }
 }

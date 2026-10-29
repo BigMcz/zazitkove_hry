@@ -56,6 +56,10 @@ public class Game {
     @Column(length = 500)
     private String outroAudioUrl;
 
+    /** Picture on the game intro screen (path on the web); null = none. */
+    @Column(length = 500)
+    private String coverImageUrl;
+
     private Integer estimatedMinutes;
 
     @Column(nullable = false)
@@ -151,6 +155,14 @@ public class Game {
 
     public void setOutroAudioUrl(String outroAudioUrl) {
         this.outroAudioUrl = outroAudioUrl;
+    }
+
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
+
+    public void setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
     }
 
     public Integer getEstimatedMinutes() {

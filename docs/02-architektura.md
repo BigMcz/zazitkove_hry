@@ -154,6 +154,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 {
   "code": "ABCD-2345",
   "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "…", "introText": "Píše se rok 1625…",
+            "introAudioUrl": "/audio/demo/intro.mp3", "coverImageUrl": "/images/demo/cover.jpg",
             "estimatedMinutes": 45, "stationCount": 5 },
   "resumesGame": false,       // true = kód už je použitý, POST /sessions vrátí jeho rozehranou hru
   "validUntil": null          // po aktivaci konec platnosti; null i u vývojového kódu bez expirace
@@ -185,6 +186,9 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
     "orderNo": 2,
     "title": "Katova studna",
     "storyText": "…",
+    "storyAudioUrl": "/audio/demo/st02-pribeh.mp3", // null = jen text
+    "listenOnly": false,       // true = poslechová úloha, text příběhu jen jako přepis na vyžádání
+    "imageUrl": "/images/demo/st02.jpg", "imageAlt": "…", // null = bez obrázku
     "taskText": "Kolik kroků vede…?",
     "taskType": "NUMBER",
     "choices": null,
@@ -192,7 +196,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
     "nextHintPenaltySeconds": 120, // penalizace za další nápovědu, null když už žádná není
     "revealedHints": [ { "orderNo": 1, "text": "…", "penaltySeconds": 60 } ]
   },
-  "solvedStations": [ { "id": "…", "orderNo": 1, "title": "…", "rewardText": "…" } ],
+  "solvedStations": [ { "id": "…", "orderNo": 1, "title": "…", "rewardText": "…", "rewardAudioUrl": null, "nextText": "…" } ],
   "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3 }
 }
 ```
@@ -200,8 +204,9 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 ```json
 // POST …/answers  → 200
 { "correct": false, "message": "To není ono. Zkus to znovu." }   // u NUMBER bez číslic: "Odpověď musí obsahovat číslo."
-{ "correct": true, "rewardText": "…", "nextStationId": "b2…", "gameCompleted": false }
-// poslední stanoviště: nextStationId chybí, gameCompleted = true
+{ "correct": true, "rewardText": "…", "rewardAudioUrl": "…", "nextText": "Vystoupej k hradní bráně.",
+  "nextStationId": "b2…", "gameCompleted": false }
+// poslední stanoviště: nextStationId (a obvykle i nextText) chybí, gameCompleted = true
 ```
 
 ```json
@@ -306,6 +311,7 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 - Stránky `/play*` načítají `GET /sessions/current`. Bez tokenu nebo při `401`/`410` klient token smaže a vrátí hráče na úvod se zprávou ze serveru.
 - Po správné odpovědi klient přejde na `/play/reward` s textem odměny; stav relace se obnoví až tam (jinak by stránka stanoviště přesměrovala dřív, než se odměna zobrazí). Po reloadu odměnové stránky se zobrazí odměna posledního vyřešeného stanoviště.
 - **Namluvené texty:** úvod hry, příběh stanoviště, odměna a závěr mohou mít zvuk (MP3, pole `introAudioUrl`, `storyAudioUrl`, `rewardAudioUrl`, `outroAudioUrl`; null = jen text). `VoicePlayer` zvuk po otevření stránky zkusí spustit sám (prohlížeč to obvykle dovolí, protože předcházelo klepnutí hráče); když to prohlížeč zablokuje (hlavně iPhone), zůstává tlačítko „Poslechnout“. „Ztlumit“ si zařízení pamatuje v `localStorage` (`zazitky.voiceMuted`) a další texty se pak samy nespouští. Text zůstává na obrazovce jako titulky. Soubory jsou zatím ve `frontend/public/audio/` (zabalí se do JAR, server podporuje Range požadavky, které iPhone pro přehrávání vyžaduje).
+- **Obrázky a vedení hráče:** úvod hry (`coverImageUrl`) a stanoviště (`imageUrl`, `imageAlt`) mohou mít obrázek ve `frontend/public/images/`. Chybí-li soubor (nahrávka nebo obrázek se teprve připravuje), přehrávač i obrázek se skryjí a hra jde dál jen s textem. U poslechové úlohy (`listenOnly`) je text příběhu skrytý za tlačítkem „Zobrazit přepis“; když nahrávka chybí, zobrazí se text rovnou. Pod odměnou je rámeček „Kam dál“ (`nextText`).
 - `NUMBER` používá textové pole s `inputMode="numeric"` (numerická klávesnice, ale odpověď typu „56 schodů“ projde). `CHOICE` jsou velká tlačítka, klepnutí rovnou odešle odpověď.
 - Nápověda stojí čas, proto se odkrývá až po potvrzení, které ukazuje výši penalizace (`nextHintPenaltySeconds`).
 - Zahájení nové hry při existujícím tokenu nejdřív zavolá `abandon` na starou relaci.

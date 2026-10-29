@@ -5,6 +5,7 @@ import { useStartSession } from '../api/queries.ts'
 import type { CodeCheck } from '../api/types.ts'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import Page from '../components/Page.tsx'
+import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary, input, linkSubtle } from '../components/ui.ts'
@@ -63,6 +64,7 @@ export default function StartPage() {
         </p>
       </header>
 
+      {game.coverImageUrl && <StoryImage src={game.coverImageUrl} alt="" />}
       {game.introAudioUrl && <VoicePlayer src={game.introAudioUrl} />}
       <StoryText text={game.introText} />
 

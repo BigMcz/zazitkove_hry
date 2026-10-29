@@ -55,6 +55,11 @@ public final class SessionDtos {
             String storyText,
             /** Spoken story, null = text only. */
             String storyAudioUrl,
+            /** The story is a listening task: show its text only on request. */
+            boolean listenOnly,
+            /** Picture to the story / task, null = none. */
+            String imageUrl,
+            String imageAlt,
             String taskText,
             TaskType taskType,
             /** Texts to choose from for {@code CHOICE}, otherwise null. */
@@ -69,7 +74,8 @@ public final class SessionDtos {
     public record RevealedHint(int orderNo, String text, int penaltySeconds) {
     }
 
-    public record SolvedStation(UUID id, int orderNo, String title, String rewardText, String rewardAudioUrl) {
+    public record SolvedStation(
+            UUID id, int orderNo, String title, String rewardText, String rewardAudioUrl, String nextText) {
     }
 
     public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed) {
@@ -81,15 +87,18 @@ public final class SessionDtos {
             String message,
             String rewardText,
             String rewardAudioUrl,
+            /** Where to go next, null = no direction. */
+            String nextText,
             UUID nextStationId,
             Boolean gameCompleted) {
 
         static AnswerResult wrong(String message) {
-            return new AnswerResult(false, message, null, null, null, null);
+            return new AnswerResult(false, message, null, null, null, null, null);
         }
 
-        static AnswerResult solved(String rewardText, String rewardAudioUrl, UUID nextStationId) {
-            return new AnswerResult(true, null, rewardText, rewardAudioUrl, nextStationId, nextStationId == null);
+        static AnswerResult solved(String rewardText, String rewardAudioUrl, String nextText, UUID nextStationId) {
+            return new AnswerResult(true, null, rewardText, rewardAudioUrl, nextText, nextStationId,
+                    nextStationId == null);
         }
     }
 

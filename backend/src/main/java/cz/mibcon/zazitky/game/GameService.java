@@ -29,6 +29,7 @@ public class GameService {
                 game.getSubtitle(),
                 game.getIntroText(),
                 game.getIntroAudioUrl(),
+                game.getCoverImageUrl(),
                 game.getEstimatedMinutes(),
                 stations.countByGameId(game.getId()));
     }

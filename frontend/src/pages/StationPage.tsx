@@ -9,6 +9,7 @@ import { formatDuration } from '../components/formatDuration.ts'
 import HintList from '../components/HintList.tsx'
 import Page from '../components/Page.tsx'
 import ProgressBar from '../components/ProgressBar.tsx'
+import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonSecondary, linkSubtle } from '../components/ui.ts'
@@ -17,6 +18,7 @@ import { usePlaySession } from '../session/usePlaySession.ts'
 export interface RewardLocationState {
   rewardText?: string
   rewardAudioUrl?: string
+  nextText?: string
   gameCompleted?: boolean
 }
 
@@ -84,6 +86,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
             const rewardState: RewardLocationState = {
               rewardText: result.rewardText,
               rewardAudioUrl: result.rewardAudioUrl,
+              nextText: result.nextText,
               gameCompleted: result.gameCompleted,
             }
             navigate('/play/reward', { state: rewardState })
@@ -120,8 +123,8 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
 
       <h1 className="font-serif text-3xl font-bold text-stone-950">{station.title}</h1>
 
-      {station.storyAudioUrl && <VoicePlayer src={station.storyAudioUrl} />}
-      <StoryText text={station.storyText} />
+      {station.imageUrl && <StoryImage src={station.imageUrl} alt={station.imageAlt ?? ''} />}
+      <Story station={station} />
 
       <section aria-labelledby="task-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">
         <h2 id="task-heading" className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
@@ -170,6 +173,35 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
         )}
       </footer>
     </Page>
+  )
+}
+
+/**
+ * Story of the station with its recording. A listening task hides the text behind „Zobrazit přepis“ —
+ * unless the recording is missing, then the text is the only way to solve it.
+ */
+function Story({ station }: { station: CurrentStation }) {
+  const [audioMissing, setAudioMissing] = useState(false)
+  const [transcriptShown, setTranscriptShown] = useState(false)
+  const hasAudio = station.storyAudioUrl !== null && !audioMissing
+  const textHidden = station.listenOnly && hasAudio && !transcriptShown
+
+  return (
+    <>
+      {station.storyAudioUrl && (
+        <VoicePlayer src={station.storyAudioUrl} onUnavailable={() => setAudioMissing(true)} />
+      )}
+      {textHidden ? (
+        <div className="flex flex-col gap-2 rounded-xl bg-stone-100 p-4">
+          <p className="text-base text-stone-800">Poslechni si, co se tu říká. Odpověď zazní v nahrávce.</p>
+          <button type="button" onClick={() => setTranscriptShown(true)} className={linkSubtle}>
+            Zobrazit přepis
+          </button>
+        </div>
+      ) : (
+        <StoryText text={station.storyText} />
+      )}
+    </>
   )
 }
 

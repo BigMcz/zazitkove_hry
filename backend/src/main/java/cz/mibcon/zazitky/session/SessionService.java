@@ -140,7 +140,7 @@ public class SessionService {
             session.setStatus(SessionStatus.COMPLETED);
             session.setFinishedAt(now);
         }
-        return AnswerResult.solved(station.getRewardText(), station.getRewardAudioUrl(),
+        return AnswerResult.solved(station.getRewardText(), station.getRewardAudioUrl(), station.getNextText(),
                 next.map(Station::getId).orElse(null));
     }
 
@@ -242,7 +242,7 @@ public class SessionService {
                         .filter(item -> item.getStatus() == ProgressStatus.SOLVED)
                         .map(item -> new SolvedStation(
                                 station.getId(), station.getOrderNo(), station.getTitle(), station.getRewardText(),
-                                station.getRewardAudioUrl())))
+                                station.getRewardAudioUrl(), station.getNextText())))
                 .toList();
 
         CurrentStation current = session.getStatus() != SessionStatus.IN_PROGRESS ? null : progress.stream()
@@ -281,6 +281,9 @@ public class SessionService {
                 station.getTitle(),
                 station.getStoryText(),
                 station.getStoryAudioUrl(),
+                station.isListenOnly(),
+                station.getImageUrl(),
+                station.getImageAlt(),
                 station.getTaskText(),
                 station.getTaskType(),
                 choices,

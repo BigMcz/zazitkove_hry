@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -24,6 +24,9 @@ const inProgress: SessionState = {
     title: 'Hradní věž',
     storyText: 'Strážný u věže vzpomíná.',
     storyAudioUrl: null,
+    listenOnly: false,
+    imageUrl: null,
+    imageAlt: null,
     taskText: 'Kolik schodů kat vystoupal až nahoru?',
     taskType: 'NUMBER',
     choices: null,
@@ -31,7 +34,7 @@ const inProgress: SessionState = {
     nextHintPenaltySeconds: 60,
     revealedHints: [],
   },
-  solvedStations: [{ id: 's1', orderNo: 1, title: 'Katova světnice', rewardText: 'Písmeno K.', rewardAudioUrl: null }],
+  solvedStations: [{ id: 's1', orderNo: 1, title: 'Katova světnice', rewardText: 'Písmeno K.', rewardAudioUrl: null, nextText: 'Jdi k věži.' }],
   finale: null,
 }
 
@@ -41,6 +44,7 @@ const demoGame = {
   subtitle: 'Demo hra',
   introText: 'Píše se rok 1621.',
   introAudioUrl: '/audio/demo/intro.mp3',
+  coverImageUrl: '/images/demo/cover.jpg',
   estimatedMinutes: 20,
   stationCount: 5,
 }
@@ -100,6 +104,7 @@ describe('App', () => {
     // The spoken intro tries to start on its own; the button stays for blocked autoplay
     expect(screen.getByRole('button', { name: 'Poslechnout' })).toBeInTheDocument()
     expect(document.querySelector('audio')).toHaveAttribute('src', '/audio/demo/intro.mp3')
+    expect(document.querySelector('img')).toHaveAttribute('src', '/images/demo/cover.jpg')
     await userEvent.type(screen.getByLabelText(/Název týmu/), 'Kuchtovi')
     await userEvent.click(screen.getByRole('button', { name: 'Začít hru' }))
 
@@ -185,14 +190,71 @@ describe('App', () => {
     mockApi({
       'GET /api/v1/sessions/current': () => json(inProgress),
       'POST /api/v1/sessions/current/stations/s2/answers': () =>
-        json({ correct: true, rewardText: 'Na 56. schodu je písmeno L.', nextStationId: 's3', gameCompleted: false }),
+        json({
+          correct: true,
+          rewardText: 'Na 56. schodu je písmeno L.',
+          nextText: 'Sestup do sklepení.',
+          nextStationId: 's3',
+          gameCompleted: false,
+        }),
     })
     renderApp('/play')
 
     await userEvent.type(await screen.findByLabelText('Tvoje odpověď'), '56{Enter}')
 
     expect(await screen.findByText('Na 56. schodu je písmeno L.')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Kam dál' })).toHaveTextContent('Sestup do sklepení.')
     expect(screen.getByRole('link', { name: 'Na další stanoviště' })).toHaveAttribute('href', '/play')
+  })
+
+  it('hides the story of a listening task until the transcript is requested', async () => {
+    tokenStorage.set(TOKEN)
+    const listening = {
+      ...inProgress,
+      currentStation: {
+        ...inProgress.currentStation!,
+        storyText: 'Na věky věkův amen.',
+        storyAudioUrl: '/audio/demo/st04-pribeh.mp3',
+        listenOnly: true,
+        imageUrl: '/images/demo/st04.jpg',
+        imageAlt: 'Kat a odsouzený v cele',
+      },
+    }
+    mockApi({ 'GET /api/v1/sessions/current': () => json(listening) })
+    renderApp('/play')
+
+    expect(await screen.findByRole('button', { name: 'Zobrazit přepis' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Kat a odsouzený v cele' })).toHaveAttribute('src', '/images/demo/st04.jpg')
+    expect(screen.queryByText('Na věky věkův amen.')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zobrazit přepis' }))
+    expect(screen.getByText('Na věky věkův amen.')).toBeInTheDocument()
+  })
+
+  it('shows the story of a listening task when its recording is missing, hides a missing picture', async () => {
+    tokenStorage.set(TOKEN)
+    const listening = {
+      ...inProgress,
+      currentStation: {
+        ...inProgress.currentStation!,
+        storyText: 'Na věky věkův amen.',
+        storyAudioUrl: '/audio/demo/st04-pribeh.mp3',
+        listenOnly: true,
+        imageUrl: '/images/demo/st04.jpg',
+        imageAlt: 'Kat a odsouzený v cele',
+      },
+    }
+    mockApi({ 'GET /api/v1/sessions/current': () => json(listening) })
+    renderApp('/play')
+    await screen.findByRole('button', { name: 'Zobrazit přepis' })
+
+    fireEvent.error(document.querySelector('audio')!)
+    fireEvent.error(screen.getByRole('img'))
+
+    expect(screen.getByText('Na věky věkův amen.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Zobrazit přepis' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Poslechnout' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
   it('shows the reward of the last station before the finale', async () => {
