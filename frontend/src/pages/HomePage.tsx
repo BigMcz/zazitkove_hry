@@ -10,7 +10,7 @@ import type { HomeLocationState } from '../session/usePlaySession.ts'
 import type { StartLocationState } from './StartPage.tsx'
 
 /**
- * Landing page of StoryHold (design in docs/image.png, for now without the castle photo):
+ * Landing page of StoryHold (design in docs/image.png):
  * hero, entering the code from the card, three steps and how it works on site.
  */
 export default function HomePage() {
@@ -79,10 +79,17 @@ function Hero() {
   )
 }
 
-/** Place for the castle photo (comes later) with a preview of a game chapter on a phone. */
+/** Castle picture from the demo game with a preview of a game chapter on a phone. */
 function HeroVisual() {
   return (
     <div className="relative min-h-96 overflow-hidden rounded-3xl border border-night-line bg-gradient-to-br from-stone-700 via-stone-800 to-night md:min-h-[30rem]">
+      <img
+        src="/images/demo/st01.jpg"
+        alt="Hrad Loket na skále nad řekou Ohří"
+        className="absolute inset-0 size-full object-cover"
+      />
+      {/* Darker bottom edge keeps the caption readable over the picture */}
+      <div className="absolute inset-0 bg-gradient-to-t from-night/80 via-transparent to-transparent" />
       <PhonePreview />
       <p className="absolute bottom-5 left-5 text-xs font-bold tracking-[0.18em] text-white/90 uppercase">
         Skutečná místa. Nečekané příběhy.
@@ -100,7 +107,11 @@ function PhonePreview() {
       <p className="px-1 pt-1 text-[0.65rem] font-bold tracking-[0.15em] text-lime uppercase">
         Ukázka hry | Kapitola 01
       </p>
-      <div className="mt-2 aspect-[16/9] rounded-xl bg-gradient-to-br from-stone-500 to-stone-700" />
+      <img
+        src="/images/demo/st02.jpg"
+        alt=""
+        className="mt-2 aspect-[16/9] w-full rounded-xl bg-stone-700 object-cover"
+      />
       <h2 className="mt-3 px-1 text-xl font-extrabold">Znamení ve zdi</h2>
       <p className="mt-1 px-1 text-xs leading-relaxed text-stone-300">
         Někdo tu zanechal vzkaz. Prozkoumejte okolí brány. Co vám napoví staré kameny?
