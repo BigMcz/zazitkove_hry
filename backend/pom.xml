@@ -12,7 +12,7 @@
 	<artifactId>zazitky</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>zazitky</name>
-	<description>Hradní tajemství — příběhové venkovní hry</description>
+	<description>StoryHold — příběhové venkovní hry</description>
 	<properties>
 		<java.version>21</java.version>
 	</properties>

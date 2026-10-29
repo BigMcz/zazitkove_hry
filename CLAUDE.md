@@ -1,4 +1,4 @@
-# Hradní tajemství — instrukce pro Claude Code
+# StoryHold — instrukce pro Claude Code
 
 ## O projektu
 
