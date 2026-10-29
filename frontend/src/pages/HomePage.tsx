@@ -57,14 +57,14 @@ function Hero() {
   return (
     <section className="grid items-center gap-10 md:grid-cols-2">
       <div className="flex flex-col items-start gap-6">
-        <Eyebrow>Váš další quest? Český hrad.</Eyebrow>
+        <Eyebrow>Váš další quest? Historická památka.</Eyebrow>
         <h1 className="text-5xl leading-[1.02] font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
           Staré zdi.
           <br />
           Nová pravidla hry.
         </h1>
         <p className="max-w-md text-lg leading-relaxed text-stone-300">
-          Proměňte návštěvu hradu v dobrodružství. Odemkněte příběh v mobilu, hledejte stopy ve skutečném světě a
+          Proměňte návštěvu památky v dobrodružství. Odemkněte příběh v mobilu, hledejte stopy ve skutečném světě a
           rozluštěte jeho tajemství.
         </p>
         <a
@@ -185,7 +185,7 @@ function CodeEntry({ message }: { message?: string }) {
       <div className="flex flex-col gap-3">
         <Eyebrow>Máte kartičku?</Eyebrow>
         <h2 className="text-3xl font-extrabold tracking-tight">Zadejte kód a hra začne.</h2>
-        <p className="text-stone-300">Kód najdete na kartičce z pokladny hradu. Velikost písmen ani pomlčka nehrají roli.</p>
+        <p className="text-stone-300">Kód najdete na kartičce z pokladny památky. Velikost písmen ani pomlčka nehrají roli.</p>
         {token && (
           <Link
             to="/play"
@@ -241,17 +241,17 @@ function CodeEntry({ message }: { message?: string }) {
 const steps = [
   {
     title: '01 / Kartička je váš klíč',
-    text: 'Na pokladně hradu si zakupte hru a získáte kartičku s přístupovým kódem.',
+    text: 'Na pokladně památky si zakupte hru a získáte kartičku s přístupovým kódem.',
     icon: TicketIcon,
   },
   {
     title: '02 / Odemkněte příběh',
-    text: 'Použijte kód podle pokynů na kartičce. V mobilu se před vámi otevře hradní příběh.',
+    text: 'Použijte kód podle pokynů na kartičce. V mobilu se před vámi otevře příběh památky.',
     icon: PhoneIcon,
   },
   {
     title: '03 / Rozhlédněte se',
-    text: 'Luštěte úkoly a hledejte odpovědi v okolí hradu. Každá nalezená stopa vás posune dál.',
+    text: 'Luštěte úkoly a hledejte odpovědi v okolí památky. Každá nalezená stopa vás posune dál.',
     icon: CompassIcon,
   },
 ]
@@ -348,16 +348,16 @@ function OnSite() {
     <section className="grid items-end gap-8 md:grid-cols-[1fr_20rem]">
       <div className="flex flex-col gap-4">
         <Eyebrow>Méně scrollování. Víc objevování.</Eyebrow>
-        <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Displej vypráví. Hrad napovídá.</h2>
+        <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Displej vypráví. Památka napovídá.</h2>
         <p className="max-w-2xl text-lg leading-relaxed text-stone-300">
-          Tohle není hra jen na obrazovce. Rozhlížejte se po nádvoří, všímejte si detailů a spojte stopy, které ostatní
+          Tohle není hra jen na obrazovce. Rozhlížejte se po památce, všímejte si detailů a spojte stopy, které ostatní
           míjejí. Historie se stává součástí vašeho příběhu.
         </p>
       </div>
       <aside className="flex flex-col gap-3 rounded-2xl border border-night-line p-6">
         <h3 className="text-xl font-extrabold">Začíná to na pokladně.</h3>
         <p className="text-stone-400">
-          Kartičku s kódem získáte přímo na hradě. Na dostupnost hry se informujte u jeho pokladny.
+          Kartičku s kódem získáte přímo na památce. Na dostupnost hry se informujte u její pokladny.
         </p>
       </aside>
     </section>
