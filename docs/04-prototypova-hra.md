@@ -1,6 +1,6 @@
 # 04 — Prototypová hra „Katova povinnost“ (demo, verze 2)
 
-> **Stav: schváleno a nahráno v seedu `R__demo_game.sql`** (nahradilo původní demo „Tajemství katova klíče“). Nahrávky (`docs/nahravky.md`) a obrázky (`docs/grafika.md`) se dodávají postupně; dokud soubor chybí, hra ukáže jen text. Fakta mimo článek jsou pro demo ponechána tak, jak jsou; ostrá hra se opře o podklady od hradu.
+> **Stav: schváleno a nahráno v seedu `R__demo_game.sql`** (nahradilo původní demo „Tajemství katova klíče“). Hra je kompletně namluvená (22 nahrávek, `docs/nahravky.md`) a má všech 11 obrázků (`docs/grafika.md`); kdyby soubor chyběl, hra ukáže jen text. Fakta mimo článek jsou pro demo ponechána tak, jak jsou; ostrá hra se opře o podklady od hradu.
 
 > **Historický základ.** Příběh stojí na skutečné události: 19. srpna 1822 vykonal poslední chebský kat Karl Huss na hradě Loket rozsudek nad Karlem Hainsem. Zdroj: PhDr. Miloš Říha, *Poprava na hradu Loket* (2004), viz `docs/Kat_dejiny.txt`, a Hussova rukopisná kronika města Chebu, ze které článek cituje. Co je doložené a co je herní fikce, shrnuje tabulka na konci.
 

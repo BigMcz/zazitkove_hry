@@ -62,43 +62,43 @@ Listy se generují **prázdné**, nápisy (písmeno, událost, datum) do nich do
 Four loose blank aged parchment pages scattered on the cobblestones of a castle courtyard, each page clearly visible and lying flat with empty space for writing, a leather-bound chronicle lying open nearby, a quill and an ink pot, warm late light, view from above
 ```
 
-### st04.jpg — Rozhovor v cele
+### st04.jpg — Rozhovor v cele ✔ hotovo
 
 ```
 A vaulted stone prison cell lit by a single candle, an elderly calm man in a dark frock coat standing and speaking kindly to a young remorseful prisoner sitting on a wooden bench, the prisoner holding a small devotional picture of Christ, quiet emotional moment, deep shadows, 1822
 ```
 
-### st05.jpg — Mučírna
+### st05.jpg — Mučírna ✔ hotovo
 
 ```
 An abandoned dusty medieval torture chamber in a castle cellar, old wooden instruments covered with cobwebs and cloth, clearly unused for decades, a beam of light from a small barred window, eerie but not gory, no people
 ```
 
-### st06.jpg — Poslední role
+### st06.jpg — Poslední role ✔ hotovo
 
 ```
 An elderly calm man in a dark frock coat sitting at a wooden table in a plain castle room, patiently rehearsing a text with a younger prisoner who reads from a sheet of paper, like a theatre director with an actor, candle and window light, quiet focused mood, 1822
 ```
 
-### st07.jpg — Poslední cesta
+### st07.jpg — Poslední cesta ✔ hotovo
 
 ```
 A small round Romanesque stone rotunda chapel inside a castle at dawn, a priest in a black cassock waiting at its door holding a prayer book, soft mist and first golden sunlight, solemn quiet mood, 1822
 ```
 
-### st08.jpg — Výhled z věže
+### st08.jpg — Výhled z věže ✔ hotovo
 
 ```
 View from the top of a medieval castle tower over the green wooded hills and the river valley around the town of Loket, a small procession of people and soldiers on a distant road, seen from far away, summer morning haze, wide landscape, 1822
 ```
 
-### st09.jpg — Účet z roku 1835
+### st09.jpg — Účet z roku 1835 ✔ hotovo
 
 ```
 An official Austrian government letter from 1835 with a red wax seal lying on a wooden desk, next to a small leather purse and a neat stack of old silver and copper coins, an old man's hand counting the coins, warm lamplight, close-up, the letter shows only illegible handwriting
 ```
 
-### st10.jpg — Tajenka
+### st10.jpg — Tajenka ✔ hotovo
 
 ```
 An old leather-bound chronicle lying open on a desk by a window, a quill resting in an ink pot, a sealed letter beside it, the castle visible through the window in warm evening light, peaceful reflective mood, end of a story
