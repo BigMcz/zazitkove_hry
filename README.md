@@ -56,7 +56,15 @@ docker compose --profile app stop app
 
 Testovací server **https://test.storyhold.cz** (celý za basic auth) běží na VPS ve složce `~/storyhold`: Caddy (HTTPS), aplikace a PostgreSQL z `deploy/staging/compose.yaml`. Popis prostředí je v `docs/02-architektura.md`, kap. 6.
 
-**Předpoklady:** Docker Desktop, SSH alias `storyhold` v `~/.ssh/config` (`ssh storyhold` se přihlásí bez hesla k serveru).
+**Předpoklady:** Docker Desktop, SSH alias `storyhold` v `~/.ssh/config` a klíč načtený v `ssh-agent` (skript se připojuje víckrát a na heslo ke klíči se ptát nesmí). Jednorázově ve Windows:
+
+```powershell
+# PowerShell jako správce: zapne službu ssh-agent (i po restartu)
+Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent
+# běžný PowerShell: načte klíč (heslo se zadá jednou, agent si klíč pamatuje i po restartu)
+ssh-add $HOME\.ssh\storyhold_ed25519
+```
 
 ### První nasazení
 

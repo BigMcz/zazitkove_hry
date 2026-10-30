@@ -18,7 +18,10 @@ function Invoke-Native([string]$what, [scriptblock]$command) {
     if ($LASTEXITCODE -ne 0) { throw "$what selhalo (kód $LASTEXITCODE)" }
 }
 
-ssh storyhold "test -f storyhold/.env"
+# Skript se připojuje víckrát, heslo ke klíči proto musí mít ssh-agent (jinak by server čekání na heslo ukončil)
+ssh -o BatchMode=yes storyhold "true"
+if ($LASTEXITCODE -ne 0) { throw 'SSH se nepřipojí bez hesla. Načti klíč do ssh-agenta: ssh-add $HOME\.ssh\storyhold_ed25519 (viz README).' }
+ssh -o BatchMode=yes storyhold "test -f storyhold/.env"
 if ($LASTEXITCODE -ne 0) { throw 'Na serveru chybí ~/storyhold/.env, vytvoř ho podle README (první nasazení).' }
 
 if (-not $SkipBuild) {
