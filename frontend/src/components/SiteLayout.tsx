@@ -31,7 +31,7 @@ function SiteHeader() {
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         className="rounded focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-lime"
       >
-        <img src={logoUrl} alt="StoryHold – úvodní stránka" className="h-7 w-auto" />
+        <img src={logoUrl} alt="StoryHold, úvodní stránka" className="h-7 w-auto" />
       </Link>
       <span className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Historie Jinak</span>
     </header>

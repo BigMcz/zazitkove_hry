@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client.ts'
 import { useStartSession } from '../api/queries.ts'
 import { formatAccessCode } from '../components/formatAccessCode.ts'
+import { operator } from '../components/operator.ts'
 import SiteLayout from '../components/SiteLayout.tsx'
 import { useSessionToken } from '../session/sessionTokenContext.ts'
 import type { HomeLocationState } from '../session/usePlaySession.ts'
@@ -25,6 +26,8 @@ export default function HomePage() {
         <Steps />
         <OurGames />
         <OnSite />
+        <About />
+        <ForHeritageSites />
       </main>
     </SiteLayout>
   )
@@ -296,7 +299,7 @@ function OurGames() {
             odsouzeného jeho poslední roli a o třináct let později musel vracet přeplatek za popravu.
           </p>
           <p className="leading-relaxed text-stone-300">
-            Projděte s ním jeho cestu hradem, poslouchejte jeho vyprávění, rozluštěte deset hádanek a složte tajenku —
+            Projděte s ním jeho cestu hradem, poslouchejte jeho vyprávění, rozluštěte deset hádanek a složte tajenku:
             slovo, podle kterého mistr Huss žil.
           </p>
           <ul aria-label="O hře" className="flex flex-wrap gap-2">
@@ -343,6 +346,91 @@ function OnSite() {
           Kartičku s kódem získáte přímo na památce. Na dostupnost hry se informujte u její pokladny.
         </p>
       </aside>
+    </section>
+  )
+}
+
+/** Why StoryHold exists: games that make people look around and leave knowing more. */
+function About() {
+  return (
+    <section id="o-nas" aria-labelledby="o-nas-nadpis" className="flex scroll-mt-8 flex-col gap-6">
+      <Eyebrow>Proč StoryHold</Eyebrow>
+      <h2 id="o-nas-nadpis" className="max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Hra, ze které si odnesete víc než fotku.
+      </h2>
+      <div className="grid gap-6 text-lg leading-relaxed text-stone-300 md:grid-cols-2">
+        <p>
+          Na památky jezdíme rádi. Projdeme nádvoří, vyfotíme hradby a podíváme se, jak místo vypadá dnes. Co se tu ale
+          kdysi odehrálo, kdo tu žil a jaké příběhy tyhle zdi pamatují, se většinou nedozvíme. Na informační tabule při
+          prohlídce obvykle nezbude čas ani chuť.
+        </p>
+        <p>
+          Proto vznikl StoryHold. Mobil, který máte stejně v ruce, se stane vaším průvodcem. Příběhy skutečných lidí vás
+          zavedou k místům a detailům, kolem kterých byste jinak prošli, a odpovědi na úkoly najdete jen tak, že se
+          pozorně rozhlédnete. Domů si odnesete zážitek i spoustu zajímavostí, které se při běžné prohlídce nedozvíte.
+        </p>
+      </div>
+      <ul aria-label="Co hra přináší" className="mt-2 grid gap-4 md:grid-cols-3">
+        {aboutPoints.map((point) => (
+          <li key={point.title} className="flex flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+            <h3 className="text-xl font-extrabold">{point.title}</h3>
+            <p className="text-stone-400">{point.text}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const aboutPoints = [
+  {
+    title: 'Vzdělává hrou',
+    text: 'Historie podaná jako příběh a hádanky. Fakta si zapamatujete, protože jste na ně sami přišli.',
+  },
+  {
+    title: 'Vrací pohled kolem sebe',
+    text: 'Mobil jen vypráví a ptá se. Odpovědi najdete ve zdech, na portálech a v detailech památky.',
+  },
+  {
+    title: 'Baví celou rodinu',
+    text: 'Děti luští, dospělí poslouchají příběh. Hrát můžete sami, s rodinou i jako tým kamarádů.',
+  },
+]
+
+/** Offer for castles and other heritage sites, the actual customers of StoryHold. */
+function ForHeritageSites() {
+  return (
+    <section
+      id="pro-pamatky"
+      aria-labelledby="pro-pamatky-nadpis"
+      className="grid scroll-mt-8 gap-8 rounded-3xl border border-night-line bg-night-card p-6 md:grid-cols-[1fr_auto] md:items-end md:p-10"
+    >
+      <div className="flex flex-col gap-4">
+        <Eyebrow>Pro památky</Eyebrow>
+        <h2 id="pro-pamatky-nadpis" className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Spravujete hrad, zámek nebo jinou památku?
+        </h2>
+        <p className="max-w-2xl text-lg leading-relaxed text-stone-300">
+          Připravíme pro vás hru na míru: příběh podle skutečné historie místa, namluvené texty a úkoly, které provedou
+          návštěvníky po zajímavých místech. Postaráme se o všechno, od příběhu až po tisk kartiček. Vy je jen prodáváte
+          na pokladně, bez nákladů a starostí navíc, a v administraci vidíte přehled prodaných kódů.
+        </p>
+        <p className="text-stone-400">Podmínky spolupráce domluvíme individuálně.</p>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
+        <a
+          href={`mailto:${operator.email}?subject=${encodeURIComponent('Hra StoryHold pro naši památku')}`}
+          className="inline-flex min-h-12 items-center justify-center rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark"
+        >
+          Napište nám
+        </a>
+        <a
+          href="#nase-hry"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-lime px-6 font-bold text-lime hover:bg-lime hover:text-night"
+        >
+          Vyzkoušejte ukázku
+        </a>
+      </div>
     </section>
   )
 }

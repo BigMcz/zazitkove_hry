@@ -10,7 +10,7 @@ import SiteLayout from '../components/SiteLayout.tsx'
 export default function PrivacyPage() {
   return (
     <SiteLayout>
-      <title>Ochrana osobních údajů — StoryHold</title>
+      <title>Ochrana osobních údajů | StoryHold</title>
       <main className="flex max-w-3xl flex-col gap-10 pt-10 pb-20 md:pt-16">
         <header className="flex flex-col gap-4">
           <p className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Ochrana osobních údajů</p>
@@ -39,20 +39,20 @@ export default function PrivacyPage() {
         <Section title="Co zpracováváme a proč">
           <Purpose
             title="Hraní hry"
-            data="Přístupový kód z kartičky, průběh hry (vyřešená stanoviště, zadané odpovědi, použité nápovědy, časy) a název týmu, pokud ho vyplníte. Název týmu je nepovinný — nepište do něj prosím celá jména ani jiné osobní údaje."
-            basis="Plnění smlouvy — poskytujeme vám hru, kterou jste si koupili nebo kterou jste si sami spustili (čl. 6 odst. 1 písm. b) GDPR)."
+            data="Přístupový kód z kartičky, průběh hry (vyřešená stanoviště, zadané odpovědi, použité nápovědy, časy) a název týmu, pokud ho vyplníte. Název týmu je nepovinný, nepište do něj prosím celá jména ani jiné osobní údaje."
+            basis="Plnění smlouvy: poskytujeme vám hru, kterou jste si koupili nebo kterou jste si sami spustili (čl. 6 odst. 1 písm. b) GDPR)."
             retention="Údaje o konkrétní hře 12 měsíců od vypršení kódu. Potom název týmu automaticky smažeme; průběh hry zůstane bez vazby na vás jen jako anonymní statistika (např. obtížnost úkolů nebo počty aktivovaných kódů)."
           />
           <Purpose
             title="Ochrana proti zneužití"
             data="IP adresa zařízení při zadávání přístupového kódu a při přihlášení do administrace."
-            basis="Oprávněný zájem — chránit kódy a účty před hádáním a útoky (čl. 6 odst. 1 písm. f) GDPR)."
+            basis="Oprávněný zájem, tedy chránit kódy a účty před hádáním a útoky (čl. 6 odst. 1 písm. f) GDPR)."
             retention="Jen v operační paměti serveru po dobu 1 minuty, nikam se neukládá. Záznamy serveru (logy) IP adresy návštěvníků neobsahují."
           />
           <Purpose
             title="Komunikace s vámi"
             data="Jméno, e-mail nebo telefon a obsah zprávy, pokud nás kontaktujete."
-            basis="Oprávněný zájem — odpovědět vám a vyřešit váš dotaz (čl. 6 odst. 1 písm. f) GDPR)."
+            basis="Oprávněný zájem, tedy odpovědět vám a vyřešit váš dotaz (čl. 6 odst. 1 písm. f) GDPR)."
             retention="Po dobu vyřizování a poté nejdéle 3 roky, pro případ, že se k dotazu budete vracet."
           />
           <Purpose
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-mono text-xs">JSESSIONID, XSRF-TOKEN</td>
-                  <td className="py-2 pr-4">Přihlášení do administrace a ochrana formulářů — jen pro správce a partnery.</td>
+                  <td className="py-2 pr-4">Přihlášení do administrace a ochrana formulářů, jen pro správce a partnery.</td>
                   <td className="py-2">Do odhlášení nebo zavření prohlížeče.</td>
                 </tr>
               </tbody>
@@ -111,12 +111,12 @@ export default function PrivacyPage() {
             nakládat jen podle našich pokynů:
           </p>
           <ul className="list-disc space-y-1 pl-5">
-            <li>WEDOS Internet, a.s. — provoz serveru (datové centrum v České republice),</li>
-            <li>Seznam.cz, a.s. — e-mailová schránka.</li>
+            <li>WEDOS Internet, a.s.: provoz serveru (datové centrum v České republice),</li>
+            <li>Seznam.cz, a.s.: e-mailová schránka.</li>
           </ul>
           <p>
             Památce, na jejíž pokladně jste kartičku koupili, předáváme jen souhrnné počty aktivovaných kódů pro
-            vyúčtování — žádné údaje o vás ani o průběhu vaší hry. Údaje můžeme předat také státním orgánům, pokud nám to
+            vyúčtování, žádné údaje o vás ani o průběhu vaší hry. Údaje můžeme předat také státním orgánům, pokud nám to
             ukládá zákon. Mimo Evropskou unii údaje nepředáváme.
           </p>
         </Section>
@@ -130,7 +130,7 @@ export default function PrivacyPage() {
             <li>na omezení zpracování,</li>
             <li>na přenositelnost údajů, které jste nám poskytli,</li>
             <li>
-              <strong>vznést námitku</strong> proti zpracování založenému na oprávněném zájmu — pak údaje dál nezpracujeme,
+              <strong>vznést námitku</strong> proti zpracování založenému na oprávněném zájmu; pak údaje dál nezpracujeme,
               pokud neprokážeme závažné důvody,
             </li>
             <li>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
               {operator.email}
             </a>
             , vyřídíme ji bez zbytečného odkladu, nejpozději do jednoho měsíce. Protože hrajete bez registrace, uveďte
-            prosím přístupový kód z kartičky — jinak nedokážeme poznat, která hra je vaše.
+            prosím přístupový kód z kartičky, jinak nedokážeme poznat, která hra je vaše.
           </p>
         </Section>
 

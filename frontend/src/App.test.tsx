@@ -170,7 +170,15 @@ describe('App', () => {
       '03 / Rozhlédněte se',
       'Katova povinnost',
       'Začíná to na pokladně.',
+      'Vzdělává hrou',
+      'Vrací pohled kolem sebe',
+      'Baví celou rodinu',
     ])
+    expect(screen.getByRole('heading', { name: 'Spravujete hrad, zámek nebo jinou památku?' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Napište nám' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^mailto:info@storyhold\.cz\?subject=/),
+    )
     expect(screen.getByLabelText('Zadej kód z kartičky')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '+420 605 403 623' })).toHaveAttribute('href', 'tel:+420605403623')
   })
