@@ -83,8 +83,9 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 - [x] Docker Engine + Compose, rotace logů
 - [x] DNS `test.storyhold.cz`, Caddy s HTTPS, basic auth a zástupnou stránkou
 - [x] `deploy/staging/` (`compose.yaml`, `Caddyfile`, `.env.example`) a skript `deploy/deploy-staging.ps1`, popis v `02-architektura.md` kap. 6 a v README
-- [ ] První nasazení: `.env` na serveru, nahrání souborů, spuštění
-- [ ] Ověření: `/actuator/health` = UP (za basic auth), demo hra přes `DEMO-KATA` na telefonu přes mobilní data, přihlášení do `/admin` silným heslem, CSV s odkazy `https://test.storyhold.cz/?kod=…`, MP3 na iPhonu (Range přes Caddy)
+- [x] První nasazení: `.env` na serveru, nahrání souborů, spuštění
+- [x] Ověření: `/actuator/health` = UP (za basic auth), demo hra přes `DEMO-KATA` na telefonu přes mobilní data, přihlášení do `/admin` silným heslem, CSV s odkazy `https://test.storyhold.cz/?kod=…`, MP3 na iPhonu (Range přes Caddy)
+- [x] Druhý účet basic auth `ukazka` pro prezentace
 
 ### Později
 
