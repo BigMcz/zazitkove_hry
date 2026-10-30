@@ -1,6 +1,9 @@
 spring:
   application:
     name: zazitky
+  autoconfigure:
+    # Účty má jen administrace (AdminSecurityConfig), výchozí účet Spring Bootu s heslem v logu je zbytečný
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
   jpa:
     open-in-view: false
     hibernate:
