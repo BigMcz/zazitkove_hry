@@ -5,6 +5,7 @@ import Page from './components/Page.tsx'
 import { linkSubtle } from './components/ui.ts'
 import FinalePage from './pages/FinalePage.tsx'
 import HomePage from './pages/HomePage.tsx'
+import PrivacyPage from './pages/PrivacyPage.tsx'
 import RewardPage from './pages/RewardPage.tsx'
 import StartPage from './pages/StartPage.tsx'
 import StationPage from './pages/StationPage.tsx'
@@ -15,6 +16,7 @@ export default function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/ochrana-udaju" element={<PrivacyPage />} />
         <Route path="/start" element={<StartPage />} />
         <Route path="/play" element={<StationPage />} />
         <Route path="/play/reward" element={<RewardPage />} />

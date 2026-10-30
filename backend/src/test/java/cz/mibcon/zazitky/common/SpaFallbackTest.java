@@ -25,7 +25,7 @@ class SpaFallbackTest {
     MockMvc mvc;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/start", "/play", "/play/reward", "/play/finale", "/admin", "/admin/partners"})
+    @ValueSource(strings = {"/ochrana-udaju", "/start", "/play", "/play/reward", "/play/finale", "/admin", "/admin/partners"})
     void clientRoutesServeAppHtmlWithoutIndexing(String path) throws Exception {
         mvc.perform(get(path))
                 .andExpect(status().isOk())

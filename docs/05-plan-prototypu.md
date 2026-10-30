@@ -113,6 +113,17 @@ Rozhodnutí Q16, popis v `02-architektura.md` kap. 4 „Vyhledávače (SEO)“.
 - [ ] Odkaz z webu hradu Loket na `storyhold.cz` (ideálně součást smlouvy), zápis na Firmy.cz, turistické portály (kudyznudy.cz, kraj)
 - [ ] Stránky pro jednotlivé lokality (např. `/hry/loket`) s vlastním textem, až bude skutečný obsah hry
 
+## F4 — Ochrana osobních údajů a identifikace provozovatele
+
+Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohlížeči.
+
+- [x] Identifikace provozovatele (§ 435 občanského zákoníku) na stránce `/ochrana-udaju`, odkaz „Provozovatel a ochrana osobních údajů“ v patičce (adresa ne přímo na úvodu), společný `SiteLayout`
+- [x] Stránka `/ochrana-udaju` (čl. 13 GDPR: správce, účely, právní základy, lhůty, příjemci, práva, místní úložiště), test
+- [x] Doplněno podle odpovědí provozovatele: hra 12 měsíců, komunikace 3 roky, zpracovatelé WEDOS a Seznam, hrad jen souhrnné počty, účinnost 1. 11. 2026 (upravit při spuštění produkce)
+- [x] Mazání názvů týmů 12 měsíců po vypršení kódu (`SessionRetention`, denně ve 3:30), test
+- [ ] Smlouvy o zpracování (DPA) s WEDOS a Seznamem — obvykle součást obchodních podmínek, ověřit
+- [ ] Kontrola textu právníkem před ostrým provozem
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady

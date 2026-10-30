@@ -60,6 +60,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 │   ├── AnswerEvaluator.java # normalizace + porovnání odpovědí
 │   ├── SessionController.java # /api/v1/sessions
 │   ├── SessionDtos.java     # request/response recordy
+│   ├── SessionRetention.java # denně smaže názvy týmů 12 měsíců po vypršení kódu (/ochrana-udaju)
 │   └── InvalidTokenException (401), SessionExpiredException (410)
 └── accesscode/              # přístupové kódy
     ├── domain/              # AccessCodeBatch, AccessCode + AccessCodeStatus
@@ -299,6 +300,7 @@ frontend/src/
 | Cesta | Stránka |
 |---|---|
 | `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png`: úvod s obrázkem hradu Loket přes celou sekci (`public/images/hero.jpg`, na telefonu a tabletu nad textem, od šířky `lg` pod textem se ztmavením zleva) a ukázkou hry v mobilu (jen od šířky `xl`, aby nezakrývala hrad), zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, „Naše hry“ (demo Katova povinnost, tlačítko „Zahrát ukázku“ použije kód DEMO-KATA), jak hra probíhá, patička s kontaktem. Obsah je v `index.html` předgenerovaný při buildu, viz [Vyhledávače (SEO)](#vyhledávače-seo) |
+| `/ochrana-udaju` | Informace o zpracování osobních údajů a o ukládání v prohlížeči (Q17), odkaz v patičce. Úvodní stránka i tato sdílí `SiteLayout` (tmavá hlavička s logem, patička s odkazem „Provozovatel a ochrana osobních údajů“; údaje provozovatele v `components/operator.ts`) |
 | `/start` | Úvod hry z ověřeného kódu, název týmu, „Začít hru“ (kód jen v navigačním stavu, ne v URL) |
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |
@@ -324,7 +326,7 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 
 Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 
-**Produkční build (rozhodnuto v M5):** `backend/pom.xml` přidává `../frontend/dist` jako resource do `static/` — bez frontend pluginu v Mavenu, backendové testy tak nepotřebují Node. Postup: `cd frontend && npm run build`, pak `cd backend && ./mvnw package`; když `dist` neexistuje, JAR je jen backend. `Dockerfile` dělá totéž ve dvou fázích. `SpaWebConfig` servíruje statické soubory, `/` je `index.html` s předgenerovanou úvodní stránkou. Routy aplikace (`/start`, `/play…`, `/admin…`) vrací `SpaPages` jako `app.html`. Ostatní cesty bez tečky mimo `/api/` a `/actuator/` vrací `404` s `app.html` (aplikace ukáže „Stránka nenalezena“), chybějící soubory a API `404` jako ProblemDetail. HTML stránky mají `Cache-Control: no-cache`, hashované `/assets/**` cache na rok (`immutable`).
+**Produkční build (rozhodnuto v M5):** `backend/pom.xml` přidává `../frontend/dist` jako resource do `static/` — bez frontend pluginu v Mavenu, backendové testy tak nepotřebují Node. Postup: `cd frontend && npm run build`, pak `cd backend && ./mvnw package`; když `dist` neexistuje, JAR je jen backend. `Dockerfile` dělá totéž ve dvou fázích. `SpaWebConfig` servíruje statické soubory, `/` je `index.html` s předgenerovanou úvodní stránkou. Routy aplikace (`/ochrana-udaju`, `/start`, `/play…`, `/admin…`) vrací `SpaPages` jako `app.html`. Ostatní cesty bez tečky mimo `/api/` a `/actuator/` vrací `404` s `app.html` (aplikace ukáže „Stránka nenalezena“), chybějící soubory a API `404` jako ProblemDetail. HTML stránky mají `Cache-Control: no-cache`, hashované `/assets/**` cache na rok (`immutable`).
 
 ### Vyhledávače (SEO)
 
