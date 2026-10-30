@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /admin
+Disallow: /play
+Disallow: /start
+Disallow: /api/
+Disallow: /actuator/
+
+Sitemap: https://storyhold.cz/sitemap.xml

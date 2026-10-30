@@ -87,6 +87,7 @@ function HeroVisual() {
       <img
         src="/images/demo/st01.jpg"
         alt="Hrad Loket na skále nad řekou Ohří"
+        fetchPriority="high"
         className="absolute inset-0 size-full object-cover"
       />
       {/* Darker bottom edge keeps the caption readable over the picture */}
@@ -301,6 +302,7 @@ function OurGames() {
         <img
           src="/images/demo/cover.jpg"
           alt="Starý kat Karl Huss s úředním dopisem v zámeckém muzeu"
+          loading="lazy"
           className="aspect-[4/3] size-full object-cover"
         />
         <div className="flex flex-col items-start gap-5 p-6 md:p-8">

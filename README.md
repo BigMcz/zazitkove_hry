@@ -37,7 +37,7 @@ cd frontend && npm run build && npm test
 ## Produkční build (jeden JAR s frontendem)
 
 ```bash
-cd frontend && npm ci && npm run build      # → frontend/dist
+cd frontend && npm ci && npm run build      # → frontend/dist (úvodní stránka předgenerovaná do index.html)
 cd backend && ./mvnw package                # pom.xml přibalí frontend/dist do static/
 java -jar target/zazitky-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev   # aplikace i API na :8080
 ```

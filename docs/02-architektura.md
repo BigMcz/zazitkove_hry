@@ -39,7 +39,7 @@ flowchart LR
 cz.mibcon.zazitky            # (název balíčku lze upravit)
 ├── ZazitkyApplication.java
 ├── common/                  # ApiExceptionHandler (ProblemDetail), ApiException + NotFound/InvalidState,
-│                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend + SPA fallback),
+│                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend), SpaPages (routy aplikace, 404),
 │                            # RateLimiter + RateLimitConfig, TooManyRequestsException (429)
 ├── admin/                   # přístupy do administrace
 │   ├── domain/              # PartnerUser (účet správy hradu)
@@ -298,7 +298,7 @@ frontend/src/
 
 | Cesta | Stránka |
 |---|---|
-| `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png`: úvod s obrázkem hradu Loket a ukázkou hry v mobilu (obrázky z dema), zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, „Naše hry“ (demo Katova povinnost, tlačítko „Zahrát ukázku“ použije kód DEMO-KATA), jak hra probíhá, patička s kontaktem. Náhled odkazu (Open Graph) v `index.html` s obrázkem `og-image.jpg`; po nasazení na veřejnou doménu změnit `og:image` na absolutní adresu (Facebook relativní nebere) |
+| `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png`: úvod s obrázkem hradu Loket a ukázkou hry v mobilu (obrázky z dema), zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, „Naše hry“ (demo Katova povinnost, tlačítko „Zahrát ukázku“ použije kód DEMO-KATA), jak hra probíhá, patička s kontaktem. Obsah je v `index.html` předgenerovaný při buildu, viz [Vyhledávače (SEO)](#vyhledávače-seo) |
 | `/start` | Úvod hry z ověřeného kódu, název týmu, „Začít hru“ (kód jen v navigačním stavu, ne v URL) |
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |
@@ -324,7 +324,19 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 
 Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 
-**Produkční build (rozhodnuto v M5):** `backend/pom.xml` přidává `../frontend/dist` jako resource do `static/` — bez frontend pluginu v Mavenu, backendové testy tak nepotřebují Node. Postup: `cd frontend && npm run build`, pak `cd backend && ./mvnw package`; když `dist` neexistuje, JAR je jen backend. `Dockerfile` dělá totéž ve dvou fázích. `SpaWebConfig` servíruje statické soubory a pro klientské routy (cesta bez tečky, mimo `/api/` a `/actuator/`) vrací `index.html`; `index.html` má `Cache-Control: no-cache`, hashované `/assets/**` cache na rok (`immutable`).
+**Produkční build (rozhodnuto v M5):** `backend/pom.xml` přidává `../frontend/dist` jako resource do `static/` — bez frontend pluginu v Mavenu, backendové testy tak nepotřebují Node. Postup: `cd frontend && npm run build`, pak `cd backend && ./mvnw package`; když `dist` neexistuje, JAR je jen backend. `Dockerfile` dělá totéž ve dvou fázích. `SpaWebConfig` servíruje statické soubory, `/` je `index.html` s předgenerovanou úvodní stránkou. Routy aplikace (`/start`, `/play…`, `/admin…`) vrací `SpaPages` jako `app.html`. Ostatní cesty bez tečky mimo `/api/` a `/actuator/` vrací `404` s `app.html` (aplikace ukáže „Stránka nenalezena“), chybějící soubory a API `404` jako ProblemDetail. HTML stránky mají `Cache-Control: no-cache`, hashované `/assets/**` cache na rok (`immutable`).
+
+### Vyhledávače (SEO)
+
+Rozhodnuto 2026-10-30 (Q16). Indexovat se má jen úvodní stránka na `https://storyhold.cz/`; hra a administrace do vyhledávačů nepatří.
+
+- **Hlavička `index.html`:** výstižný `<title>`, `description`, kanonická adresa `https://storyhold.cz/` (sjednotí i odkazy z QR `/?kod=…`), Open Graph s absolutní adresou obrázku (`og:url`, `og:image`), strukturovaná data JSON-LD (`Organization` s logem a kontaktem, `WebSite`). Adresy jsou natvrdo na produkční doménu, testovací server je stejně skrytý.
+- **Předgenerování úvodní stránky:** `npm run build` po `vite build` spustí `prerender.mjs`. Ten přes Vite SSR build vykreslí `src/prerender.tsx` (`HomePage` přes `renderToString`, bez tokenu a bez `?kod=`) a vloží HTML do `dist/index.html`. Původní prázdnou stránku uloží jako `dist/app.html` pro ostatní routy, aby hra při načtení neprobleskla úvodní stránkou. Vyhledávače (hlavně Seznam, který JavaScript zpracuje jen omezeně) a náhledy odkazů tak vidí obsah bez JavaScriptu a stránka se dřív vykreslí. Aplikace pak obsah překreslí přes `createRoot` (ne hydratace: stav z `localStorage` a `?kod=` se od předgenerované verze liší). Vite dev server používá `index.html` bez předgenerování.
+- **`robots.txt`** zakazuje `/admin`, `/play`, `/start`, `/api/`, `/actuator/` a odkazuje na **`sitemap.xml`** (zatím jen `/`). Routy aplikace a stránka 404 mají navíc hlavičku `X-Robots-Tag: noindex` (`SpaPages`).
+- **Neexistující adresy** vrací skutečnou `404`, ne úvodní stránku s `200` („soft 404“).
+- **Rychlost:** hlavní obrázek úvodu má `fetchpriority="high"`, obrázek níž na stránce `loading="lazy"`.
+- **Testovací server** zůstává za basic auth s `X-Robots-Tag: noindex, nofollow` (Caddy), do vyhledávačů se nedostane.
+- **Později:** stránky pro jednotlivé lokality (např. `/hry/loket`) s vlastním textem, předgenerované stejným způsobem a přidané do sitemapy; po spuštění produkce registrace v Google Search Console a Seznam Webmaster.
 
 ## 5. Bezpečnost
 
@@ -397,7 +409,8 @@ Staging (`deploy/staging/`):
 | Integrace | Celý průchod demo hrou přes REST (start → odpovědi → nápovědy → finále), chybové stavy | `@SpringBootTest` + MockMvc + Testcontainers PostgreSQL |
 | Migrace | Flyway proběhne na čisté DB, `ddl-auto=validate` projde | Testcontainers |
 | Souběh | Dvě překrývající se změny jedné relace → druhá selže | `TransactionTemplate` + Testcontainers |
-| SPA | Klientské routy vrací `index.html`, `/api` a chybějící soubory 404 | MockMvc |
+| SPA | `/` vrací `index.html`, routy aplikace `app.html` s `noindex`, neznámé stránky 404 s `app.html`, `/api` a chybějící soubory 404 | MockMvc |
+| Předgenerování | Úvodní stránka z `src/prerender.tsx` obsahuje nadpis a obsah, bez „Pokračovat ve hře“ | Vitest |
 | Frontend | `AnswerInput`, `HintList`, `formatDuration`, `tokenStorage`, toky v `App` (obnova po reloadu, 410 → úvod, odměna → finále) | Vitest + Testing Library (mock `fetch`) |
 | Kódy | Aktivace, platnost 5 h, pokračování na jiném zařízení, opuštěná hra, vypršení, vývojový kód, limit pokusů | MockMvc + Testcontainers |
 | Administrace | Přihlášení + CSRF, dávky, CSV, měsíční přehled bez vývojových kódů | MockMvc + `spring-security-test` |

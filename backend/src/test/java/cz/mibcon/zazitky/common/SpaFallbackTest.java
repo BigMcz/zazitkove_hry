@@ -1,6 +1,7 @@
 package cz.mibcon.zazitky.common;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -24,29 +25,46 @@ class SpaFallbackTest {
     MockMvc mvc;
 
     @ParameterizedTest
-    @ValueSource(strings = {"/index.html", "/play", "/play/reward", "/play/finale",
-            "/games/00000000-0000-0000-0000-000000000003"})
-    void clientRoutesServeIndexHtml(String path) throws Exception {
+    @ValueSource(strings = {"/start", "/play", "/play/reward", "/play/finale", "/admin", "/admin/partners"})
+    void clientRoutesServeAppHtmlWithoutIndexing(String path) throws Exception {
         mvc.perform(get(path))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl(null))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("spa-test-index")))
-                .andExpect(header().string("Cache-Control", "no-cache"));
+                .andExpect(content().string(containsString("spa-test-app")))
+                .andExpect(header().string("Cache-Control", "no-cache"))
+                .andExpect(header().string("X-Robots-Tag", "noindex"));
     }
 
-    /** Spring Boot's welcome page mapping forwards "/" to index.html, which the handler above then serves. */
+    /** Spring Boot's welcome page mapping forwards "/" to index.html with the prerendered landing page. */
     @Test
     void rootForwardsToIndexHtml() throws Exception {
         mvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("index.html"));
+        mvc.perform(get("/index.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("spa-test-index")))
+                .andExpect(header().string("Cache-Control", "no-cache"))
+                .andExpect(header().doesNotExist("X-Robots-Tag"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/unknown", "/games/00000000-0000-0000-0000-000000000003", "/play/unknown"})
+    void unknownPageIsNotFoundWithTheApp(String path) throws Exception {
+        mvc.perform(get(path))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("spa-test-app")))
+                .andExpect(header().string("X-Robots-Tag", "noindex"));
     }
 
     @Test
     void missingFileIsNotFound() throws Exception {
         mvc.perform(get("/assets/missing-abc123.js")).andExpect(status().isNotFound());
-        mvc.perform(get("/missing.png")).andExpect(status().isNotFound());
+        mvc.perform(get("/missing.png"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(not(containsString("spa-test"))));
     }
 
     @Test

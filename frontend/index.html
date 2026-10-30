@@ -5,19 +5,45 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1c1917" />
-    <title>StoryHold</title>
+    <title>StoryHold — příběhové hry na hradech a zámcích</title>
     <meta name="description" content="Příběhové hry na hradech, zámcích a dalších historických památkách. Kód z pokladny, mobil v ruce a historie, která ožije." />
+    <!-- Search engines index only the production domain; the test server is behind basic auth with noindex -->
+    <link rel="canonical" href="https://storyhold.cz/" />
     <!-- Link preview (WhatsApp, Messenger, e-mail…); the picture is made by tools/grafika/og_image.py -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="StoryHold" />
     <meta property="og:title" content="StoryHold — příběhové hry na historických památkách" />
     <meta property="og:description" content="Příběhové hry na hradech, zámcích a dalších historických památkách. Kód z pokladny, mobil v ruce a historie, která ožije." />
-    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:url" content="https://storyhold.cz/" />
+    <meta property="og:image" content="https://storyhold.cz/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Hrad Loket a logo StoryHold" />
     <meta property="og:locale" content="cs_CZ" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://storyhold.cz/#organization",
+            "name": "StoryHold",
+            "url": "https://storyhold.cz/",
+            "logo": "https://storyhold.cz/favicon.svg",
+            "email": "info@storyhold.cz",
+            "telephone": "+420605403623"
+          },
+          {
+            "@type": "WebSite",
+            "name": "StoryHold",
+            "url": "https://storyhold.cz/",
+            "inLanguage": "cs",
+            "publisher": { "@id": "https://storyhold.cz/#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

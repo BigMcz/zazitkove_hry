@@ -15,8 +15,10 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Returns all API errors as RFC 9457 {@link ProblemDetail}. The {@code type} is a relative URI
@@ -38,6 +40,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleConcurrentUpdate() {
         return problem(HttpStatus.CONFLICT, "invalid-state", "Neplatný stav hry",
                 "Hra se mezitím změnila. Načti prosím aktuální stav.");
+    }
+
+    /** An unknown page (not API, not a file) is a 404 page of the app, the API keeps ProblemDetail. */
+    @Override
+    protected @Nullable ResponseEntity<Object> handleNoResourceFoundException(NoResourceFoundException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        if (request instanceof ServletWebRequest servlet && SpaPages.isPagePath(servlet.getRequest().getRequestURI())) {
+            return SpaPages.page(HttpStatus.NOT_FOUND);
+        }
+        return super.handleNoResourceFoundException(ex, headers, status, request);
     }
 
     /** Unifies Spring's built-in 400/404 responses (bad JSON, invalid UUID in path, unknown URL…) with ours. */

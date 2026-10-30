@@ -1,19 +1,15 @@
 package cz.mibcon.zazitky.common;
 
-import java.io.IOException;
 import java.time.Duration;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
- * Serves the frontend build packaged in {@code classpath:/static/}. Client-side routes of the SPA
- * ({@code /games/…}, {@code /play/…}) fall back to {@code index.html}; API, actuator and missing
- * files still end with 404.
+ * Serves the frontend build packaged in {@code classpath:/static/}; "/" is {@code index.html} with the
+ * prerendered landing page (Spring Boot's welcome page). Routes of the React app are in {@link SpaPages}.
  */
 @Configuration(proxyBeanMethods = false)
 public class SpaWebConfig implements WebMvcConfigurer {
@@ -29,29 +25,6 @@ public class SpaWebConfig implements WebMvcConfigurer {
 
         registry.addResourceHandler("/**")
                 .addResourceLocations(STATIC)
-                .setCacheControl(CacheControl.noCache())
-                .resourceChain(true)
-                .addResolver(new SpaFallbackResolver());
-    }
-
-    static class SpaFallbackResolver extends PathResourceResolver {
-
-        @Override
-        protected Resource getResource(String resourcePath, Resource location) throws IOException {
-            if (!resourcePath.isEmpty() && !resourcePath.endsWith("/")) {
-                Resource file = super.getResource(resourcePath, location);
-                if (file != null) {
-                    return file;
-                }
-                if (!isClientRoute(resourcePath)) {
-                    return null;
-                }
-            }
-            return super.getResource("index.html", location);
-        }
-
-        private static boolean isClientRoute(String path) {
-            return !path.startsWith("api/") && !path.startsWith("actuator/") && !path.contains(".");
-        }
+                .setCacheControl(CacheControl.noCache());
     }
 }
