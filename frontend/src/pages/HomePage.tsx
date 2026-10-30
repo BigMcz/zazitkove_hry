@@ -368,7 +368,7 @@ const contact = {
   name: 'Michal Matúš',
   phone: '+420 605 403 623',
   // Shown once the storyhold.cz domain and its mailbox exist, e.g. 'info@storyhold.cz'
-  email: null as string | null,
+  email: 'info@storyhold.cz',
 }
 
 function SiteFooter() {
