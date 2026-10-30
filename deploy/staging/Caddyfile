@@ -1,0 +1,18 @@
+# Testovací server: automatické HTTPS (Let's Encrypt), celý web za basic auth, mimo vyhledávače.
+# {$BASIC_AUTH_USER} a {$BASIC_AUTH_HASH} dosadí Caddy z prostředí kontejneru (compose.yaml ← .env).
+# Po změně: docker compose exec -w /etc/caddy caddy caddy reload (dělá to i deploy-staging.ps1).
+
+test.storyhold.cz {
+	header X-Robots-Tag "noindex, nofollow"
+
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	encode zstd gzip
+
+	reverse_proxy app:8080 {
+		# Heslo k basic auth aplikace nepotřebuje
+		header_up -Authorization
+	}
+}

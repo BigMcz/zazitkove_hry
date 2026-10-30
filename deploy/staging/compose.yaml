@@ -1,0 +1,72 @@
+# Testovací server test.storyhold.cz, na serveru v ~/storyhold s Caddyfile a .env (postup v README).
+# Porty zveřejňuje jen Caddy: Docker obchází ufw, proto app a db nemají „ports:“.
+
+# Pevný název projektu = stejné názvy volumes jako dosud (storyhold_caddy_data s certifikáty)
+name: storyhold
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?doplň BASIC_AUTH_USER do .env}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?doplň BASIC_AUTH_HASH do .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  app:
+    # Image se builduje na vývojovém počítači a nahrává přes docker load, ze Docker Hubu se nestahuje
+    image: storyhold-app:staging
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # JVM bere 75 % z limitu kontejneru (ENTRYPOINT v Dockerfile) → heap ~770 MB
+    mem_limit: 1g
+    environment:
+      # Profil prod (z image) + demo hra ze seedu, stejně jako lokálně docker compose --profile app
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed
+      DB_URL: jdbc:postgresql://db:5432/storyhold
+      DB_USER: storyhold
+      DB_PASSWORD: ${DB_PASSWORD:?doplň DB_PASSWORD do .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?doplň ADMIN_PASSWORD do .env}
+      PUBLIC_URL: https://test.storyhold.cz
+      # Za Caddy: limity pokusů počítají skutečnou IP hráče z X-Forwarded-For
+      FORWARD_HEADERS_STRATEGY: native
+      SESSION_COOKIE_SECURE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 90s
+      retries: 3
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      POSTGRES_DB: storyhold
+      POSTGRES_USER: storyhold
+      # Platí jen při prvním založení databáze, pozdější změna v .env heslo v DB nezmění
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?doplň DB_PASSWORD do .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storyhold -d storyhold"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:

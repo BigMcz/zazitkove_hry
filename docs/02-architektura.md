@@ -339,10 +339,55 @@ Vite dev server na `:5173` s proxy `/api → http://localhost:8080`.
 
 - Build: `npm run build` + `./mvnw package` → spustitelný JAR s vloženým frontendem, nebo Docker image z `Dockerfile` (multi-stage: Node → Maven → JRE, běží pod neprivilegovaným uživatelem, profil `prod`, `HEALTHCHECK` na `/actuator/health`). V image se nespouští testy (Testcontainers potřebují Docker) — spouští se předem / v CI.
 - Lokální ověření image: `docker compose --profile app up -d --build` (aplikace na `:8080` proti PostgreSQL z compose, včetně demo hry přes `SPRING_FLYWAY_LOCATIONS`).
-- Výhled provozu:
-  - Docker Compose (app + PostgreSQL) na VPS za reverzní proxy (Caddy/Nginx s Let's Encrypt), nebo spravovaná PostgreSQL v cloudu. Varianta SAP BTP Cloud Foundry zůstává otevřená (viz Q1 v analýze).
-- Monitoring: Actuator `/actuator/health` pro proxy/orchestraci, logy na stdout.
-- Zálohy DB: denní `pg_dump`.
+
+### Prostředí
+
+| Prostředí | Adresa | Kde běží | Data |
+|---|---|---|---|
+| dev | `localhost:5173` / `:8080` | vývojový počítač, `docker-compose.yml` | profil `dev`, seed demo hry |
+| staging | `https://test.storyhold.cz` | VPS, `~/storyhold` (`deploy/staging/`) | profil `prod` + seed demo hry, celé za basic auth, `noindex` |
+| prod | `https://storyhold.cz` | stejný VPS, vlastní stack (zatím neexistuje) | profil `prod` bez seedu, bez basic auth |
+
+### Server
+
+- WEDOS VPS SSD (2 moduly: 4 GB RAM, 1 vlákno CPU, 30 GB SSD), Ubuntu 24.04 LTS, IP `31.31.75.96` / `2a02:2b88:2:1::7dd8:1`.
+- Přístup jen SSH klíčem jako `michal` (sudo), root a hesla zakázané; nouzově KVM/VNC z administrace WEDOS.
+- `ufw` povoluje jen 22, 80, 443; swap 2 GB; automatické bezpečnostní aktualizace; Docker Engine + Compose, logy kontejnerů rotované (10 MB × 3).
+- **Porty zveřejňuje jen Caddy.** Docker pravidla `ufw` obchází, proto `app` a `db` nemají `ports:` a jsou dostupné jen ve vnitřní síti Compose.
+- Image se na serveru **nebuilduje** (1 vlákno CPU): build na vývojovém počítači, na server přes `docker save` → `scp` → `docker load` (`deploy/deploy-staging.ps1`). Později GitHub Container Registry a CI.
+
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#ffffff','primaryTextColor':'#000000','primaryBorderColor':'#000000','lineColor':'#000000','textColor':'#000000','edgeLabelBackground':'#ffffff','clusterBkg':'#ffffff','clusterBorder':'#000000','titleColor':'#000000'}}}%%
+flowchart LR
+    U[Mobilní prohlížeč] -->|HTTPS 443<br/>test.storyhold.cz| C
+    PC[Vývojový počítač<br/>docker build] -.->|scp image<br/>ssh storyhold| S
+    subgraph S[VPS · Docker Compose ~/storyhold]
+        C[Caddy<br/>Let's Encrypt, basic auth] -->|HTTP app:8080| A[Spring Boot<br/>image storyhold-app]
+        A -->|JDBC db:5432| D[(PostgreSQL 16<br/>volume pgdata)]
+    end
+```
+
+Staging (`deploy/staging/`):
+
+- `compose.yaml` — `caddy` (jediná s porty 80/443), `app` (`storyhold-app:staging`, limit 1 GB → heap ~770 MB, healthcheck `/actuator/health`), `db` (`postgres:16-alpine`, limit 512 MB, volume `pgdata`); vše `restart: unless-stopped`. Název projektu `storyhold` drží volume `caddy_data` s certifikáty.
+- `Caddyfile` — `reverse_proxy app:8080`, basic auth z proměnných `BASIC_AUTH_USER` / `BASIC_AUTH_HASH`, `X-Robots-Tag: noindex, nofollow`.
+- Tajemství (`DB_PASSWORD`, `ADMIN_PASSWORD`, hash basic auth) jen v `~/storyhold/.env` na serveru (práva 600), vzor `deploy/staging/.env.example`. Každá služba dostane jen své proměnné.
+- Pevně v `compose.yaml`: `PUBLIC_URL=https://test.storyhold.cz`, `FORWARD_HEADERS_STRATEGY=native`, `SESSION_COOKIE_SECURE=true`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/seed`.
+- Seed na stagingu vytvoří i vývojový kód `DEMO-KATA` a účet hradu `hrad` / `hrad-loket` (heslo je v repozitáři, za basic auth přijatelné). Heslo účtu jde v administraci změnit, ale každá změna `R__demo_game.sql` seed spustí znovu: vrátí heslo, smaže rozehrané hry demo hry a dávky kódů k ní (Q9).
+
+### DNS a e-mail (`storyhold.cz`, WEDOS)
+
+| Záznam | Hodnota |
+|---|---|
+| `test` A / AAAA | VPS |
+| `@`, `*` A / AAAA | zatím parkovací stránka WEDOS, při spuštění produkce přesměrovat na VPS |
+| MX, SPF, DKIM (`szn1–3._domainkey`) | Seznam Email Profi (`info@storyhold.cz`) |
+| `_dmarc` | `p=none`, po ověření doručování `p=quarantine` |
+
+### Provoz
+
+- Monitoring: Actuator `/actuator/health` (healthcheck v Compose), logy na stdout (`docker compose logs -f app`).
+- Zálohy DB (až budou ostrá data): denní `pg_dump` → šifrování (`age`/`gpg`) → WEDOS Disk přes rsync, retence 14 denních + měsíční.
 
 ## 7. Testování
 

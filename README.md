@@ -52,6 +52,46 @@ docker compose --profile app up -d --build      # aplikace na :8080 proti Postgr
 docker compose --profile app stop app
 ```
 
+## Nasazení na testovací server
+
+Testovací server **https://test.storyhold.cz** (celý za basic auth) běží na VPS ve složce `~/storyhold`: Caddy (HTTPS), aplikace a PostgreSQL z `deploy/staging/compose.yaml`. Popis prostředí je v `docs/02-architektura.md`, kap. 6.
+
+**Předpoklady:** Docker Desktop, SSH alias `storyhold` v `~/.ssh/config` (`ssh storyhold` se přihlásí bez hesla k serveru).
+
+### První nasazení
+
+1. Na serveru (`ssh storyhold`) vytvoř `.env` s vygenerovanými hesly a s hashem basic auth z dosavadního `Caddyfile` (musí proběhnout před jeho přepsáním):
+   ```bash
+   cd ~/storyhold
+   umask 077
+   printf 'DB_PASSWORD=%s\nADMIN_USERNAME=admin\nADMIN_PASSWORD=%s\nBASIC_AUTH_USER=tester\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 16)" > .env
+   printf "BASIC_AUTH_HASH='%s'\n" "$(awk '$1=="tester" {print $2}' Caddyfile)" >> .env
+   grep -c . .env                        # má vypsat 5 (řádků)
+   grep BASIC_AUTH_HASH .env | cut -c1-24  # začátek hashe: BASIC_AUTH_HASH='$2a$…
+   grep ADMIN_PASSWORD .env              # heslo do /admin, ulož si ho do správce hesel
+   exit
+   ```
+   Vzor se všemi proměnnými je `deploy/staging/.env.example`.
+2. Na svém počítači v kořeni repozitáře (PowerShell):
+   ```powershell
+   .\deploy\deploy-staging.ps1
+   ```
+   Skript postaví image, nahraje ho s `compose.yaml` a `Caddyfile` na server, spustí `docker compose up -d`, načte konfiguraci Caddy a počká, až bude aplikace zdravá. Pokud PowerShell skript odmítne spustit, povol skripty pro svého uživatele: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+### Aktualizace verze
+
+Commitni změny a spusť znovu `.\deploy\deploy-staging.ps1`. Databáze (volume `pgdata`) zůstává, Flyway při startu doplní nové migrace. Pozor: změna `R__demo_game.sql` smaže rozehrané hry demo hry a dávky kódů k ní.
+
+### Na serveru (`ssh storyhold`, pak `cd ~/storyhold`)
+
+```bash
+docker compose ps                    # stav služeb (app má být healthy)
+docker compose logs -f app           # logy aplikace (Ctrl+C ukončí sledování)
+docker compose logs -f caddy         # logy Caddy (certifikáty, přístupy)
+docker compose restart app           # restart aplikace
+nano .env && docker compose up -d    # změna tajemství (DB_PASSWORD platí jen při prvním založení DB)
+```
+
 ## Hraní na telefonu v lokální síti
 
 Telefon musí být ve stejné Wi-Fi jako počítač.

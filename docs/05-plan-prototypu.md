@@ -76,10 +76,29 @@ Postupuj po milnících v tomto pořadí. Každý milník končí zeleným build
 - [x] Testy (backend + frontend), ruční průchod v prohlížeči
 - [x] Administrace pro partnera (Q12): `V3__partner_user.sql`, role `ADMIN`/`PARTNER`, správa účtů hradů, přehled hradu jen s vlastními daty, změna hesla
 
+## F2 — Testovací server a nasazení
+
+- [x] Značka StoryHold (Q15), doména `storyhold.cz` (WEDOS), e-mail `info@storyhold.cz` (Seznam Email Profi, SPF, DKIM, DMARC)
+- [x] VPS (Q1): Ubuntu 24.04, přístup jen SSH klíčem, `ufw` 22/80/443, swap, automatické aktualizace
+- [x] Docker Engine + Compose, rotace logů
+- [x] DNS `test.storyhold.cz`, Caddy s HTTPS, basic auth a zástupnou stránkou
+- [x] `deploy/staging/` (`compose.yaml`, `Caddyfile`, `.env.example`) a skript `deploy/deploy-staging.ps1`, popis v `02-architektura.md` kap. 6 a v README
+- [ ] První nasazení: `.env` na serveru, nahrání souborů, spuštění
+- [ ] Ověření: `/actuator/health` = UP (za basic auth), demo hra přes `DEMO-KATA` na telefonu přes mobilní data, přihlášení do `/admin` silným heslem, CSV s odkazy `https://test.storyhold.cz/?kod=…`, MP3 na iPhonu (Range přes Caddy)
+
+### Později
+
+- [ ] Zálohy: denní `pg_dump` → `age`/`gpg` → WEDOS Disk přes rsync, retence 14 denních + měsíční (až budou ostrá data)
+- [ ] Produkce `storyhold.cz` na stejném serveru: vlastní stack bez seedu a bez basic auth, DNS `@` a `*` na VPS, absolutní `og:image`
+- [ ] Rate limiting odpovědí (Q11) před ostrým provozem
+- [ ] DMARC `p=quarantine` po ověření doručování
+- [ ] Skutečné IP klientů přes IPv6: Docker bez IPv6 předává Caddy spojení z IPv6 s adresou brány, limity pokusů pak sdílí všichni hráči na IPv6 (zapnout IPv6 v Dockeru, nebo Caddy v síti hostitele)
+- [ ] GitHub Container Registry a CI místo `docker save` / `scp`
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady
 2. Skutečný obsah pro hrad Loket (průzkum na místě, příběh kata)
 3. Administrace obsahu a statistiky obtížnosti
-4. Ostrý provoz — hosting, HTTPS, zálohy, rate limiting
+4. Ostrý provoz — testovací server hotov (F2), dál produkce, zálohy, rate limiting
 5. Volitelně PWA/offline, GPS/QR, jazykové mutace
