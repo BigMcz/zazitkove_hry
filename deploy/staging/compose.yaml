@@ -15,6 +15,8 @@ services:
     environment:
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:?doplň BASIC_AUTH_USER do .env}
       BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?doplň BASIC_AUTH_HASH do .env}
+      PRESENTATION_AUTH_USER: ${PRESENTATION_AUTH_USER:?doplň PRESENTATION_AUTH_USER do .env}
+      PRESENTATION_AUTH_HASH: ${PRESENTATION_AUTH_HASH:?doplň PRESENTATION_AUTH_HASH do .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

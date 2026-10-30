@@ -79,8 +79,14 @@ ssh-add $HOME\.ssh\storyhold_ed25519
    grep ADMIN_PASSWORD .env              # heslo do /admin, ulož si ho do správce hesel
    exit
    ```
-   Vzor se všemi proměnnými je `deploy/staging/.env.example`.
-2. Na svém počítači v kořeni repozitáře (PowerShell):
+   Vzor se všemi proměnnými je `deploy/staging/.env.example`. Pak ještě přidej účet pro prezentace (další bod).
+2. Účet basic auth pro prezentace (`ukazka`, posílá se lidem mimo tým): na serveru v `~/storyhold`
+   ```bash
+   docker run --rm -it caddy:2 caddy hash-password   # zadej heslo 2×, vypíše hash $2a$14$…
+   printf "PRESENTATION_AUTH_USER=ukazka\nPRESENTATION_AUTH_HASH='%s'\n" 'SEM_VLOŽ_HASH' >> .env
+   ```
+   Změna hesla později: v `.env` nahraď hash (`nano .env`) a spusť `docker compose up -d caddy`.
+3. Na svém počítači v kořeni repozitáře (PowerShell):
    ```powershell
    .\deploy\deploy-staging.ps1
    ```

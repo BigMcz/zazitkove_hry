@@ -1,5 +1,5 @@
 # Testovací server: automatické HTTPS (Let's Encrypt), celý web za basic auth, mimo vyhledávače.
-# {$BASIC_AUTH_USER} a {$BASIC_AUTH_HASH} dosadí Caddy z prostředí kontejneru (compose.yaml ← .env).
+# Jména a hashe hesel dosadí Caddy z prostředí kontejneru (compose.yaml ← .env).
 # Po změně: docker compose exec -w /etc/caddy caddy caddy reload (dělá to i deploy-staging.ps1).
 
 test.storyhold.cz {
@@ -7,6 +7,8 @@ test.storyhold.cz {
 
 	basic_auth {
 		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+		# Účet pro prezentace (posílá se lidem mimo tým, heslo jde kdykoli změnit bez dopadu na tester)
+		{$PRESENTATION_AUTH_USER} {$PRESENTATION_AUTH_HASH}
 	}
 
 	encode zstd gzip
