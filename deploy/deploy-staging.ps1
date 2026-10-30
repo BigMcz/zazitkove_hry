@@ -51,7 +51,7 @@ try {
 }
 
 Write-Host '==> Čekám, až bude aplikace zdravá' -ForegroundColor Cyan
-for ($i = 0; $i -lt 36; $i++) {
+for ($i = 0; $i -lt 60; $i++) {
     $health = ssh storyhold "cd storyhold && docker compose ps app --format '{{.Health}}'"
     if ($health -eq 'healthy') {
         Write-Host 'Hotovo: https://test.storyhold.cz' -ForegroundColor Green
