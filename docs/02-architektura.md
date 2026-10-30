@@ -298,7 +298,7 @@ frontend/src/
 
 | Cesta | Stránka |
 |---|---|
-| `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png`: úvod s obrázkem hradu Loket a ukázkou hry v mobilu (obrázky z dema), zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, „Naše hry“ (demo Katova povinnost, tlačítko „Zahrát ukázku“ použije kód DEMO-KATA), jak hra probíhá, patička s kontaktem. Obsah je v `index.html` předgenerovaný při buildu, viz [Vyhledávače (SEO)](#vyhledávače-seo) |
+| `/` | Úvodní stránka StoryHold (logo v hlavičce) podle návrhu `docs/image.png`: úvod s obrázkem hradu Loket přes celou sekci (`public/images/hero.jpg`, na telefonu a tabletu nad textem, od šířky `lg` pod textem se ztmavením zleva) a ukázkou hry v mobilu (jen od šířky `xl`, aby nezakrývala hrad), zadání kódu ve tvaru XXXX-XXXX (pomlčka se doplní sama po 4 znacích, předvyplní se z `?kod=` z QR), „Pokračovat ve hře“ pokud je token, tři kroky, „Naše hry“ (demo Katova povinnost, tlačítko „Zahrát ukázku“ použije kód DEMO-KATA), jak hra probíhá, patička s kontaktem. Obsah je v `index.html` předgenerovaný při buildu, viz [Vyhledávače (SEO)](#vyhledávače-seo) |
 | `/start` | Úvod hry z ověřeného kódu, název týmu, „Začít hru“ (kód jen v navigačním stavu, ne v URL) |
 | `/play` | Aktuální stanoviště (podle `GET /sessions/current`) |
 | `/play/reward` | Odměna po vyřešení |

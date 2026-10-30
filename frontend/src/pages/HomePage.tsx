@@ -43,8 +43,15 @@ export default function HomePage() {
 function SiteHeader() {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-night-line py-5">
-      <img src={logoUrl} alt="StoryHold" className="h-7 w-auto" />
-      <span className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Historie. Jinak.</span>
+      {/* Already on "/", so the router alone would not scroll back to the top */}
+      <Link
+        to="/"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="rounded focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-lime"
+      >
+        <img src={logoUrl} alt="StoryHold – úvodní stránka" className="h-7 w-auto" />
+      </Link>
+      <span className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Historie Jinak</span>
     </header>
   )
 }
@@ -53,58 +60,58 @@ function Eyebrow({ children }: { children: ReactNode }) {
   return <p className="text-xs font-bold tracking-[0.18em] text-lime uppercase">{children}</p>
 }
 
+/**
+ * Castle picture across the whole hero (grafika/hero.png). On phones it is a banner above the text,
+ * from lg up it lies under the text, darkened from the left so that the text stays readable.
+ */
 function Hero() {
   return (
-    <section className="grid items-center gap-10 md:grid-cols-2">
-      <div className="flex flex-col items-start gap-6">
-        <Eyebrow>Váš další quest? Historická památka.</Eyebrow>
-        <h1 className="text-5xl leading-[1.02] font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-          Staré zdi.
-          <br />
-          Nová pravidla hry.
-        </h1>
-        <p className="max-w-md text-lg leading-relaxed text-stone-300">
-          Proměňte návštěvu památky v dobrodružství. Odemkněte příběh v mobilu, hledejte stopy ve skutečném světě a
-          rozluštěte jeho tajemství.
+    <section className="relative overflow-hidden rounded-3xl border border-night-line bg-night">
+      <div className="relative lg:absolute lg:inset-0">
+        <img
+          src="/images/hero.jpg"
+          alt="Hrad Loket na skále nad řekou Ohří při západu slunce"
+          fetchPriority="high"
+          className="h-64 w-full object-cover object-[62%_center] sm:h-80 md:h-96 lg:h-full"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-night via-transparent to-transparent lg:bg-gradient-to-r lg:from-night lg:from-10% lg:via-night/70 lg:via-40% lg:to-transparent lg:to-70%" />
+        <div className="absolute inset-0 hidden bg-gradient-to-t from-night/80 via-transparent via-30% to-transparent lg:block" />
+        <p className="absolute right-6 bottom-4 text-xs font-bold tracking-[0.18em] text-white/90 uppercase lg:right-8 lg:bottom-6">
+          Skutečná místa. Nečekané příběhy.
         </p>
-        <a
-          href="#jak-to-funguje"
-          className="inline-flex min-h-12 items-center rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-lime"
-        >
-          Ukažte mi, jak na to
-        </a>
-        <p className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Mobil v ruce. Dobrodružství všude kolem.</p>
       </div>
-      <HeroVisual />
+      <div className="relative grid items-center gap-10 px-6 pt-4 pb-10 lg:min-h-[36rem] lg:grid-cols-[minmax(0,1fr)_auto] lg:p-12 xl:px-14">
+        <div className="flex max-w-xl flex-col items-start gap-6">
+          <Eyebrow>Váš další quest? Historická památka.</Eyebrow>
+          <h1 className="text-5xl leading-[1.02] font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
+            Staré zdi.
+            <br />
+            Nová pravidla hry.
+          </h1>
+          <p className="max-w-md text-lg leading-relaxed text-stone-200">
+            Proměňte návštěvu památky v dobrodružství. Odemkněte příběh v mobilu, hledejte stopy ve skutečném světě a
+            rozluštěte jeho tajemství.
+          </p>
+          <a
+            href="#jak-to-funguje"
+            className="inline-flex min-h-12 items-center rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-lime"
+          >
+            Ukažte mi, jak na to
+          </a>
+          <p className="text-xs font-bold tracking-[0.18em] text-lime uppercase">Mobil v ruce. Dobrodružství všude kolem.</p>
+        </div>
+        <PhonePreview />
+      </div>
     </section>
   )
 }
 
-/** Castle picture from the demo game with a preview of a game chapter on a phone. */
-function HeroVisual() {
-  return (
-    <div className="relative min-h-96 overflow-hidden rounded-3xl border border-night-line bg-gradient-to-br from-stone-700 via-stone-800 to-night md:min-h-[30rem]">
-      <img
-        src="/images/demo/st01.jpg"
-        alt="Hrad Loket na skále nad řekou Ohří"
-        fetchPriority="high"
-        className="absolute inset-0 size-full object-cover"
-      />
-      {/* Darker bottom edge keeps the caption readable over the picture */}
-      <div className="absolute inset-0 bg-gradient-to-t from-night/80 via-transparent to-transparent" />
-      <PhonePreview />
-      <p className="absolute bottom-5 left-5 text-xs font-bold tracking-[0.18em] text-white/90 uppercase">
-        Skutečná místa. Nečekané příběhy.
-      </p>
-    </div>
-  )
-}
-
+/** Preview of a game chapter on a phone, only where it fits next to the text without hiding the castle. */
 function PhonePreview() {
   return (
     <div
       aria-label="Ukázka hry"
-      className="absolute top-1/2 right-5 w-60 -translate-y-1/2 rounded-[2rem] border-4 border-night bg-night p-3 shadow-2xl sm:right-8 sm:w-64"
+      className="hidden w-64 rounded-[2rem] border-4 border-night bg-night p-3 shadow-2xl xl:block"
     >
       <p className="px-1 pt-1 text-[0.65rem] font-bold tracking-[0.15em] text-lime uppercase">
         Ukázka hry | Kapitola 01
