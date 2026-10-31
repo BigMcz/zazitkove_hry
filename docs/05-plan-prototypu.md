@@ -145,7 +145,8 @@ Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá n
 
 - [x] Krok 1: aplikace jako PWA, service worker s kostrou aplikace, offline navigace, mezipaměť pro obrázky a zvuky (Range); ověřeno lokálně s vypnutým serverem (úvod i `/play` se načtou, data hry zatím ne)
 - [x] Krok 2: balíček relace (`GET /sessions/current/package`), šifrování obsahu po úkolech, `TextNormalizer` v TypeScriptu se společnými testovacími případy (`test-fixtures/`), stažení médií při startu s ukazatelem průběhu; ověřeno lokálně (demo: 10 stanovišť, balíček 20 kB, 33 souborů)
-- [ ] Krok 3: hra z balíčku v telefonu (odpovědi, nápovědy, odměny, tajenka, finále) bez signálu
+- [x] Krok 3: hra z balíčku v telefonu (odpovědi, nápovědy, odměny, tajenka, finále) bez signálu, fronta akcí odeslaná při signálu; ověřeno lokálně s vypnutým serverem (2 stanoviště offline, po zapnutí serveru 3 pokusy v `answer_attempt`)
+- [x] Oprava: statické soubory se revalidují podle obsahu (`ETag`), ne podle data 1980 z JAR (prohlížeč jinak po nasazení držel starou verzi)
 - [ ] Krok 4: synchronizace událostí na server (`POST /sessions/current/sync`), idempotence, časy z telefonu, vypršení kódu
 - [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README
 

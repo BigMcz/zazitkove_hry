@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
 import type { SessionState } from './api/types.ts'
-import { packageStorage } from './offline/gameDownload.ts'
+import { packageStorage } from './offline/storage.ts'
 import type { GamePackage } from './offline/types.ts'
 import { createQueryClient } from './queryClient.ts'
 import SessionTokenProvider from './session/SessionTokenProvider.tsx'
@@ -54,6 +54,7 @@ const demoGame = {
 
 const gamePackage: GamePackage = {
   gameId: 'g1',
+  session: { gameTitle: 'Tajemství katova klíče', teamName: null, startedAt: '2026-10-28T10:00:00Z', expiresAt: '2026-10-28T15:00:00Z' },
   kdfIterations: 1000,
   firstStation: { ...inProgress.currentStation!, hints: [] },
   stations: [],

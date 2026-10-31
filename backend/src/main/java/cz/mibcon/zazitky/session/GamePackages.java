@@ -21,6 +21,7 @@ import cz.mibcon.zazitky.session.SessionPackage.Finale;
 import cz.mibcon.zazitky.session.SessionPackage.Hint;
 import cz.mibcon.zazitky.session.SessionPackage.Sealed;
 import cz.mibcon.zazitky.session.SessionPackage.SealedStation;
+import cz.mibcon.zazitky.session.SessionPackage.SessionInfo;
 import cz.mibcon.zazitky.session.SessionPackage.StationContent;
 import cz.mibcon.zazitky.session.SessionPackage.Unlocked;
 import cz.mibcon.zazitky.session.domain.GameSession;
@@ -53,10 +54,21 @@ class GamePackages {
                 .map(progress -> progress.getStation().getId())
                 .forEach(stationId -> unlockedKeys.put(stationId, sealed.contentKeys().get(stationId)));
 
-        long letters = game.getStations().stream().filter(station -> station.getPuzzleLetter() != null).count();
-        List<Integer> puzzleSlots = letters == 0 ? null : PuzzleLetters.scrambledSlots(session.getId(), (int) letters);
+        List<Station> withLetter = game.getStations().stream()
+                .filter(station -> station.getPuzzleLetter() != null)
+                .toList();
+        Map<UUID, Integer> puzzleSlots = null;
+        if (!withLetter.isEmpty()) {
+            List<Integer> slots = PuzzleLetters.scrambledSlots(session.getId(), withLetter.size());
+            puzzleSlots = new LinkedHashMap<>();
+            for (int i = 0; i < withLetter.size(); i++) {
+                puzzleSlots.put(withLetter.get(i).getId(), slots.get(i));
+            }
+        }
 
-        return new SessionPackage(game.getId(), PackageCrypto.KDF_ITERATIONS, sealed.firstStation(),
+        SessionInfo info = new SessionInfo(game.getTitle(), session.getTeamName(), session.getStartedAt(),
+                session.getExpiresAt());
+        return new SessionPackage(game.getId(), info, PackageCrypto.KDF_ITERATIONS, sealed.firstStation(),
                 sealed.stations(), puzzleSlots, unlockedKeys, sealed.media());
     }
 

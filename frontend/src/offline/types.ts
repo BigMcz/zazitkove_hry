@@ -6,12 +6,14 @@ import type { TaskType } from '../api/types.ts'
  */
 export interface GamePackage {
   gameId: string
+  /** What the phone needs to play without the server. */
+  session: { gameTitle: string; teamName: string | null; startedAt: string; expiresAt: string }
   /** PBKDF2-HMAC-SHA256 iterations for the answer keys. */
   kdfIterations: number
   firstStation: StationContent
   stations: SealedStation[]
-  /** Slot of the letter of each station that has one (in station order), null when the game has no puzzle. */
-  puzzleSlots: number[] | null
+  /** Slot of the puzzle letter of each station that gives one, null when the game has no puzzle. */
+  puzzleSlots: Record<string, number> | null
   /** Content keys (base64) of the stations this session already solved. */
   unlockedKeys: Record<string, string>
   /** Pictures and sounds of the game to download for playing without a signal. */

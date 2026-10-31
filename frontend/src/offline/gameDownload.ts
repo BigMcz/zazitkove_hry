@@ -1,45 +1,9 @@
 import { api } from '../api/client.ts'
+import { packageStorage } from './storage.ts'
 import type { GamePackage } from './types.ts'
 
-const PACKAGE_KEY = 'zazitky.gamePackage'
 /** The same cache the service worker answers pictures and sounds from (service-worker.mjs). */
 export const MEDIA_CACHE = 'game-media'
-
-interface StoredPackage {
-  token: string
-  gamePackage: GamePackage
-}
-
-/**
- * Offline package of the game in localStorage, tied to the session token. Storage may be unavailable
- * (private mode), then the game simply needs a signal.
- */
-export const packageStorage = {
-  get(token: string): GamePackage | null {
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(PACKAGE_KEY) ?? 'null') as StoredPackage | null
-      return stored?.token === token ? stored.gamePackage : null
-    } catch {
-      return null
-    }
-  },
-
-  set(token: string, gamePackage: GamePackage): void {
-    try {
-      window.localStorage.setItem(PACKAGE_KEY, JSON.stringify({ token, gamePackage } satisfies StoredPackage))
-    } catch {
-      // see above
-    }
-  },
-
-  clear(): void {
-    try {
-      window.localStorage.removeItem(PACKAGE_KEY)
-    } catch {
-      // see above
-    }
-  },
-}
 
 export type DownloadProgress = (done: number, total: number) => void
 

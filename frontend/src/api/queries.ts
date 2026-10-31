@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { playClient } from '../offline/playClient.ts'
 import { api } from './client.ts'
 
 export const queryKeys = {
@@ -8,7 +9,7 @@ export const queryKeys = {
 export function useSessionState(token: string | null) {
   return useQuery({
     queryKey: queryKeys.session(token),
-    queryFn: () => api.getSession(token as string),
+    queryFn: () => playClient.getState(token as string),
     enabled: token !== null,
   })
 }
@@ -33,14 +34,14 @@ export function useStartSession() {
 export function useSubmitAnswer(token: string | null) {
   return useMutation({
     mutationFn: ({ stationId, answer }: { stationId: string; answer: string }) =>
-      api.submitAnswer(token as string, stationId, answer),
+      playClient.submitAnswer(token as string, stationId, answer),
   })
 }
 
 export function useRevealHint(token: string | null) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (stationId: string) => api.revealHint(token as string, stationId),
+    mutationFn: (stationId: string) => playClient.revealHint(token as string, stationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.session(token) }),
   })
 }

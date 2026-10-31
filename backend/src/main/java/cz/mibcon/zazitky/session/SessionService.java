@@ -121,11 +121,14 @@ public class SessionService {
         return toState(session, false);
     }
 
-    /** Offline package of a game in progress (docs/02-architektura.md, "Offline režim"). */
+    /**
+     * Offline package of a game (docs/02-architektura.md, "Offline režim"); also of a completed one, so that a phone
+     * that played offline can catch up with a game finished on another phone.
+     */
     public SessionPackage getPackage(UUID token) {
         GameSession session = sessions.findByToken(token).orElseThrow(InvalidTokenException::new);
         checkNotExpired(session);
-        if (session.getStatus() != SessionStatus.IN_PROGRESS) {
+        if (session.getStatus() != SessionStatus.IN_PROGRESS && session.getStatus() != SessionStatus.COMPLETED) {
             throw new InvalidStateException("Hra není rozehraná.");
         }
         return packages.forSession(session);

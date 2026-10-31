@@ -1,5 +1,6 @@
 package cz.mibcon.zazitky.session;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,17 +14,22 @@ import cz.mibcon.zazitky.game.domain.TaskType;
  */
 public record SessionPackage(
         UUID gameId,
+        /** What the phone needs to play without the server. */
+        SessionInfo session,
         /** PBKDF2-HMAC-SHA256 iterations for the answer keys. */
         int kdfIterations,
         StationContent firstStation,
         /** All stations in order; solving one opens its {@code content}, see {@link Unlocked}. */
         List<SealedStation> stations,
-        /** Slot of the letter of each station that has one (in station order), null when the game has no puzzle. */
-        List<Integer> puzzleSlots,
+        /** Slot of the puzzle letter of each station that gives one, null when the game has no puzzle. */
+        Map<UUID, Integer> puzzleSlots,
         /** Content keys (base64) of the stations this session already solved, also on another phone. */
         Map<UUID, String> unlockedKeys,
         /** Pictures and sounds of the game to download for playing without a signal. */
         List<String> media) {
+
+    public record SessionInfo(String gameTitle, String teamName, Instant startedAt, Instant expiresAt) {
+    }
 
     public record StationContent(
             UUID id,

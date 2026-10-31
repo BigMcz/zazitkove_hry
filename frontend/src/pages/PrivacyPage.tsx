@@ -95,9 +95,9 @@ export default function PrivacyPage() {
                   <td className="py-2">Dokud hlas znovu nezapnete.</td>
                 </tr>
                 <tr className="border-b border-night-line">
-                  <td className="py-2 pr-4 font-mono text-xs">zazitky.gamePackage, game-media</td>
+                  <td className="py-2 pr-4 font-mono text-xs">zazitky.gamePackage, zazitky.gameProgress, game-media</td>
                   <td className="py-2 pr-4">
-                    Stažená hra (zašifrovaný příběh, obrázky a nahrávky), abyste mohli hrát i bez signálu.
+                    Stažená hra (zašifrovaný příběh, obrázky a nahrávky) a váš postup, abyste mohli hrát i bez signálu.
                   </td>
                   <td className="py-2">Do konce hry; obrázky a nahrávky, dokud je prohlížeč neuvolní.</td>
                 </tr>

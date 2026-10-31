@@ -49,6 +49,18 @@ class SpaFallbackTest {
                 .andExpect(header().doesNotExist("X-Robots-Tag"));
     }
 
+    /** The JAR has one date for all files, so a new deployment must be recognized by the content. */
+    @Test
+    void revalidatesStaticFilesByContentNotByDate() throws Exception {
+        String etag = mvc.perform(get("/index.html").header("If-Modified-Since", "Fri, 01 Feb 1980 00:00:00 GMT"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Last-Modified"))
+                .andReturn().getResponse().getHeader("ETag");
+
+        mvc.perform(get("/index.html").header("If-None-Match", etag)).andExpect(status().isNotModified());
+        mvc.perform(get("/index.html").header("If-None-Match", "\"older-deployment\"")).andExpect(status().isOk());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"/unknown", "/games/00000000-0000-0000-0000-000000000003", "/play/unknown"})
     void unknownPageIsNotFoundWithTheApp(String path) throws Exception {
