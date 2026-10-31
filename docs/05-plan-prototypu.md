@@ -130,6 +130,8 @@ Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohl
 - [x] Úvod: „Než vyrazíte“ (tipy) a „Časté otázky“ (cena na pokladně, věk, tým, délka, bez aplikace, pokračování, nápovědy, bezbariérovost podle památky)
 - [x] Stránka `/pravidla` (kartička a platnost, průběh, bezpečnost, potíže a reklamace), odkaz v patičce
 - [x] Stránka 404 ve vzhledu webu
+- [x] Obrazovka „Než začnete“ před úvodem hry (zvuk, bezpečnost, „Hrát bez zvuku“)
+- [x] Odkaz z QR kódu vede rovnou do hry (nová hra na „Než začnete“, rozehraná pokračuje, neplatný kód s důvodem na úvodu)
 - [ ] Měření návštěvnosti bez cookies (Umami na VPS nebo Plausible) — odloženo, rozhodnout s produkcí; pak doplnit do `/ochrana-udaju`
 - [ ] Ikona pro plochu telefonu (`apple-touch-icon`, `manifest`)
 - [ ] Podrobná stránka pro památky (průběh spolupráce, prezentace ke stažení)

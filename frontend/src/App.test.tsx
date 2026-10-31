@@ -145,13 +145,33 @@ describe('App', () => {
       'POST /api/v1/sessions': () => json({ ...inProgress, token: TOKEN }),
       'GET /api/v1/sessions/current': () => json(inProgress),
     })
+    // The QR code on the card goes straight back into the game
     renderApp('/?kod=ABCD-2345')
-
-    expect(screen.getByLabelText('Zadej kód z kartičky')).toHaveValue('ABCD-2345')
-    await userEvent.click(screen.getByRole('button', { name: 'Použít kód' }))
 
     expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
     expect(tokenStorage.get()).toBe(TOKEN)
+  })
+
+  it('opens a new game from the QR code link without activating the code', async () => {
+    const fetchMock = mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'ABCD-2345', game: demoGame, resumesGame: false, validUntil: null }),
+    })
+    renderApp('/?kod=abcd2345')
+
+    expect(await screen.findByRole('heading', { name: '🔊 Hra mluví' })).toBeInTheDocument()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/v1/access-codes/check'])
+  })
+
+  it('keeps an invalid code from the QR code link filled in with the reason', async () => {
+    mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ type: '/problems/code-expired', status: 410, detail: 'Platnost tohoto kódu už vypršela.' }, 410),
+    })
+    renderApp('/?kod=ABCD-2345')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Platnost tohoto kódu už vypršela.')
+    expect(screen.getByLabelText('Zadej kód z kartičky')).toHaveValue('ABCD-2345')
   })
 
   it('shows why a code cannot be used', async () => {

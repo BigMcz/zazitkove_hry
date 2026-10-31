@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client.ts'
 import { useStartSession } from '../api/queries.ts'
@@ -152,12 +152,36 @@ function useEnterCode() {
   }
 }
 
-/** Entering the code from the card (a QR code on the card opens /?kod=ABCD-2345 with the code filled in). */
+/**
+ * Entering the code from the card. A QR code on the card opens /?kod=ABCD-2345: the code is checked right away
+ * and a new game goes on to "Než začnete" (checking does not activate the code), a game in progress continues;
+ * an invalid code stays filled in here with the reason.
+ */
 function CodeEntry({ message }: { message?: string }) {
   const { token } = useSessionToken()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [code, setCode] = useState(() => formatAccessCode(searchParams.get('kod') ?? '', ''))
   const { enterCode, error, pending } = useEnterCode()
+  const sectionRef = useRef<HTMLElement>(null)
+  const codeFromLink = useRef(searchParams.get('kod'))
+
+  useEffect(() => {
+    const linkCode = codeFromLink.current
+    if (!linkCode) {
+      return
+    }
+    codeFromLink.current = null
+    // Going back from the game must not start it again
+    setSearchParams({}, { replace: true })
+    enterCode(linkCode)
+  }, [enterCode, setSearchParams])
+
+  // The code entry is below the hero; a player coming from the QR code must see why the code did not work
+  useEffect(() => {
+    if (error) {
+      sectionRef.current?.scrollIntoView({ block: 'center' })
+    }
+  }, [error])
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -168,7 +192,7 @@ function CodeEntry({ message }: { message?: string }) {
   }
 
   return (
-    <section id="kod" className="grid gap-6 rounded-3xl border border-night-line bg-night-card p-6 md:grid-cols-2 md:p-8">
+    <section ref={sectionRef} id="kod" className="grid gap-6 rounded-3xl border border-night-line bg-night-card p-6 md:grid-cols-2 md:p-8">
       <div className="flex flex-col gap-3">
         <Eyebrow>Máte kartičku?</Eyebrow>
         <h2 className="text-3xl font-extrabold tracking-tight">Zadejte kód a hra začne.</h2>

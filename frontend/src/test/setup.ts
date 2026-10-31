@@ -6,5 +6,6 @@ afterEach(() => {
   cleanup()
 })
 
-// jsdom does not implement scrolling; the app scrolls to the top on every page change
+// jsdom does not implement scrolling; the app scrolls to the top on every page change and to the code entry on errors
 window.scrollTo = () => {}
+Element.prototype.scrollIntoView = () => {}
