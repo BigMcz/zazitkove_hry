@@ -29,9 +29,11 @@ import cz.mibcon.zazitky.session.SessionDtos.Puzzle;
 import cz.mibcon.zazitky.session.SessionDtos.RevealedHint;
 import cz.mibcon.zazitky.session.SessionDtos.SessionState;
 import cz.mibcon.zazitky.session.SessionDtos.SolvedStation;
+import cz.mibcon.zazitky.session.SessionDtos.SyncEvent;
 import cz.mibcon.zazitky.session.domain.AnswerAttempt;
 import cz.mibcon.zazitky.session.domain.GameSession;
 import cz.mibcon.zazitky.session.domain.ProgressStatus;
+import cz.mibcon.zazitky.session.domain.SessionEvent;
 import cz.mibcon.zazitky.session.domain.SessionProgress;
 import cz.mibcon.zazitky.session.domain.SessionStatus;
 import org.springframework.stereotype.Service;
@@ -52,15 +54,18 @@ public class SessionService {
     private final AccessCodeService accessCodes;
     private final GameSessionRepository sessions;
     private final AnswerAttemptRepository attempts;
+    private final SessionEventRepository events;
     private final AnswerEvaluator evaluator;
     private final GamePackages packages;
     private final Clock clock;
 
     public SessionService(AccessCodeService accessCodes, GameSessionRepository sessions,
-            AnswerAttemptRepository attempts, AnswerEvaluator evaluator, GamePackages packages, Clock clock) {
+            AnswerAttemptRepository attempts, SessionEventRepository events, AnswerEvaluator evaluator,
+            GamePackages packages, Clock clock) {
         this.accessCodes = accessCodes;
         this.sessions = sessions;
         this.attempts = attempts;
+        this.events = events;
         this.evaluator = evaluator;
         this.packages = packages;
         this.clock = clock;
@@ -136,10 +141,11 @@ public class SessionService {
 
     public AnswerResult submitAnswer(UUID token, UUID stationId, String rawAnswer) {
         GameSession session = loadForUpdate(token);
-        SessionProgress progress = activeProgress(session, stationId);
-        Station station = progress.getStation();
-        Instant now = clock.instant();
+        return applyAnswer(session, activeProgress(session, stationId), rawAnswer, clock.instant());
+    }
 
+    private AnswerResult applyAnswer(GameSession session, SessionProgress progress, String rawAnswer, Instant now) {
+        Station station = progress.getStation();
         AnswerEvaluator.Evaluation evaluation = evaluator.evaluate(station, rawAnswer);
         attempts.save(attempt(session, station, rawAnswer, evaluation, now));
         progress.setAttemptsCount(progress.getAttemptsCount() + 1);
@@ -169,16 +175,63 @@ public class SessionService {
         if (progress.getHintsUsed() >= hints.size()) {
             throw new InvalidStateException("Žádná další nápověda už není k dispozici.");
         }
-
-        Hint hint = hints.get(progress.getHintsUsed());
-        progress.setHintsUsed(progress.getHintsUsed() + 1);
-        session.setPenaltySeconds(session.getPenaltySeconds() + hint.getPenaltySeconds());
+        applyHint(session, progress);
 
         return new HintsResult(
                 revealedHints(progress),
                 hints.size() - progress.getHintsUsed(),
                 nextHintPenalty(progress),
                 session.getPenaltySeconds());
+    }
+
+    private static void applyHint(GameSession session, SessionProgress progress) {
+        Hint hint = progress.getStation().getHints().get(progress.getHintsUsed());
+        progress.setHintsUsed(progress.getHintsUsed() + 1);
+        session.setPenaltySeconds(session.getPenaltySeconds() + hint.getPenaltySeconds());
+    }
+
+    /**
+     * Applies actions played in the phone without a signal (docs/02-architektura.md, "Offline režim") with the same
+     * rules as the single requests, at the time they were played. An action already received (same id) is skipped;
+     * one the rules no longer allow (station solved on another phone, no hint left) is recorded without effect.
+     * Actions played while the code was valid count even when they arrive after it expired.
+     */
+    public SessionState sync(UUID token, List<SyncEvent> played) {
+        GameSession session = sessions.findByTokenForUpdate(token).orElseThrow(InvalidTokenException::new);
+        Instant now = clock.instant();
+        if (session.getStatus() == SessionStatus.EXPIRED) {
+            // Expiry is decided again below, after the actions from the time the code was valid
+            session.setStatus(SessionStatus.IN_PROGRESS);
+        }
+
+        Instant previous = session.getStartedAt();
+        for (SyncEvent event : played) {
+            if (events.existsById(event.id())) {
+                continue;
+            }
+            // In the order played, never before the start of the game or in the future (phone clocks are off)
+            Instant at = event.at().isBefore(previous) ? previous : event.at().isAfter(now) ? now : event.at();
+            previous = at;
+            events.save(new SessionEvent(event.id(), session, event.type(), at, now));
+            if (session.getStatus() != SessionStatus.IN_PROGRESS || !at.isBefore(session.getExpiresAt())) {
+                continue;
+            }
+            Optional<SessionProgress> progress = findActiveProgress(session, event.stationId());
+            if (progress.isEmpty()) {
+                continue;
+            }
+            switch (event.type()) {
+                case ANSWER -> applyAnswer(session, progress.get(), event.answer() == null ? "" : event.answer(), at);
+                case HINT -> {
+                    if (progress.get().getHintsUsed() < progress.get().getStation().getHints().size()) {
+                        applyHint(session, progress.get());
+                    }
+                }
+            }
+        }
+
+        checkNotExpired(session);
+        return toState(session, false);
     }
 
     public void abandon(UUID token) {
@@ -216,11 +269,15 @@ public class SessionService {
         if (!stationInGame) {
             throw new NotFoundException("Stanoviště nebylo nalezeno.");
         }
+        return findActiveProgress(session, stationId)
+                .orElseThrow(() -> new InvalidStateException("Toto stanoviště teď není aktivní."));
+    }
+
+    private static Optional<SessionProgress> findActiveProgress(GameSession session, UUID stationId) {
         return session.getProgress().stream()
                 .filter(progress -> progress.getStation().getId().equals(stationId))
                 .filter(progress -> progress.getStatus() == ProgressStatus.ACTIVE)
-                .findFirst()
-                .orElseThrow(() -> new InvalidStateException("Toto stanoviště teď není aktivní."));
+                .findFirst();
     }
 
     private static Optional<Station> nextStation(Game game, Station current) {

@@ -5,7 +5,7 @@ import type {
   ProblemDetail,
   SessionState,
 } from './types.ts'
-import type { GamePackage } from '../offline/types.ts'
+import type { GamePackage, SyncEvent } from '../offline/types.ts'
 
 const BASE_URL = '/api/v1'
 const TOKEN_HEADER = 'X-Session-Token'
@@ -87,6 +87,10 @@ export const api = {
   getSession: (token: string) => apiRequest<SessionState>('/sessions/current', { token }),
 
   getPackage: (token: string) => apiRequest<GamePackage>('/sessions/current/package', { token }),
+
+  /** Actions played in the phone without a signal, in order; the server applies each only once. */
+  sync: (token: string, events: SyncEvent[]) =>
+    apiRequest<SessionState>('/sessions/current/sync', { method: 'POST', token, body: { events } }),
 
   submitAnswer: (token: string, stationId: string, answer: string) =>
     apiRequest<AnswerResult>(`${station(stationId)}/answers`, { method: 'POST', token, body: { answer } }),

@@ -3,6 +3,7 @@ import type { AnswerResult, HintsResult, SessionState } from '../api/types.ts'
 import { downloadGame } from './gameDownload.ts'
 import { LocalGameError, localAnswer, localHint, localState } from './localGame.ts'
 import { type LocalProgress, type QueuedEvent, packageStorage, progressStorage } from './storage.ts'
+import type { SyncEvent } from './types.ts'
 
 /**
  * The game for the /play pages (docs/02-architektura.md, "Offline režim"). With a downloaded package the phone
@@ -110,7 +111,7 @@ function downloadInBackground(token: string): void {
 let flushing: Promise<void> | null = null
 
 /**
- * Sends the queued actions in order, one run at a time; a run that is still failing without a signal is waited for
+ * Sends the queued actions in one request (POST /sessions/current/sync), one run at a time; a run that is still failing without a signal is waited for
  * and then a new one starts. Rejects without a signal or when the game is gone.
  */
 async function flush(token: string): Promise<void> {
@@ -124,30 +125,32 @@ async function flush(token: string): Promise<void> {
 }
 
 async function sendQueue(token: string): Promise<void> {
-  for (;;) {
-    const event = progressStorage.get(token)?.queue[0]
-    if (!event) {
-      return
-    }
-    try {
-      await send(token, event)
-    } catch (error) {
-      // 409 / 404: the server already has it (sent before the answer got lost) or does not accept it any more
-      if (!(error instanceof ApiError) || (error.status !== 409 && error.status !== 404)) {
-        throw error
-      }
-    }
+  const queue = progressStorage.get(token)?.queue ?? []
+  if (queue.length === 0) {
+    return
+  }
+  const sent = new Set(queue.map((event) => event.id))
+  const removeSent = () =>
     progressStorage.update(token, (progress) => ({
       ...progress,
-      queue: progress.queue.filter((queued) => queued.id !== event.id),
+      queue: progress.queue.filter((queued) => !sent.has(queued.id)),
     }))
+  try {
+    await api.sync(token, queue.map(toSyncEvent))
+  } catch (error) {
+    // 410: received, but the code has expired meanwhile; 400: the server will never take them, do not retry forever
+    if (error instanceof ApiError && (error.status === 410 || error.status === 400)) {
+      removeSent()
+    }
+    throw error
   }
+  removeSent()
 }
 
-function send(token: string, event: QueuedEvent): Promise<unknown> {
+function toSyncEvent(event: QueuedEvent): SyncEvent {
   return event.type === 'answer'
-    ? api.submitAnswer(token, event.stationId, event.answer)
-    : api.revealHint(token, event.stationId)
+    ? { id: event.id, type: 'ANSWER', stationId: event.stationId, answer: event.answer, at: event.at }
+    : { id: event.id, type: 'HINT', stationId: event.stationId, at: event.at }
 }
 
 async function flushQuietly(token: string): Promise<void> {

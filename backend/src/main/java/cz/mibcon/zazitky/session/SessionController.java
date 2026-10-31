@@ -9,6 +9,7 @@ import cz.mibcon.zazitky.session.SessionDtos.HintsResult;
 import cz.mibcon.zazitky.session.SessionDtos.SessionState;
 import cz.mibcon.zazitky.session.SessionDtos.StartSessionRequest;
 import cz.mibcon.zazitky.session.SessionDtos.SubmitAnswerRequest;
+import cz.mibcon.zazitky.session.SessionDtos.SyncRequest;
 import cz.mibcon.zazitky.session.SessionService.StartResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -59,6 +60,12 @@ public class SessionController {
     @GetMapping("/current/package")
     public SessionPackage gamePackage(@RequestHeader(name = TOKEN_HEADER, required = false) String token) {
         return sessionService.getPackage(parseToken(token));
+    }
+
+    @PostMapping("/current/sync")
+    public SessionState sync(@RequestHeader(name = TOKEN_HEADER, required = false) String token,
+            @Valid @RequestBody SyncRequest request) {
+        return sessionService.sync(parseToken(token), request.events());
     }
 
     @PostMapping("/current/stations/{stationId}/answers")

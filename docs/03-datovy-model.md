@@ -30,6 +30,7 @@ erDiagram
     station ||--o{ session_progress : "stav"
     game_session ||--o{ answer_attempt : "pokusy"
     station ||--o{ answer_attempt : "pokusy"
+    game_session ||--o{ session_event : "akce z telefonu"
 
     partner_user {
         uuid id PK
@@ -175,6 +176,13 @@ erDiagram
         boolean correct
         timestamptz created_at
     }
+    session_event {
+        uuid id PK
+        uuid session_id FK
+        varchar type
+        timestamptz played_at
+        timestamptz received_at
+    }
 ```
 
 ## 2. Popis tabulek
@@ -211,7 +219,8 @@ erDiagram
 |---|---|---|
 | `game_session` | Jedna rozehraná hra jednoho týmu (může běžet na více zařízeních se stejným tokenem) | `token` = identita hráče; `access_code_id` = kód, kterým byla hra spuštěna (od V2 není unikátní: nová hra po opuštění nebo vývojový kód); `expires_at` nejpozději s platností kódu; `version` pro optimistický zámek |
 | `session_progress` | Stav stanoviště v rámci relace | Řádek vzniká při odemčení stanoviště; unikátní `(session_id, station_id)` |
-| `answer_attempt` | Každý pokus o odpověď | Analytika obtížnosti; neukládá nic osobního |
+| `answer_attempt` | Každý pokus o odpověď | Analytika obtížnosti; neukládá nic osobního; u akcí z telefonu (offline) je `created_at` čas hraní |
+| `session_event` | Akce zahraná v telefonu a přijatá přes `POST /sessions/current/sync` (V10) | `id` volí telefon: akce odeslaná dvakrát se uplatní jednou; `type` `ANSWER` / `HINT`; `played_at` čas hraní (na serveru omezený na interval od startu hry do přijetí), `received_at` čas přijetí |
 
 ## 3. Stavy
 
@@ -571,6 +580,24 @@ ALTER TABLE station
     ADD COLUMN puzzle_letter VARCHAR(5);
 ```
 
+### V10
+
+Soubor `backend/src/main/resources/db/migration/V10__session_event.sql`:
+
+```sql
+-- Actions played in the phone without a signal and sent later (POST /sessions/current/sync,
+-- docs/02-architektura.md "Offline režim"). The id comes from the phone: an action sent twice
+-- (the answer of the first sending got lost) is applied only once.
+CREATE TABLE session_event (
+    id           UUID PRIMARY KEY,
+    session_id   UUID        NOT NULL REFERENCES game_session(id) ON DELETE CASCADE,
+    type         VARCHAR(10) NOT NULL CHECK (type IN ('ANSWER','HINT')),
+    played_at    TIMESTAMPTZ NOT NULL,
+    received_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_session_event_session ON session_event(session_id);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -595,3 +622,4 @@ ALTER TABLE station
 | V7 | Namluvené texty: `game.intro_audio_url`, `game.outro_audio_url`, `station.story_audio_url`, `station.reward_audio_url` (cesta k MP3, NULL = jen text) |
 | V8 | Obrázky a vedení hráče: `game.cover_image_url`, `station.image_alt` (k `image_url` z V1), `station.listen_only` (poslechová úloha), `station.next_text` (kam jít dál) |
 | V9 | Tajenka: `station.puzzle_letter` — písmeno, které hráč získá vyřešením stanoviště |
+| V10 | Offline režim: tabulka `session_event` — přijaté akce z telefonu (idempotence podle `id` z telefonu, čas hraní) |

@@ -6,8 +6,11 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import cz.mibcon.zazitky.game.domain.TaskType;
+import cz.mibcon.zazitky.session.domain.SessionEventType;
 import cz.mibcon.zazitky.session.domain.SessionStatus;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -26,6 +29,23 @@ public final class SessionDtos {
 
     public record SubmitAnswerRequest(
             @NotBlank @Size(max = 200) String answer) {
+    }
+
+    /** Actions played in the phone, in the order they were played (docs/02-architektura.md, "Offline režim"). */
+    public record SyncRequest(@NotNull @Size(max = 500) List<@Valid @NotNull SyncEvent> events) {
+    }
+
+    /**
+     * @param id     chosen by the phone; an action already received is skipped
+     * @param answer only for {@code ANSWER}
+     * @param at     when it was played in the phone (kept between the start of the game and now on the server)
+     */
+    public record SyncEvent(
+            @NotNull UUID id,
+            @NotNull SessionEventType type,
+            @NotNull UUID stationId,
+            @Size(max = 200) String answer,
+            @NotNull Instant at) {
     }
 
     public record SessionState(

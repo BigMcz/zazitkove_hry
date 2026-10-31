@@ -66,19 +66,21 @@ describe('playClient', () => {
     expect(progressStorage.get(TOKEN)?.queue.map((event) => event.type)).toEqual(['hint', 'answer', 'answer'])
   })
 
-  it('sends the queued actions in order once the signal is back', async () => {
+  it('sends the queued actions in one request with the times they were played', async () => {
     await downloaded()
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
+    await playClient.revealHint(TOKEN, 's1')
     await playClient.submitAnswer(TOKEN, 's1', 'nevím')
     await playClient.submitAnswer(TOKEN, 's1', 'ohyb reky')
+    const queued = progressStorage.get(TOKEN)!.queue
 
-    const sent: string[] = []
+    const sent: unknown[] = []
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init?: RequestInit) => {
-        if (init?.method === 'POST') {
-          sent.push(`${url} ${String(init.body)}`)
-          return json({ correct: true })
+        if (url === '/api/v1/sessions/current/sync') {
+          sent.push(JSON.parse(String(init?.body)))
+          return json(serverState(['s1']))
         }
         return json(serverState(['s1']))
       }),
@@ -87,11 +89,33 @@ describe('playClient', () => {
     const state = await playClient.getState(TOKEN)
 
     expect(sent).toEqual([
-      '/api/v1/sessions/current/stations/s1/answers {"answer":"nevím"}',
-      '/api/v1/sessions/current/stations/s1/answers {"answer":"ohyb reky"}',
+      {
+        events: [
+          { id: queued[0].id, type: 'HINT', stationId: 's1', at: queued[0].at },
+          { id: queued[1].id, type: 'ANSWER', stationId: 's1', answer: 'nevím', at: queued[1].at },
+          { id: queued[2].id, type: 'ANSWER', stationId: 's1', answer: 'ohyb reky', at: queued[2].at },
+        ],
+      },
     ])
     expect(progressStorage.get(TOKEN)?.queue).toEqual([])
     expect(state.currentStation?.id).toBe('s2')
+  })
+
+  it('keeps the queue while there is no signal and drops it once the server took it after the code expired', async () => {
+    await downloaded()
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
+    await playClient.submitAnswer(TOKEN, 's1', 'ohyb reky')
+    await playClient.getState(TOKEN)
+    expect(progressStorage.get(TOKEN)?.queue).toHaveLength(1)
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({ type: '/problems/session-expired', status: 410, detail: 'Platnost rozehrané hry vypršela.' }, 410),
+      ),
+    )
+    await expect(playClient.getState(TOKEN)).rejects.toMatchObject({ status: 410 })
+    expect(progressStorage.get(TOKEN)?.queue).toEqual([])
   })
 
   it('takes over a station solved on another phone', async () => {

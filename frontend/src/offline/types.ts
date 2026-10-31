@@ -35,6 +35,16 @@ export interface StationContent {
   hints: { orderNo: number; text: string; penaltySeconds: number }[]
 }
 
+/** An action for POST /sessions/current/sync. */
+export interface SyncEvent {
+  id: string
+  type: 'ANSWER' | 'HINT'
+  stationId: string
+  answer?: string
+  /** When it was played in the phone (ISO). */
+  at: string
+}
+
 /** AES-GCM: base64 IV and base64 ciphertext with the tag. */
 export interface Sealed {
   iv: string
