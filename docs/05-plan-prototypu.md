@@ -150,6 +150,8 @@ Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá n
 - [x] Krok 4: synchronizace událostí na server (`POST /sessions/current/sync`, tabulka `session_event` V10), idempotence, časy z telefonu, vypršení kódu
 - [x] Stahování hry na pozadí: hráč nečeká, stav stahování na stanovišti, dokončení přerušeného stahování
 - [x] Oprava: TanStack Query v letadlovém režimu pozastavoval požadavky (`networkMode: 'always'`), ověřeno na telefonu
+- [x] Menší a rychlejší stažení: obrázky WebP 900 px (`tools/grafika/web_images.py`, demo 2,2 → 1,0 MB), stahování po 4 souborech v pořadí stanovišť
+- [ ] Nahrávky na 32 kb/s mono (asi −33 %, z původních nahrávek přes ffmpeg) — až s delší hrou
 - [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README
 
 ## Další fáze

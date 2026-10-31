@@ -96,7 +96,7 @@ function PhonePreview() {
         Ukázka hry | Kapitola 01
       </p>
       <img
-        src="/images/demo/st02.jpg"
+        src="/images/demo/st02.webp"
         alt=""
         className="mt-2 aspect-[16/9] w-full rounded-xl bg-stone-700 object-cover"
       />
@@ -310,7 +310,7 @@ function OurGames() {
       </h2>
       <article className="mt-4 grid overflow-hidden rounded-3xl border border-night-line bg-night-card md:grid-cols-2">
         <img
-          src="/images/demo/cover.jpg"
+          src="/images/demo/cover.webp"
           alt="Starý kat Karl Huss s úředním dopisem v zámeckém muzeu"
           loading="lazy"
           className="aspect-[4/3] size-full object-cover"

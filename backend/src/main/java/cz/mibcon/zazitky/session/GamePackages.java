@@ -113,13 +113,17 @@ class GamePackages {
                 station.getTaskText(), station.getTaskType(), choices, hints);
     }
 
+    /** In the order they are needed, so that the nearest stations are in the phone first and the ending last. */
     private static List<String> media(Game game) {
-        Stream<String> gameMedia = Stream.of(game.getCoverImageUrl(), game.getIntroAudioUrl(), game.getOutroAudioUrl());
-        Stream<String> stationMedia = game.getStations().stream()
+        Stream<String> intro = Stream.of(game.getCoverImageUrl(), game.getIntroAudioUrl());
+        Stream<String> stations = game.getStations().stream()
                 .flatMap(station -> Stream.of(station.getImageUrl(), station.getStoryAudioUrl(),
                         station.getRewardAudioUrl()));
         Set<String> media = new LinkedHashSet<>();
-        Stream.concat(gameMedia, stationMedia).filter(Objects::nonNull).forEach(media::add);
+        Stream.of(intro, stations, Stream.of(game.getOutroAudioUrl()))
+                .flatMap(part -> part)
+                .filter(Objects::nonNull)
+                .forEach(media::add);
         return List.copyOf(media);
     }
 

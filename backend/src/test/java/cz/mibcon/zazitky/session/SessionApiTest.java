@@ -105,7 +105,7 @@ class SessionApiTest {
         // Station 4 (TEXT): a listening task with a picture
         state(token)
                 .andExpect(jsonPath("$.currentStation.listenOnly").value(true))
-                .andExpect(jsonPath("$.currentStation.imageUrl").value("/images/demo/st04.jpg"))
+                .andExpect(jsonPath("$.currentStation.imageUrl").value("/images/demo/st04.webp"))
                 .andExpect(jsonPath("$.currentStation.imageAlt").isString())
                 .andExpect(jsonPath("$.currentStation.storyAudioUrl").value("/audio/demo/st04-pribeh.mp3"));
         answer(token, STATION_4, "Obraz Spasitele!").andExpect(jsonPath("$.correct").value(true));
@@ -192,7 +192,7 @@ class SessionApiTest {
                 .andExpect(jsonPath("$.currentStation.id").value(STATION_1))
                 .andExpect(jsonPath("$.currentStation.choices", hasSize(4)))
                 .andExpect(jsonPath("$.currentStation.listenOnly").value(false))
-                .andExpect(jsonPath("$.currentStation.imageUrl").value("/images/demo/st01.jpg"))
+                .andExpect(jsonPath("$.currentStation.imageUrl").value("/images/demo/st01.webp"))
                 .andExpect(jsonPath("$.currentStation.hintsAvailable").value(1))
                 .andExpect(jsonPath("$.currentStation.nextHintPenaltySeconds").value(60))
                 .andExpect(jsonPath("$.currentStation.revealedHints").isEmpty())

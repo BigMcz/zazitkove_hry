@@ -28,3 +28,6 @@ frontend/dist/
 # Zdrojové nahrávky a grafika od autora (do hry se přesouvají upravené)
 /audio/
 /grafika/
+
+# Python
+__pycache__/

@@ -48,7 +48,9 @@ class SessionPackageTest {
         assertThat(pack.session().expiresAt()).isAfter(pack.session().startedAt());
         assertThat(pack.stations()).hasSize(10);
         assertThat(pack.unlockedKeys()).isEmpty();
-        assertThat(pack.media()).contains("/images/demo/st01.jpg", "/audio/demo/st01-odmena.mp3");
+        assertThat(pack.media()).contains("/images/demo/st01.webp", "/audio/demo/st01-odmena.mp3")
+                .startsWith("/images/demo/cover.webp", "/audio/demo/intro.mp3", "/images/demo/st01.webp")
+                .endsWith("/audio/demo/zaver.mp3");
         // No accepted answer (except CHOICE, where it is one of the visible choices), reward or later station
         List<String> secrets = jdbc.queryForList("""
                 SELECT a.value FROM accepted_answer a JOIN station s ON s.id = a.station_id

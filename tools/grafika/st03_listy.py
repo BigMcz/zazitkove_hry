@@ -1,15 +1,17 @@
 """Writes the four chronicle entries onto the blank pages of grafika/st03.png (krok 3 dema).
 
-Usage: python tools/grafika/st03_listy.py  (needs Pillow; output frontend/public/images/demo/st03.jpg)
+Usage: python tools/grafika/st03_listy.py  (needs Pillow; output frontend/public/images/demo/st03.webp)
 """
 import os
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
+from web_images import save_web
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FONT = os.path.join(os.path.dirname(__file__), 'Caveat.ttf')  # OFL, github.com/google/fonts/tree/main/ofl/caveat
-OUT = sys.argv[1] if len(sys.argv) > 1 else f'{ROOT}/frontend/public/images/demo/st03.jpg'
+OUT = sys.argv[1] if len(sys.argv) > 1 else f'{ROOT}/frontend/public/images/demo/st03.webp'
 
 INK = (52, 34, 20)
 
@@ -50,5 +52,4 @@ for (cx, cy), angle, letter, lines in PAGES:
 
 out = img.convert('RGB')
 out.thumbnail((1200, 900), Image.LANCZOS)
-out.save(OUT, 'JPEG', quality=82, optimize=True, progressive=True)
-print(OUT, out.size, os.path.getsize(OUT) // 1024, 'kB')
+save_web(out, OUT)
