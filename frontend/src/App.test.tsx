@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
@@ -8,6 +8,7 @@ import type { SessionState } from './api/types.ts'
 import { packageStorage } from './offline/storage.ts'
 import type { GamePackage } from './offline/types.ts'
 import { createQueryClient } from './queryClient.ts'
+import { sealedPackage } from './test/sealedPackage.ts'
 import SessionTokenProvider from './session/SessionTokenProvider.tsx'
 import { tokenStorage } from './session/tokenStorage.ts'
 
@@ -100,6 +101,33 @@ describe('App', () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     window.localStorage.clear()
+    onlineManager.setOnline(true)
+  })
+
+  it('plays the downloaded game in airplane mode', async () => {
+    tokenStorage.set(TOKEN)
+    packageStorage.set(
+      TOKEN,
+      await sealedPackage(
+        [
+          { id: 's1', title: 'Brána', taskType: 'TEXT', answers: ['ohyb reky'] },
+          { id: 's2', title: 'Věž', taskType: 'NUMBER', answers: ['56'] },
+        ],
+        { expiresAt: '2999-01-01T00:00:00Z' },
+      ),
+    )
+    // The browser reports offline and every request fails, as on a phone in airplane mode
+    onlineManager.setOnline(false)
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
+    renderApp('/play')
+
+    expect(await screen.findByRole('heading', { name: 'Brána' })).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('textbox'), 'Ohyb řeky{Enter}')
+
+    expect(await screen.findByRole('heading', { name: 'Stopa nalezena' })).toBeInTheDocument()
+    expect(screen.getByText('Odměna Brána')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Na další stanoviště' }))
+    expect(await screen.findByRole('heading', { name: 'Věž' })).toBeInTheDocument()
   })
 
   it('starts a game with a new code: intro, team name, first station', async () => {
