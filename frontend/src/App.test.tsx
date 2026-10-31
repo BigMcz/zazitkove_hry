@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
 import type { SessionState } from './api/types.ts'
+import { packageStorage } from './offline/gameDownload.ts'
+import type { GamePackage } from './offline/types.ts'
 import { createQueryClient } from './queryClient.ts'
 import SessionTokenProvider from './session/SessionTokenProvider.tsx'
 import { tokenStorage } from './session/tokenStorage.ts'
@@ -48,6 +50,16 @@ const demoGame = {
   coverImageUrl: '/images/demo/cover.jpg',
   estimatedMinutes: 20,
   stationCount: 5,
+}
+
+const gamePackage: GamePackage = {
+  gameId: 'g1',
+  kdfIterations: 1000,
+  firstStation: { ...inProgress.currentStation!, hints: [] },
+  stations: [],
+  puzzleSlots: null,
+  unlockedKeys: {},
+  media: [],
 }
 
 type Handler = (init?: RequestInit) => Response
@@ -94,6 +106,7 @@ describe('App', () => {
       'POST /api/v1/access-codes/check': () =>
         json({ code: 'ABCD-2345', game: demoGame, resumesGame: false, validUntil: null }),
       'POST /api/v1/sessions': () => json({ ...inProgress, token: TOKEN }, 201),
+      'GET /api/v1/sessions/current/package': () => json(gamePackage),
       'GET /api/v1/sessions/current': () => json(inProgress),
     })
     renderApp('/')
@@ -116,6 +129,8 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
     expect(tokenStorage.get()).toBe(TOKEN)
+    // The game was downloaded into the phone for playing without a signal
+    expect(packageStorage.get(TOKEN)).toEqual(gamePackage)
     const bodies = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => init?.body)
     expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
   })

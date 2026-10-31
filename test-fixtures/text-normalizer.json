@@ -1,0 +1,38 @@
+{
+  "description": "Shared cases of answer normalization: backend TextNormalizer (Java) and frontend textNormalizer.ts must give the same results, otherwise the offline game would not accept correct answers.",
+  "text": [
+    ["jáma", "jama"],
+    ["JÁMA", "jama"],
+    ["  jama  ", "jama"],
+    ["Díra!", "dira"],
+    ["ŽLUŤOUČKÝ KŮŇ", "zlutoucky kun"],
+    ["„Brána“", "brana"],
+    ["Mistr   Jakub", "mistr jakub"],
+    ["mistr, jakub?", "mistr jakub"],
+    ["rok 1621", "rok 1621"],
+    ["mistr\tJakub\nkat", "mistr jakub kat"],
+    ["kat - mistr", "kat mistr"],
+    ["kat — mistr", "kat mistr"],
+    ["!!! klíč ???", "klic"],
+    ["   ", ""],
+    ["?!", ""],
+    ["a b", "ab"],
+    ["🏰 hrad", "hrad"],
+    ["Ohyb řeky jako ohnutá paže", "ohyb reky jako ohnuta paze"],
+    ["  OHYB ŘEKY jako ohnutá paže ", "ohyb reky jako ohnuta paze"],
+    ["İSTANBUL", "istanbul"],
+    ["Straße", "straße"],
+    ["½ hodiny", "½ hodiny"],
+    ["ǅ", "ǆ"]
+  ],
+  "number": [
+    ["56", "56"],
+    [" 56 ", "56"],
+    ["56 schodů", "56"],
+    ["1 621", "1621"],
+    ["1.621", "1621"],
+    ["-56", "56"],
+    ["padesát šest", ""],
+    ["٥٦", ""]
+  ]
+}

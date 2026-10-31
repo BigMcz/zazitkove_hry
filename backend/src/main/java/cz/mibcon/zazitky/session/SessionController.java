@@ -56,6 +56,11 @@ public class SessionController {
         return sessionService.getState(parseToken(token));
     }
 
+    @GetMapping("/current/package")
+    public SessionPackage gamePackage(@RequestHeader(name = TOKEN_HEADER, required = false) String token) {
+        return sessionService.getPackage(parseToken(token));
+    }
+
     @PostMapping("/current/stations/{stationId}/answers")
     public AnswerResult submitAnswer(@RequestHeader(name = TOKEN_HEADER, required = false) String token,
             @PathVariable UUID stationId, @Valid @RequestBody SubmitAnswerRequest request) {

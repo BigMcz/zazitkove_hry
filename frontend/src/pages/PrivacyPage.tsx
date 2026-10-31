@@ -94,6 +94,13 @@ export default function PrivacyPage() {
                   <td className="py-2 pr-4">Pamatuje si, že jste si ztlumili namluvený hlas.</td>
                   <td className="py-2">Dokud hlas znovu nezapnete.</td>
                 </tr>
+                <tr className="border-b border-night-line">
+                  <td className="py-2 pr-4 font-mono text-xs">zazitky.gamePackage, game-media</td>
+                  <td className="py-2 pr-4">
+                    Stažená hra (zašifrovaný příběh, obrázky a nahrávky), abyste mohli hrát i bez signálu.
+                  </td>
+                  <td className="py-2">Do konce hry; obrázky a nahrávky, dokud je prohlížeč neuvolní.</td>
+                </tr>
                 <tr>
                   <td className="py-2 pr-4 font-mono text-xs">JSESSIONID, XSRF-TOKEN</td>
                   <td className="py-2 pr-4">Přihlášení do administrace a ochrana formulářů, jen pro správce a partnery.</td>

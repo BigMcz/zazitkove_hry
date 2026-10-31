@@ -1,0 +1,11 @@
+{
+  "description": "Shared case of the offline package encryption: backend PackageCrypto (Java) seals it exactly like this, frontend packageCrypto.ts (Web Crypto) must open it. Fixed salt, keys and IVs only for the test.",
+  "answer": "ohyb reky jako ohnuta paze",
+  "wrongAnswer": "tvar hradni veze",
+  "salt": "AAECAwQFBgcICQoLDA0ODw==",
+  "iterations": 1000,
+  "contentKey": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoM=",
+  "key": { "iv": "AQEBAQEBAQEBAQEB", "data": "G3tiEBzJqiBDBgiDMFM/UazYeRJoWhM2BVcfvlfsSyrok86RHZ8gpGZyMIhW+ABI" },
+  "content": { "iv": "AgICAgICAgICAgIC", "data": "SaUgU/M304AOmEaPaJbyQUr781cfsoOXyWg8vPtx0Owc+hzqRqMcgArL+oeMXg9QREqmHUn2vg==" },
+  "plaintext": "{\"rewardText\":\"Správně.\",\"next\":null}"
+}

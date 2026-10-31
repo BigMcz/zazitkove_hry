@@ -5,6 +5,7 @@ import type {
   ProblemDetail,
   SessionState,
 } from './types.ts'
+import type { GamePackage } from '../offline/types.ts'
 
 const BASE_URL = '/api/v1'
 const TOKEN_HEADER = 'X-Session-Token'
@@ -84,6 +85,8 @@ export const api = {
     apiRequest<SessionState>('/sessions', { method: 'POST', body: { code, teamName } }),
 
   getSession: (token: string) => apiRequest<SessionState>('/sessions/current', { token }),
+
+  getPackage: (token: string) => apiRequest<GamePackage>('/sessions/current/package', { token }),
 
   submitAnswer: (token: string, stationId: string, answer: string) =>
     apiRequest<AnswerResult>(`${station(stationId)}/answers`, { method: 'POST', token, body: { answer } }),

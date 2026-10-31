@@ -53,14 +53,16 @@ public class SessionService {
     private final GameSessionRepository sessions;
     private final AnswerAttemptRepository attempts;
     private final AnswerEvaluator evaluator;
+    private final GamePackages packages;
     private final Clock clock;
 
     public SessionService(AccessCodeService accessCodes, GameSessionRepository sessions,
-            AnswerAttemptRepository attempts, AnswerEvaluator evaluator, Clock clock) {
+            AnswerAttemptRepository attempts, AnswerEvaluator evaluator, GamePackages packages, Clock clock) {
         this.accessCodes = accessCodes;
         this.sessions = sessions;
         this.attempts = attempts;
         this.evaluator = evaluator;
+        this.packages = packages;
         this.clock = clock;
     }
 
@@ -117,6 +119,16 @@ public class SessionService {
         GameSession session = sessions.findByToken(token).orElseThrow(InvalidTokenException::new);
         checkNotExpired(session);
         return toState(session, false);
+    }
+
+    /** Offline package of a game in progress (docs/02-architektura.md, "Offline režim"). */
+    public SessionPackage getPackage(UUID token) {
+        GameSession session = sessions.findByToken(token).orElseThrow(InvalidTokenException::new);
+        checkNotExpired(session);
+        if (session.getStatus() != SessionStatus.IN_PROGRESS) {
+            throw new InvalidStateException("Hra není rozehraná.");
+        }
+        return packages.forSession(session);
     }
 
     public AnswerResult submitAnswer(UUID token, UUID stationId, String rawAnswer) {

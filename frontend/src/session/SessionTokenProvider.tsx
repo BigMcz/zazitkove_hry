@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { SessionTokenContext } from './sessionTokenContext.ts'
+import { packageStorage } from '../offline/gameDownload.ts'
 import { tokenStorage } from './tokenStorage.ts'
 
 export default function SessionTokenProvider({ children }: { children: ReactNode }) {
@@ -14,6 +15,8 @@ export default function SessionTokenProvider({ children }: { children: ReactNode
       },
       clearToken: () => {
         tokenStorage.clear()
+        // The downloaded game belongs to the session
+        packageStorage.clear()
         setTokenState(null)
       },
     }),

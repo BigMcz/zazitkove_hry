@@ -12,9 +12,10 @@ describe('PrivacyPage', () => {
     )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Jak zacházíme s vašimi údaji')
     expect(screen.getAllByText(/IČO 03896471/).length).toBeGreaterThan(0)
-    // Keep the table in sync with tokenStorage.ts and audioPreference.ts
+    // Keep the table in sync with tokenStorage.ts, audioPreference.ts and offline/gameDownload.ts
     expect(screen.getByText('zazitky.sessionToken')).toBeInTheDocument()
     expect(screen.getByText('zazitky.voiceMuted')).toBeInTheDocument()
+    expect(screen.getByText('zazitky.gamePackage, game-media')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Provozovatel a ochrana osobních údajů' })).toHaveAttribute('href', '/ochrana-udaju')
   })
 })

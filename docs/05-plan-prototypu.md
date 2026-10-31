@@ -144,7 +144,7 @@ Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohl
 Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá nasadit samostatně.
 
 - [x] Krok 1: aplikace jako PWA, service worker s kostrou aplikace, offline navigace, mezipaměť pro obrázky a zvuky (Range); ověřeno lokálně s vypnutým serverem (úvod i `/play` se načtou, data hry zatím ne)
-- [ ] Krok 2: balíček relace (`GET /sessions/current/package`), šifrování obsahu po úkolech, `TextNormalizer` v TypeScriptu se společnými testovacími případy, stažení médií při startu s ukazatelem průběhu
+- [x] Krok 2: balíček relace (`GET /sessions/current/package`), šifrování obsahu po úkolech, `TextNormalizer` v TypeScriptu se společnými testovacími případy (`test-fixtures/`), stažení médií při startu s ukazatelem průběhu; ověřeno lokálně (demo: 10 stanovišť, balíček 20 kB, 33 souborů)
 - [ ] Krok 3: hra z balíčku v telefonu (odpovědi, nápovědy, odměny, tajenka, finále) bez signálu
 - [ ] Krok 4: synchronizace událostí na server (`POST /sessions/current/sync`), idempotence, časy z telefonu, vypršení kódu
 - [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README

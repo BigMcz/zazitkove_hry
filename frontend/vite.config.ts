@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
+    // Tests read the answer normalization cases shared with the backend
+    fs: { allow: ['.', '../test-fixtures'] },
     proxy: {
       '/api': 'http://localhost:8080',
     },
