@@ -342,6 +342,15 @@ Rozhodnuto 2026-10-30 (Q16). Indexovat se má jen úvodní stránka na `https://
 - **Testovací server** zůstává za basic auth s `X-Robots-Tag: noindex, nofollow` (Caddy), do vyhledávačů se nedostane.
 - **Později:** stránky pro jednotlivé lokality (např. `/hry/loket`) s vlastním textem, předgenerované stejným způsobem a přidané do sitemapy; po spuštění produkce registrace v Google Search Console a Seznam Webmaster.
 
+### Offline režim (F6, rozhodnutí Q4)
+
+Hráč musí projít hru i bez signálu (hradby, sklepení, letadlový režim). Zásada „správné odpovědi se neposílají na klienta“ platí dál.
+
+1. **Aplikace offline (PWA):** `npm run build` po předgenerování vytvoří service worker (`workbox-build`, `service-worker.mjs`). Do mezipaměti uloží jen kostru aplikace (JS, CSS, HTML, písma, logo). Navigace bez signálu dostane `app.html` (úvod `index.html`). Obrázky a zvuky her se ukládají až s balíčkem hry (bod 2), návštěvníci úvodní stránky je nestahují. Zvuky ze schránky se servírují s podporou Range (iPhone).
+2. **Herní balíček:** po „Začít hru“ klient stáhne balíček relace a všechny obrázky a zvuky hry (ukazatel průběhu). Obsah po každém úkolu (odměna, „Kam dál“, písmeno tajenky, další stanoviště s nápovědami, u posledního závěr) je zašifrovaný AES-GCM náhodným klíčem stanoviště. Ten je zabalený klíčem odvozeným z každé přijímané odpovědi (`PBKDF2-SHA256` z normalizované odpovědi, sůl hry). Telefon správné odpovědi nezná: odpověď hráče znormalizuje (`TextNormalizer` přepsaný do TypeScriptu, společné testovací případy s Javou), odvodí klíč a zkusí rozbalit. Číselné odpovědi a volby jde zkoušením uhodnout, u placené hry to akceptujeme. Nápovědy dalšího stanoviště jsou v zašifrovaném obsahu otevřeně (nejsou to odpovědi).
+3. **Hra v telefonu:** postup, pokusy, odkryté nápovědy a časy se ukládají v telefonu. Stav ze serveru zůstává rozhodující, při signálu se načte.
+4. **Synchronizace:** události (odpověď, nápověda) se frontou posílají na server, jakmile je signál; server je v pořadí znovu vyhodnotí stejnou logikou jako dnes, zapíše do `answer_attempt` a vrátí stav. Události mají id (opakované odeslání je bez efektu) a čas z telefonu (omezený na interval od startu hry do teď); pokusy z doby platnosti kódu se přijmou i po jeho vypršení.
+
 ## 5. Bezpečnost
 
 - Správné odpovědi a nápovědy, které hráč ještě neodkryl, nikdy neopouštějí server.

@@ -129,6 +129,8 @@ Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohl
 - [x] Úvod: sekce „Proč StoryHold“ a „Pro památky“ (bez obchodních podmínek, výzva ozvat se)
 - [x] Úvod: „Než vyrazíte“ (tipy) a „Časté otázky“ (cena na pokladně, věk, tým, délka, bez aplikace, pokračování, nápovědy, bezbariérovost podle památky)
 - [x] Stránka `/pravidla` (kartička a platnost, průběh, bezpečnost, potíže a reklamace), odkaz v patičce
+- [x] Pravidla potvrzena provozovatelem: reklamace kartičky i na pokladně památky, při technické chybě náhradní kód
+- [ ] Reklamace na pokladně zapsat do smlouvy s hradem; postup pro náhradní kód (vygenerovat v administraci a poslat hráči)
 - [x] Stránka 404 ve vzhledu webu
 - [x] Obrazovka „Než začnete“ před úvodem hry (zvuk, bezpečnost, „Hrát bez zvuku“)
 - [x] Odkaz z QR kódu vede rovnou do hry (nová hra na „Než začnete“, rozehraná pokračuje, neplatný kód s důvodem na úvodu)
@@ -137,10 +139,20 @@ Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohl
 - [ ] Podrobná stránka pro památky (průběh spolupráce, prezentace ke stažení)
 - [ ] Po spuštění: hodnocení hráčů, sociální sítě, dárkové poukazy
 
+## F6 — Offline režim (rozhodnutí Q4)
+
+Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá nasadit samostatně.
+
+- [x] Krok 1: aplikace jako PWA, service worker s kostrou aplikace, offline navigace, mezipaměť pro obrázky a zvuky (Range); ověřeno lokálně s vypnutým serverem (úvod i `/play` se načtou, data hry zatím ne)
+- [ ] Krok 2: balíček relace (`GET /sessions/current/package`), šifrování obsahu po úkolech, `TextNormalizer` v TypeScriptu se společnými testovacími případy, stažení médií při startu s ukazatelem průběhu
+- [ ] Krok 3: hra z balíčku v telefonu (odpovědi, nápovědy, odměny, tajenka, finále) bez signálu
+- [ ] Krok 4: synchronizace událostí na server (`POST /sessions/current/sync`), idempotence, časy z telefonu, vypršení kódu
+- [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady
 2. Skutečný obsah pro hrad Loket (průzkum na místě, příběh kata)
-3. Administrace obsahu a statistiky obtížnosti
+3. Administrace obsahu a statistiky obtížnosti; v administraci „vystavit náhradní kód“ (jeden kód ke stejné hře, rovnou platný, bez tisku a předání dávky) pro hráče s technickou chybou
 4. Ostrý provoz — testovací server hotov (F2), SEO základy hotovy (F3), dál produkce, zálohy, rate limiting
 5. Volitelně PWA/offline, GPS/QR, jazykové mutace

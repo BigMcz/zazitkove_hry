@@ -6,6 +6,7 @@ import App from './App.tsx'
 import '@fontsource-variable/outfit'
 import './index.css'
 import { createQueryClient } from './queryClient.ts'
+import { registerServiceWorker } from './serviceWorker.ts'
 import SessionTokenProvider from './session/SessionTokenProvider.tsx'
 
 const queryClient = createQueryClient()
@@ -21,3 +22,5 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+registerServiceWorker()
