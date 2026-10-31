@@ -10,7 +10,7 @@ import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { voicePreference } from '../components/audioPreference.ts'
 import { buttonPrimary, buttonSecondary, card, input, linkSubtle } from '../components/ui.ts'
-import { downloadGame } from '../offline/gameDownload.ts'
+import { prepareOffline } from '../offline/gameDownload.ts'
 import { useSessionToken } from '../session/sessionTokenContext.ts'
 
 export interface StartLocationState {
@@ -29,7 +29,6 @@ export default function StartPage() {
   const startSession = useStartSession()
   const [teamName, setTeamName] = useState('')
   const [prepared, setPrepared] = useState(false)
-  const [download, setDownload] = useState<{ done: number; total: number } | null>(null)
   const check = (location.state as StartLocationState | null)?.check
 
   // The code is kept only in the navigation state (not in the URL); after a reload start again.
@@ -109,51 +108,12 @@ export default function StartPage() {
         onSuccess: (state) => {
           if (state.token) {
             setToken(state.token)
-            void downloadAndPlay(state.token)
-          } else {
-            navigate('/play', { replace: true })
+            // The game downloads into the phone in the background, the player does not wait for it
+            prepareOffline(state.token)
           }
+          navigate('/play', { replace: true })
         },
       },
-    )
-  }
-
-  /** The game into the phone for playing without a signal; without the download it still works online. */
-  async function downloadAndPlay(newToken: string) {
-    setDownload({ done: 0, total: 0 })
-    try {
-      await downloadGame(newToken, (done, total) => setDownload({ done, total }))
-    } catch {
-      // No signal right now: the game goes on online and the package can be downloaded later
-    }
-    navigate('/play', { replace: true })
-  }
-
-  if (download) {
-    const percent = download.total > 0 ? Math.round((download.done / download.total) * 100) : 0
-    return (
-      <Page>
-        <header className="flex flex-col gap-1">
-          <p className="text-sm font-semibold text-stone-600">Připravuji hru</p>
-          <h1 className="font-serif text-3xl font-bold text-stone-950">{game.title}</h1>
-        </header>
-        <p className="text-base text-stone-700">
-          Stahuji příběh, obrázky a nahrávky do telefonu, abyste mohli hrát i tam, kde není signál.
-        </p>
-        <div
-          role="progressbar"
-          aria-label="Stahování hry"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-          className="h-2.5 w-full overflow-hidden rounded-full bg-stone-300"
-        >
-          <div className="h-full rounded-full bg-amber-600 transition-[width]" style={{ width: `${percent}%` }} />
-        </div>
-        <p className="text-sm text-stone-600">
-          {download.total > 0 ? `${download.done} z ${download.total} souborů` : 'Začínám…'}
-        </p>
-      </Page>
     )
   }
 

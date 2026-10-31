@@ -148,6 +148,8 @@ Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá n
 - [x] Krok 3: hra z balíčku v telefonu (odpovědi, nápovědy, odměny, tajenka, finále) bez signálu, fronta akcí odeslaná při signálu; ověřeno lokálně s vypnutým serverem (2 stanoviště offline, po zapnutí serveru 3 pokusy v `answer_attempt`)
 - [x] Oprava: statické soubory se revalidují podle obsahu (`ETag`), ne podle data 1980 z JAR (prohlížeč jinak po nasazení držel starou verzi)
 - [x] Krok 4: synchronizace událostí na server (`POST /sessions/current/sync`, tabulka `session_event` V10), idempotence, časy z telefonu, vypršení kódu
+- [x] Stahování hry na pozadí: hráč nečeká, stav stahování na stanovišti, dokončení přerušeného stahování
+- [x] Oprava: TanStack Query v letadlovém režimu pozastavoval požadavky (`networkMode: 'always'`), ověřeno na telefonu
 - [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README
 
 ## Další fáze

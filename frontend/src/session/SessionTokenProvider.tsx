@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { SessionTokenContext } from './sessionTokenContext.ts'
+import { forgetOfflineStatus } from '../offline/gameDownload.ts'
 import { clearOfflineGame } from '../offline/storage.ts'
 import { tokenStorage } from './tokenStorage.ts'
 
@@ -17,6 +18,7 @@ export default function SessionTokenProvider({ children }: { children: ReactNode
         tokenStorage.clear()
         // The downloaded game belongs to the session
         clearOfflineGame()
+        forgetOfflineStatus()
         setTokenState(null)
       },
     }),

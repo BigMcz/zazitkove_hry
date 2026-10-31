@@ -1,6 +1,6 @@
 import { ApiError, api, isSessionGone } from '../api/client.ts'
 import type { AnswerResult, HintsResult, SessionState } from '../api/types.ts'
-import { downloadGame } from './gameDownload.ts'
+import { prepareOffline } from './gameDownload.ts'
 import { LocalGameError, localAnswer, localHint, localState } from './localGame.ts'
 import { type LocalProgress, type QueuedEvent, packageStorage, progressStorage } from './storage.ts'
 import type { SyncEvent } from './types.ts'
@@ -16,10 +16,11 @@ export const playClient = {
     if (!pack) {
       const state = await api.getSession(token)
       if (state.status === 'IN_PROGRESS') {
-        downloadInBackground(token)
+        prepareOffline(token)
       }
       return state
     }
+    prepareOffline(token)
 
     try {
       const server = await synchronize(token)
@@ -93,19 +94,6 @@ async function local<T>(action: () => Promise<T>): Promise<T> {
     }
     throw error
   }
-}
-
-const downloading = new Set<string>()
-
-/** A game started before the package existed (or on another phone) gets it for the next time. */
-function downloadInBackground(token: string): void {
-  if (downloading.has(token)) {
-    return
-  }
-  downloading.add(token)
-  downloadGame(token)
-    .catch(() => undefined)
-    .finally(() => downloading.delete(token))
 }
 
 let flushing: Promise<void> | null = null

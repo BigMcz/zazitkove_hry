@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SessionState } from '../api/types.ts'
 import { sealedPackage } from '../test/sealedPackage.ts'
+import { forgetOfflineStatus } from './gameDownload.ts'
 import { playClient } from './playClient.ts'
 import { packageStorage, progressStorage } from './storage.ts'
 
@@ -47,6 +48,7 @@ function json(body: unknown, status = 200): Response {
 afterEach(() => {
   vi.unstubAllGlobals()
   window.localStorage.clear()
+  forgetOfflineStatus()
 })
 
 describe('playClient', () => {

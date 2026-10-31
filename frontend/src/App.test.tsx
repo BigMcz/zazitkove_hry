@@ -1,10 +1,11 @@
 import { QueryClientProvider, onlineManager } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App.tsx'
 import type { SessionState } from './api/types.ts'
+import { forgetOfflineStatus } from './offline/gameDownload.ts'
 import { packageStorage } from './offline/storage.ts'
 import type { GamePackage } from './offline/types.ts'
 import { createQueryClient } from './queryClient.ts'
@@ -55,7 +56,7 @@ const demoGame = {
 
 const gamePackage: GamePackage = {
   gameId: 'g1',
-  session: { gameTitle: 'Tajemství katova klíče', teamName: null, startedAt: '2026-10-28T10:00:00Z', expiresAt: '2026-10-28T15:00:00Z' },
+  session: { gameTitle: 'Tajemství katova klíče', teamName: null, startedAt: '2026-10-28T10:00:00Z', expiresAt: '2999-01-01T00:00:00Z' },
   kdfIterations: 1000,
   firstStation: { ...inProgress.currentStation!, hints: [] },
   stations: [],
@@ -102,6 +103,7 @@ describe('App', () => {
     vi.restoreAllMocks()
     window.localStorage.clear()
     onlineManager.setOnline(true)
+    forgetOfflineStatus()
   })
 
   it('plays the downloaded game in airplane mode', async () => {
@@ -158,8 +160,9 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
     expect(tokenStorage.get()).toBe(TOKEN)
-    // The game was downloaded into the phone for playing without a signal
-    expect(packageStorage.get(TOKEN)).toEqual(gamePackage)
+    // The game downloads into the phone in the background, the player did not wait for it
+    await waitFor(() => expect(packageStorage.get(TOKEN)).toEqual(gamePackage))
+    expect(await screen.findByText('✓ Hra je stažená, můžete hrát i bez signálu.')).toBeInTheDocument()
     const bodies = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => init?.body)
     expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
   })
