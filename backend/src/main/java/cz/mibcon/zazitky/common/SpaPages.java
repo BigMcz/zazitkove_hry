@@ -22,7 +22,7 @@ public class SpaPages {
     // A build without prerendering (backend tests) has only index.html
     private static final Resource INDEX = new ClassPathResource("static/index.html");
 
-    @GetMapping({"/ochrana-udaju", "/start", "/play", "/play/reward", "/play/finale", "/admin", "/admin/**"})
+    @GetMapping({"/ochrana-udaju", "/pravidla", "/start", "/play", "/play/reward", "/play/finale", "/admin", "/admin/**"})
     ResponseEntity<Object> clientRoute() {
         return page(HttpStatus.OK);
     }

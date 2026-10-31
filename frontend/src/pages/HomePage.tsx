@@ -26,6 +26,8 @@ export default function HomePage() {
         <Steps />
         <OurGames />
         <OnSite />
+        <BeforeYouGo />
+        <Faq />
         <About />
         <ForHeritageSites />
       </main>
@@ -349,6 +351,111 @@ function OnSite() {
     </section>
   )
 }
+
+/** Practical tips so that nothing spoils the game on site. */
+function BeforeYouGo() {
+  return (
+    <section id="nez-vyrazite" aria-labelledby="nez-vyrazite-nadpis" className="flex scroll-mt-8 flex-col gap-6">
+      <Eyebrow>Než vyrazíte</Eyebrow>
+      <h2 id="nez-vyrazite-nadpis" className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Pár tipů na cestu.
+      </h2>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {tips.map((tip) => (
+          <li key={tip.title} className="flex flex-col gap-2 rounded-2xl border border-night-line bg-night-card p-6">
+            <h3 className="text-lg font-extrabold">{tip.title}</h3>
+            <p className="text-stone-400">{tip.text}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const tips = [
+  { title: 'Nabitý mobil', text: 'Hra běží v prohlížeči celou dobu. Hodí se i powerbanka.' },
+  { title: 'Sluchátka', text: 'Příběh vám vypráví namluvený hlas. Ve sluchátkách ho uslyšíte i v ruchu nádvoří.' },
+  { title: 'Mobilní data', text: 'Odpovědi se ověřují přes internet, stačí běžné připojení.' },
+  { title: 'Pohodlná obuv', text: 'Trasa vede po nádvořích, schodech a dlažbě památky.' },
+]
+
+/** Questions players ask before buying a card; answers must match how the game really works. */
+function Faq() {
+  return (
+    <section id="caste-otazky" aria-labelledby="caste-otazky-nadpis" className="flex scroll-mt-8 flex-col gap-6">
+      <Eyebrow>Časté otázky</Eyebrow>
+      <h2 id="caste-otazky-nadpis" className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+        Na co se nejčastěji ptáte.
+      </h2>
+      <div className="flex flex-col gap-3">
+        {faq.map((item) => (
+          <details key={item.question} className="group rounded-2xl border border-night-line bg-night-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 text-lg font-bold">
+              {item.question}
+              <span aria-hidden="true" className="text-2xl text-lime transition-transform group-open:rotate-45">
+                +
+              </span>
+            </summary>
+            <p className="px-5 pb-5 leading-relaxed text-stone-300">{item.answer}</p>
+          </details>
+        ))}
+      </div>
+      <p className="text-stone-400">
+        Podrobnosti najdete v{' '}
+        <Link to="/pravidla" className="text-lime underline">
+          pravidlech hry
+        </Link>
+        . Nenašli jste odpověď? Napište nám na{' '}
+        <a href={`mailto:${operator.email}`} className="text-lime underline">
+          {operator.email}
+        </a>
+        .
+      </p>
+    </section>
+  )
+}
+
+const faq = [
+  {
+    question: 'Kolik hra stojí a kde koupím kartičku?',
+    answer: 'Kartičku s kódem koupíte na pokladně památky, kde se hra hraje. Tam se dozvíte i aktuální cenu.',
+  },
+  {
+    question: 'Pro koho je hra vhodná?',
+    answer:
+      'Pro všechny. Nejmenší děti, které ještě nečtou nebo neumí zacházet s mobilem, si hru užijí s rodiči. Příběh poslouchají a stopy hledají společně s nimi.',
+  },
+  {
+    question: 'Kolik lidí může hrát na jednu kartičku?',
+    answer:
+      'Jedna kartička je pro jeden tým, třeba celou rodinu nebo partu kamarádů. Hrát můžete z jednoho mobilu a vyprávění poslouchat společně.',
+  },
+  {
+    question: 'Jak dlouho hra trvá?',
+    answer:
+      'Záleží na hře a na vašem tempu. Ukázková hra na hradě Loket trvá asi 30 minut. Kód platí 5 hodin od prvního zadání, takže nikam nespěchejte.',
+  },
+  {
+    question: 'Musím si instalovat aplikaci?',
+    answer:
+      'Ne. Hra běží v prohlížeči na každém běžném chytrém telefonu. Stačí zadat kód z kartičky nebo naskenovat QR kód.',
+  },
+  {
+    question: 'Co když zavřu prohlížeč nebo se mi vybije mobil?',
+    answer:
+      'Nic se neztratí. Průběh hry se ukládá průběžně a po opětovném zadání kódu pokračujete tam, kde jste skončili, klidně i na jiném telefonu.',
+  },
+  {
+    question: 'Co když nevím, jak dál?',
+    answer:
+      'Ke každému úkolu jsou nápovědy. Každá použitá nápověda vám jen přidá pár minut k celkovému času, hru tedy dohraje každý.',
+  },
+  {
+    question: 'Je trasa bezbariérová?',
+    answer:
+      'Záleží na památce. Hry vedou po skutečných místech, často po schodech a nerovné dlažbě. Na přístupnost trasy se zeptejte na pokladně.',
+  },
+]
 
 /** Why StoryHold exists: games that make people look around and leave knowing more. */
 function About() {

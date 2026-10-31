@@ -8,20 +8,26 @@ import Page from '../components/Page.tsx'
 import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
-import { buttonPrimary, input, linkSubtle } from '../components/ui.ts'
+import { voicePreference } from '../components/audioPreference.ts'
+import { buttonPrimary, buttonSecondary, card, input, linkSubtle } from '../components/ui.ts'
 import { useSessionToken } from '../session/sessionTokenContext.ts'
 
 export interface StartLocationState {
   check: CodeCheck
 }
 
-/** Intro of the game the code belongs to; starting the game activates the code. */
+/**
+ * Intro of the game the code belongs to; starting the game activates the code. Before the intro the player
+ * reads about the sound and safety: the spoken intro would otherwise start on a muted phone unnoticed, and the
+ * tap on "Pustit úvod" lets the browser play it.
+ */
 export default function StartPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { token, setToken } = useSessionToken()
   const startSession = useStartSession()
   const [teamName, setTeamName] = useState('')
+  const [prepared, setPrepared] = useState(false)
   const check = (location.state as StartLocationState | null)?.check
 
   // The code is kept only in the navigation state (not in the URL); after a reload start again.
@@ -29,6 +35,65 @@ export default function StartPage() {
     return <Navigate to="/" replace />
   }
   const { game } = check
+
+  if (!prepared) {
+    return (
+      <Page>
+        <Link to="/" className={linkSubtle}>
+          ← Zpět
+        </Link>
+        <header className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-stone-600">Než začnete</p>
+          <h1 className="font-serif text-3xl font-bold text-stone-950">{game.title}</h1>
+        </header>
+
+        {game.introAudioUrl && (
+          <section className={`${card} flex flex-col gap-2`}>
+            <h2 className="text-lg font-bold text-stone-950">🔊 Hra mluví</h2>
+            <p className="text-base text-stone-700">
+              Příběh vám vypráví namluvený hlas. Zapněte zvuk telefonu, vypněte tichý režim a zesilte hlasitost. Nejlépe
+              uslyšíte ve sluchátkách. Text máte vždy i na obrazovce.
+            </p>
+          </section>
+        )}
+
+        <section className={`${card} flex flex-col gap-2`}>
+          <h2 className="text-lg font-bold text-stone-950">Bezpečně a ohleduplně</h2>
+          <ul className="list-disc space-y-1 pl-5 text-base text-stone-700">
+            <li>Při chůzi se dívejte kolem sebe, ne do mobilu, hlavně na schodech.</li>
+            <li>Hra vás nikdy nepošle do uzavřených prostor ani na zdi. Řiďte se návštěvním řádem památky.</li>
+            <li>Na děti dohlíží jejich doprovod.</li>
+          </ul>
+        </section>
+
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              // An explicit choice of sound turns the voice back on if it was muted in an earlier game
+              voicePreference.setMuted(false)
+              setPrepared(true)
+            }}
+            className={buttonPrimary}
+          >
+            {game.introAudioUrl ? 'Pustit úvod' : 'Pokračovat'}
+          </button>
+          {game.introAudioUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                voicePreference.setMuted(true)
+                setPrepared(true)
+              }}
+              className={buttonSecondary}
+            >
+              Hrát bez zvuku
+            </button>
+          )}
+        </div>
+      </Page>
+    )
+  }
 
   async function handleStart(event: FormEvent) {
     event.preventDefault()

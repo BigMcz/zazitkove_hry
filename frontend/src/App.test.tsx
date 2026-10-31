@@ -102,6 +102,10 @@ describe('App', () => {
     await userEvent.type(screen.getByLabelText('Zadej kód z kartičky'), 'abcd 2345{Enter}')
 
     expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
+    // First the sound and safety notice, the intro (and its voice) only after a tap
+    expect(screen.getByRole('heading', { name: '🔊 Hra mluví' })).toBeInTheDocument()
+    expect(document.querySelector('audio')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Pustit úvod' }))
     expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
     // The spoken intro tries to start on its own; the button stays for blocked autoplay
     expect(screen.getByRole('button', { name: 'Poslechnout' })).toBeInTheDocument()
@@ -127,6 +131,11 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
     expect(fetchMock.mock.calls[0][1]?.body).toBe('{"code":"DEMO-KATA"}')
+
+    // Playing without sound remembers the muted voice, so the intro does not start talking
+    await userEvent.click(screen.getByRole('button', { name: 'Hrát bez zvuku' }))
+    expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
+    expect(localStorage.getItem('zazitky.voiceMuted')).toBe('1')
   })
 
   it('continues the game of a code that is already in use', async () => {
@@ -170,6 +179,10 @@ describe('App', () => {
       '03 / Rozhlédněte se',
       'Katova povinnost',
       'Začíná to na pokladně.',
+      'Nabitý mobil',
+      'Sluchátka',
+      'Mobilní data',
+      'Pohodlná obuv',
       'Vzdělává hrou',
       'Vrací pohled kolem sebe',
       'Baví celou rodinu',
@@ -179,8 +192,21 @@ describe('App', () => {
       'href',
       expect.stringMatching(/^mailto:info@storyhold\.cz\?subject=/),
     )
+    expect(screen.getByText('Kolik hra stojí a kde koupím kartičku?')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Pravidla hry' })).toHaveAttribute('href', '/pravidla')
     expect(screen.getByLabelText('Zadej kód z kartičky')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '+420 605 403 623' })).toHaveAttribute('href', 'tel:+420605403623')
+  })
+
+  it('shows the rules and a 404 page in the site layout', async () => {
+    mockApi({})
+    const { unmount } = renderApp('/pravidla')
+    expect(screen.getByRole('heading', { name: 'Jak to u nás chodí', level: 1 })).toBeInTheDocument()
+    unmount()
+
+    renderApp('/neexistuje')
+    expect(screen.getByRole('heading', { name: 'Stránka nenalezena', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Zpět na úvod' })).toHaveAttribute('href', '/')
   })
 
   it('offers to continue a stored game', async () => {

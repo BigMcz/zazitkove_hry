@@ -44,9 +44,14 @@ function SiteFooter() {
       <div className="flex flex-col gap-3">
         <img src={logoUrl} alt="StoryHold" className="h-6 w-fit" />
         <span className="text-sm text-stone-400">Historie čeká na další tah.</span>
-        <Link to="/ochrana-udaju" className="w-fit text-xs text-stone-400 underline hover:text-lime">
-          Provozovatel a ochrana osobních údajů
-        </Link>
+        <nav aria-label="Informace" className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <Link to="/pravidla" className="text-stone-400 underline hover:text-lime">
+            Pravidla hry
+          </Link>
+          <Link to="/ochrana-udaju" className="text-stone-400 underline hover:text-lime">
+            Provozovatel a ochrana osobních údajů
+          </Link>
+        </nav>
       </div>
       <address className="flex flex-col gap-1 text-sm not-italic sm:items-end">
         <h2 className="mb-1 text-xs font-bold tracking-[0.18em] text-lime uppercase">Kontakt</h2>

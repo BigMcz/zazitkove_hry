@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
 import { operator } from '../components/operator.ts'
+import InfoSection from '../components/InfoSection.tsx'
 import SiteLayout from '../components/SiteLayout.tsx'
 
 /**
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           </p>
         </header>
 
-        <Section title="Kdo vaše údaje zpracovává">
+        <InfoSection title="Kdo vaše údaje zpracovává">
           <p>
             Správcem osobních údajů je <strong>{operator.name}</strong>, IČO {operator.companyId}, se sídlem{' '}
             {operator.address} (dále „my“), provozovatel služby StoryHold. {operator.register}
@@ -34,9 +34,9 @@ export default function PrivacyPage() {
             , telefonicky na {operator.phone} nebo poštou na adresu sídla. Pověřence pro ochranu osobních údajů jmenovaného
             nemáme, zákon nám to neukládá.
           </p>
-        </Section>
+        </InfoSection>
 
-        <Section title="Co zpracováváme a proč">
+        <InfoSection title="Co zpracováváme a proč">
           <Purpose
             title="Hraní hry"
             data="Přístupový kód z kartičky, průběh hry (vyřešená stanoviště, zadané odpovědi, použité nápovědy, časy) a název týmu, pokud ho vyplníte. Název týmu je nepovinný, nepište do něj prosím celá jména ani jiné osobní údaje."
@@ -65,9 +65,9 @@ export default function PrivacyPage() {
             Údaje nepoužíváme k marketingu, neprodáváme je, neprofilujeme vás a nerozhodujeme o vás automatizovaně.
             Zvláštní kategorie osobních údajů (např. o zdraví) nezpracováváme.
           </p>
-        </Section>
+        </InfoSection>
 
-        <Section title="Cookies a ukládání v prohlížeči">
+        <InfoSection title="Cookies a ukládání v prohlížeči">
           <p>
             Nepoužíváme žádné reklamní ani analytické cookies a na webu nejsou nástroje třetích stran, které by vás
             sledovaly. Proto se vás na souhlas s cookies neptáme. Do vašeho prohlížeče (do tzv. místního úložiště) ukládáme
@@ -103,9 +103,9 @@ export default function PrivacyPage() {
             </table>
           </div>
           <p>Uložené údaje můžete kdykoli smazat v nastavení prohlížeče; rozehranou hru pak obnovíte zadáním kódu z kartičky.</p>
-        </Section>
+        </InfoSection>
 
-        <Section title="Komu údaje předáváme">
+        <InfoSection title="Komu údaje předáváme">
           <p>
             Údaje zpracováváme sami. Technicky nám pomáhají zpracovatelé, se kterými máme smlouvu a kteří s údaji smějí
             nakládat jen podle našich pokynů:
@@ -119,9 +119,9 @@ export default function PrivacyPage() {
             vyúčtování, žádné údaje o vás ani o průběhu vaší hry. Údaje můžeme předat také státním orgánům, pokud nám to
             ukládá zákon. Mimo Evropskou unii údaje nepředáváme.
           </p>
-        </Section>
+        </InfoSection>
 
-        <Section title="Vaše práva">
+        <InfoSection title="Vaše práva">
           <p>Máte právo:</p>
           <ul className="list-disc space-y-1 pl-5">
             <li>získat informaci, jaké údaje o vás zpracováváme, a jejich kopii,</li>
@@ -149,27 +149,18 @@ export default function PrivacyPage() {
             , vyřídíme ji bez zbytečného odkladu, nejpozději do jednoho měsíce. Protože hrajete bez registrace, uveďte
             prosím přístupový kód z kartičky, jinak nedokážeme poznat, která hra je vaše.
           </p>
-        </Section>
+        </InfoSection>
 
-        <Section title="Zabezpečení">
+        <InfoSection title="Zabezpečení">
           <p>
             Spojení s webem je šifrované (HTTPS), server je v datovém centru v České republice a přístup k údajům má jen
             provozovatel. Správné odpovědi a vyhodnocení hry zůstávají na serveru.
           </p>
-        </Section>
+        </InfoSection>
 
         <p className="text-sm text-stone-500">Tyto informace platí od 1. 11. 2026.</p>
       </main>
     </SiteLayout>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-4 leading-relaxed text-stone-300">
-      <h2 className="text-2xl font-extrabold tracking-tight text-white">{title}</h2>
-      {children}
-    </section>
   )
 }
 

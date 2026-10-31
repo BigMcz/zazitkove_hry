@@ -124,6 +124,17 @@ Rozhodnutí Q17: bez lišty cookies, jen technicky nezbytné ukládání v prohl
 - [ ] Smlouvy o zpracování (DPA) s WEDOS a Seznamem — obvykle součást obchodních podmínek, ověřit
 - [ ] Kontrola textu právníkem před ostrým provozem
 
+## F5 — Obsah webu pro hráče
+
+- [x] Úvod: sekce „Proč StoryHold“ a „Pro památky“ (bez obchodních podmínek, výzva ozvat se)
+- [x] Úvod: „Než vyrazíte“ (tipy) a „Časté otázky“ (cena na pokladně, věk, tým, délka, bez aplikace, pokračování, nápovědy, bezbariérovost podle památky)
+- [x] Stránka `/pravidla` (kartička a platnost, průběh, bezpečnost, potíže a reklamace), odkaz v patičce
+- [x] Stránka 404 ve vzhledu webu
+- [ ] Měření návštěvnosti bez cookies (Umami na VPS nebo Plausible) — odloženo, rozhodnout s produkcí; pak doplnit do `/ochrana-udaju`
+- [ ] Ikona pro plochu telefonu (`apple-touch-icon`, `manifest`)
+- [ ] Podrobná stránka pro památky (průběh spolupráce, prezentace ke stažení)
+- [ ] Po spuštění: hodnocení hráčů, sociální sítě, dárkové poukazy
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady

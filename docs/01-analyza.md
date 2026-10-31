@@ -94,7 +94,7 @@ flowchart TD
 ### Popis obrazovek
 
 1. **Úvodní obrazovka** — název aplikace, seznam publikovaných her (v prototypu). Pokud existuje rozehraná relace, nabídne „Pokračovat ve hře“.
-2. **Úvod hry** — název, podtitul, odhadovaná délka, úvodní příběh, pole „Název týmu“ (nepovinné), tlačítko „Začít“.
+2. **Úvod hry** — nejdřív obrazovka „Než začnete“ (hra mluví: zapnout zvuk nebo hrát bez zvuku; bezpečnost na památce), pak název, podtitul, odhadovaná délka, úvodní příběh, pole „Název týmu“ (nepovinné), tlačítko „Začít“.
 3. **Stanoviště** — ukazatel postupu (např. 2 / 5), nadpis, příběh, zadání úkolu, vstup podle typu (text / číslo / výběr), tlačítko „Odeslat“, tlačítko „Nápověda“ a seznam již odkrytých nápověd.
 4. **Odměna** — potvrzení úspěchu, `reward_text`, tlačítko „Pokračovat“.
 5. **Finále** — závěrečný příběh, souhrn (celkový čas, nápovědy, penalizace), tlačítko „Zpět na začátek“.
