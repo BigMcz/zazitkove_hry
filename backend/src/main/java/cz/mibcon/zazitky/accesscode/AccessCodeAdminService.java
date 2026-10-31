@@ -3,28 +3,38 @@ package cz.mibcon.zazitky.accesscode;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.CreateBatchRequest;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.GameCount;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.GameStock;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.PartnerStats;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import cz.mibcon.zazitky.accesscode.domain.AccessCode;
 import cz.mibcon.zazitky.accesscode.domain.AccessCodeBatch;
 import cz.mibcon.zazitky.accesscode.domain.AccessCodeStatus;
+import cz.mibcon.zazitky.common.BadRequestException;
 import cz.mibcon.zazitky.common.InvalidStateException;
 import cz.mibcon.zazitky.common.NotFoundException;
 import cz.mibcon.zazitky.game.GameRepository;
 import cz.mibcon.zazitky.game.domain.Game;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,38 +127,167 @@ public class AccessCodeAdminService {
     /**
      * Key figures for a year: activations and money from the monthly report, cards by state.
      *
-     * @param partnerId only this partner; null = all
+     * @param partnerId only this partner (with the stock of each of its games); null = all
      */
     @Transactional(readOnly = true)
     public Summary summary(int year, UUID partnerId) {
         List<MonthlyActivation> months = monthlyActivations(year, partnerId);
-        String thisMonth = YearMonth.now(clock.withZone(BILLING_ZONE)).toString();
-        long activatedThisMonth = months.stream()
-                .filter(row -> row.month().equals(thisMonth))
-                .mapToLong(MonthlyActivation::activatedCount)
-                .sum();
-        long activatedInYear = months.stream().mapToLong(MonthlyActivation::activatedCount).sum();
-        Long revenue = months.stream().anyMatch(row -> row.revenueCzk() != null)
-                ? months.stream().map(MonthlyActivation::revenueCzk).filter(Objects::nonNull).mapToLong(Long::longValue).sum()
-                : null;
-        BigDecimal share = months.stream()
-                .map(MonthlyActivation::partnerShareCzk)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal profit = revenue == null ? null : BigDecimal.valueOf(revenue).subtract(share);
+        YearMonth now = YearMonth.now(clock.withZone(BILLING_ZONE));
+        // This month is the current one also when another year is chosen
+        Totals month = Totals.of((now.getYear() == year ? months : monthlyActivations(now.getYear(), partnerId)).stream()
+                .filter(row -> row.month().equals(now.toString()))
+                .toList());
+        Totals totals = Totals.of(months);
+        List<GameStock> games = stocks(partnerId).stream().flatMap(stock -> stock.games().stream()).toList();
+        return new Summary(year, month.activated(), totals.activated(), totals.revenue(), totals.share(),
+                totals.profit(), month.revenue(), month.share(), month.profit(),
+                games.stream().mapToLong(GameStock::cardsInStock).sum(),
+                games.stream().mapToLong(GameStock::cardsInStockComputed).sum(),
+                partnerId == null ? null : latestCount(games),
+                games.stream().mapToLong(GameStock::cardsInProduction).sum(),
+                games.stream().mapToLong(GameStock::cardsDelivered).sum(),
+                partnerId == null ? List.of() : games);
+    }
 
-        return jdbc.queryForObject("""
-                SELECT count(*) FILTER (WHERE b.handed_over_at IS NOT NULL AND c.status = 'NEW') AS in_stock,
-                       count(*) FILTER (WHERE b.handed_over_at IS NULL AND c.status = 'NEW') AS in_production,
-                       count(*) FILTER (WHERE b.handed_over_at IS NOT NULL) AS delivered
-                FROM access_code c
-                JOIN access_code_batch b ON b.id = c.batch_id
-                WHERE NOT b.multi_session AND (CAST(? AS uuid) IS NULL OR b.partner_id = ?)
+    /** Days of sales the pace for the stock estimate is taken from. */
+    static final int PACE_DAYS = 28;
+
+    /**
+     * All partners side by side for a year: activations and money (as in the monthly report), cards by
+     * state and how long the cards in stock of each game last at the pace of the last {@value #PACE_DAYS} days.
+     */
+    @Transactional(readOnly = true)
+    public List<PartnerStats> partnerStats(int year) {
+        Map<UUID, List<MonthlyActivation>> months = monthlyActivations(year, null).stream()
+                .collect(Collectors.groupingBy(MonthlyActivation::partnerId));
+        return stocks(null).stream()
+                .map(stock -> {
+                    Totals totals = Totals.of(months.getOrDefault(stock.partnerId(), List.of()));
+                    List<GameStock> games = stock.games();
+                    return new PartnerStats(stock.partnerId(), stock.partnerName(), totals.activated(),
+                            totals.revenue(), totals.share(), totals.profit(),
+                            games.stream().mapToLong(GameStock::cardsDelivered).sum(),
+                            games.stream().mapToLong(GameStock::cardsInStock).sum(),
+                            games.stream().mapToLong(GameStock::cardsInStockComputed).sum(),
+                            latestCount(games),
+                            games.stream().mapToLong(GameStock::cardsInProduction).sum(),
+                            games.stream().mapToLong(GameStock::activatedLast28Days).sum(),
+                            games.stream().map(GameStock::stockDays).filter(Objects::nonNull)
+                                    .min(Integer::compare).orElse(null),
+                            games);
+                })
+                .toList();
+    }
+
+    /**
+     * The castle's own count of the cards in stock of each game: it may lower our number (cards sold but
+     * not activated), never raise it. Money is not affected, only activated cards are invoiced.
+     */
+    public Summary recordStockCount(UUID partnerId, UUID partnerUserId, List<GameCount> counts, int year) {
+        Map<UUID, GameStock> games = stocks(partnerId).stream()
+                .flatMap(stock -> stock.games().stream())
+                .collect(Collectors.toMap(GameStock::gameId, game -> game));
+        Timestamp countedAt = Timestamp.from(clock.instant());
+        for (GameCount count : counts) {
+            GameStock game = games.get(count.gameId());
+            if (game == null) {
+                throw new BadRequestException("Kartičky této hry jste zatím nepřevzali.");
+            }
+            if (count.cardsInStock() > game.cardsInStockComputed()) {
+                throw new BadRequestException("Hra " + game.gameTitle() + ": na skladě můžete mít nejvýš "
+                        + game.cardsInStockComputed() + " kartiček, tolik převzatých kartiček zatím nikdo neaktivoval.");
+            }
+        }
+        for (GameCount count : counts) {
+            jdbc.update("""
+                    INSERT INTO partner_stock_count (partner_id, game_id, counted_at, cards_in_stock, computed_in_stock,
+                                                     partner_user_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """, partnerId, count.gameId(), countedAt, count.cardsInStock(),
+                    games.get(count.gameId()).cardsInStockComputed(), partnerUserId);
+        }
+        return summary(year, partnerId).withoutProfit();
+    }
+
+    private static Instant latestCount(List<GameStock> games) {
+        return games.stream().map(GameStock::stockCountedAt).filter(Objects::nonNull)
+                .max(Instant::compareTo).orElse(null);
+    }
+
+    /** Partner with the stock of each game it has cards of (development batches are left out). */
+    private record Stock(UUID partnerId, String partnerName, List<GameStock> games) {
+    }
+
+    /**
+     * Cards of one partner (or of each partner) by game and state. In stock is our number (handed over
+     * and not activated) unless the castle counted the cards of the game: then the count plus the cards
+     * handed over since, minus the cards activated since, at most our number.
+     */
+    private List<Stock> stocks(UUID partnerId) {
+        Timestamp paceFrom = Timestamp.from(clock.instant().minus(Duration.ofDays(PACE_DAYS)));
+        Map<UUID, Stock> result = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT p.id AS partner_id, p.name AS partner_name, g.id AS game_id, g.title AS game_title,
+                       l.counted_at, l.cards_in_stock AS counted,
+                       count(c.id) FILTER (WHERE b.handed_over_at IS NOT NULL) AS delivered,
+                       count(c.id) FILTER (WHERE b.handed_over_at IS NOT NULL AND c.status = 'NEW') AS in_stock,
+                       count(c.id) FILTER (WHERE b.handed_over_at IS NULL AND c.status = 'NEW') AS in_production,
+                       count(c.id) FILTER (WHERE c.activated_at >= ?) AS recent,
+                       count(c.id) FILTER (WHERE b.handed_over_at > l.counted_at) AS delivered_since,
+                       count(c.id) FILTER (WHERE c.activated_at > l.counted_at) AS activated_since
+                FROM partner p
+                LEFT JOIN access_code_batch b ON b.partner_id = p.id AND NOT b.multi_session
+                LEFT JOIN game g ON g.id = b.game_id
+                LEFT JOIN access_code c ON c.batch_id = b.id
+                LEFT JOIN LATERAL (
+                    SELECT s.counted_at, s.cards_in_stock
+                    FROM partner_stock_count s
+                    WHERE s.partner_id = p.id AND s.game_id = g.id
+                    ORDER BY s.counted_at DESC
+                    LIMIT 1
+                ) l ON TRUE
+                WHERE CAST(? AS uuid) IS NULL OR p.id = ?
+                GROUP BY p.id, p.name, g.id, g.title, l.counted_at, l.cards_in_stock
+                ORDER BY p.name, g.title
                 """,
-                (rs, row) -> new Summary(year, activatedThisMonth, activatedInYear, revenue,
-                        revenue == null && share.signum() == 0 ? null : share, profit,
-                        rs.getLong("in_stock"), rs.getLong("in_production"), rs.getLong("delivered")),
-                partnerId, partnerId);
+                (RowCallbackHandler) rs -> {
+                    UUID id = rs.getObject("partner_id", UUID.class);
+                    String name = rs.getString("partner_name");
+                    Stock stock = result.computeIfAbsent(id, key -> new Stock(key, name, new ArrayList<>()));
+                    UUID gameId = rs.getObject("game_id", UUID.class);
+                    if (gameId == null) {
+                        return;
+                    }
+                    long computed = rs.getLong("in_stock");
+                    Timestamp countedAt = rs.getTimestamp("counted_at");
+                    long inStock = countedAt == null ? computed
+                            : Math.max(0, Math.min(computed, rs.getLong("counted") + rs.getLong("delivered_since")
+                                    - rs.getLong("activated_since")));
+                    long recent = rs.getLong("recent");
+                    stock.games().add(new GameStock(gameId, rs.getString("game_title"), rs.getLong("delivered"),
+                            inStock, computed, countedAt == null ? null : countedAt.toInstant(),
+                            rs.getLong("in_production"), recent,
+                            recent == 0 ? null : (int) (inStock * PACE_DAYS / recent)));
+                },
+                paceFrom, partnerId, partnerId);
+        return List.copyOf(result.values());
+    }
+
+    /** Sums of monthly report rows; money is null when no activated code has a price. */
+    private record Totals(long activated, Long revenue, BigDecimal share, BigDecimal profit) {
+
+        static Totals of(List<MonthlyActivation> months) {
+            long activated = months.stream().mapToLong(MonthlyActivation::activatedCount).sum();
+            Long revenue = months.stream().anyMatch(row -> row.revenueCzk() != null)
+                    ? months.stream().map(MonthlyActivation::revenueCzk).filter(Objects::nonNull).mapToLong(Long::longValue).sum()
+                    : null;
+            BigDecimal share = months.stream()
+                    .map(MonthlyActivation::partnerShareCzk)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal profit = revenue == null ? null : BigDecimal.valueOf(revenue).subtract(share);
+            return new Totals(activated, revenue, revenue == null && share.signum() == 0 ? null : share, profit);
+        }
     }
 
     private AccessCodeBatch findBatch(UUID batchId) {
@@ -188,6 +327,7 @@ public class AccessCodeAdminService {
         Timestamp to = Timestamp.from(LocalDate.of(year + 1, 1, 1).atStartOfDay(BILLING_ZONE).toInstant());
         return jdbc.query("""
                 SELECT to_char(c.activated_at AT TIME ZONE 'Europe/Prague', 'YYYY-MM') AS month,
+                       p.id AS partner_id,
                        p.name AS partner_name,
                        g.title AS game_title,
                        count(*) AS activated_count,
@@ -207,11 +347,12 @@ public class AccessCodeAdminService {
                 ) s ON TRUE
                 WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session
                   AND (CAST(? AS uuid) IS NULL OR p.id = ?)
-                GROUP BY month, p.name, g.title
+                GROUP BY month, p.id, p.name, g.title
                 ORDER BY month, p.name, g.title
                 """,
                 (rs, row) -> new MonthlyActivation(
                         rs.getString("month"),
+                        rs.getObject("partner_id", UUID.class),
                         rs.getString("partner_name"),
                         rs.getString("game_title"),
                         rs.getLong("activated_count"),

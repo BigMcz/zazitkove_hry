@@ -41,6 +41,26 @@ export function formatPercent(value: number | null): string {
   return value === null ? '—' : `${number.format(value)} %`
 }
 
+/** Share of a whole in whole percent; "—" for an empty whole. */
+export function formatShare(part: number, whole: number): string {
+  return whole === 0 ? '—' : `${number.format(Math.round((part / whole) * 100))} %`
+}
+
+/** 3125 → "52 min", 4500 → "1 h 15 min" */
+export function formatDuration(seconds: number | null): string {
+  if (seconds === null) {
+    return '—'
+  }
+  const minutes = Math.round(seconds / 60)
+  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')} min`
+}
+
+/** 1 den, 2 dny, 5 dní */
+export function formatDays(days: number): string {
+  const unit = days === 1 ? 'den' : days >= 2 && days <= 4 ? 'dny' : 'dní'
+  return `${number.format(days)} ${unit}`
+}
+
 export function formatMoney(value: number | null): string {
   return value === null ? '—' : money.format(value)
 }

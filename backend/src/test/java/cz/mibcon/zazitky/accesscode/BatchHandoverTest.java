@@ -106,7 +106,8 @@ class BatchHandoverTest {
                 .andExpect(jsonPath("$.activatedThisMonth").value(1))
                 .andExpect(jsonPath("$.revenueCzk").value(200))
                 .andExpect(jsonPath("$.partnerShareCzk").value(50.0))
-                .andExpect(jsonPath("$.profitCzk").doesNotExist());
+                .andExpect(jsonPath("$.profitCzk").doesNotExist())
+                .andExpect(jsonPath("$.profitThisMonthCzk").doesNotExist());
     }
 
     @Test
@@ -125,7 +126,16 @@ class BatchHandoverTest {
                 .andExpect(jsonPath("$.revenueCzk").value(400))
                 .andExpect(jsonPath("$.partnerShareCzk").value(100.0)) // 25 %
                 .andExpect(jsonPath("$.profitCzk").value(300.0))
+                .andExpect(jsonPath("$.revenueThisMonthCzk").value(400))
+                .andExpect(jsonPath("$.partnerShareThisMonthCzk").value(100.0))
+                .andExpect(jsonPath("$.profitThisMonthCzk").value(300.0))
                 .andExpect(jsonPath("$.cardsInStock").value(2));
+        // A past year still shows this month
+        mvc.perform(get("/api/v1/admin/dashboard").param("year", String.valueOf(YEAR - 1))
+                        .param("partnerId", castle.partnerId.toString()).with(admin()))
+                .andExpect(jsonPath("$.activatedInYear").value(0))
+                .andExpect(jsonPath("$.activatedThisMonth").value(2))
+                .andExpect(jsonPath("$.profitThisMonthCzk").value(300.0));
 
         String all = body(mvc.perform(get("/api/v1/admin/dashboard").param("year", String.valueOf(YEAR)).with(admin()))
                 .andExpect(status().isOk()));

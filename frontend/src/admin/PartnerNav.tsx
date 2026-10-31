@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
-import { NavLink } from 'react-router'
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router'
 import { adminApi } from './adminApi.ts'
+import Dialog from './Dialog.tsx'
 import { formatPercent } from './format.ts'
+import PartnerForm from './PartnerForm.tsx'
 import { adminKeys, useLoggedOutOn401 } from './shared.ts'
 
 const item = ({ isActive }: { isActive: boolean }) =>
   `flex min-h-11 flex-col justify-center rounded-lg px-3 py-1.5 ${
-    isActive ? 'bg-stone-900 text-white' : 'text-stone-800 hover:bg-stone-200'
+    isActive ? 'bg-night text-white [&>span:first-child]:text-lime' : 'text-stone-800 hover:bg-stone-200'
   }`
 
-/** Left menu: the dashboard and one item per castle (partner). */
+/** Left menu: the dashboard, adding a partner and one item per castle (partner). */
 export default function PartnerNav() {
   const partners = useQuery({ queryKey: adminKeys.partners, queryFn: adminApi.partners })
   useLoggedOutOn401(partners.error)
@@ -20,7 +23,10 @@ export default function PartnerNav() {
         <span className="font-semibold">Přehled</span>
         <span className="text-xs opacity-75">všechny hrady</span>
       </NavLink>
-      <h2 className="mt-4 px-3 text-xs font-bold tracking-wide text-stone-500 uppercase">Hrady</h2>
+      <div className="mt-4 flex items-center justify-between gap-2 px-3">
+        <h2 className="text-xs font-bold tracking-wide text-stone-500 uppercase">Hrady</h2>
+        <AddPartnerButton />
+      </div>
       {partners.isPending && <p className="px-3 text-sm">Načítám…</p>}
       {partners.data?.length === 0 && <p className="px-3 text-sm text-stone-600">Zatím žádný partner.</p>}
       {partners.data?.map((partner) => (
@@ -32,5 +38,33 @@ export default function PartnerNav() {
         </NavLink>
       ))}
     </nav>
+  )
+}
+
+/** Opens the new partner form in a dialog; after saving continues to the partner's share. */
+function AddPartnerButton() {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-11 rounded-lg px-2 text-sm font-semibold text-stone-800 hover:bg-stone-200"
+      >
+        + Přidat partnera
+      </button>
+      {open && (
+        <Dialog title="Nový partner" wide onClose={() => setOpen(false)}>
+          <PartnerForm
+            onSaved={(partner) => {
+              setOpen(false)
+              navigate(`/admin/partneri/${partner.id}?sekce=podily`)
+            }}
+          />
+        </Dialog>
+      )}
+    </>
   )
 }

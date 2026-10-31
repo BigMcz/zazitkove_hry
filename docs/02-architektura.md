@@ -244,13 +244,15 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | POST | `/admin/login` | Form `username`, `password` → `200` stejné tělo jako `/admin/session` / `401`; limit 5 pokusů/min na IP; platí pro obě role |
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
-| GET | `/admin/dashboard?year=2026[&partnerId=…]` | Souhrn za rok (všechny hrady nebo jeden): `activatedThisMonth`, `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (= tržba − podíl hradů), `cardsInStock` (předané a neaktivované), `cardsInProduction`, `cardsDelivered`; vývojové dávky se nepočítají |
+| GET | `/admin/dashboard?year=2026[&partnerId=…]` | Souhrn za rok (všechny hrady nebo jeden): `activatedThisMonth`, `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (= tržba − podíl hradů), `revenueThisMonthCzk`, `partnerShareThisMonthCzk`, `profitThisMonthCzk` (aktuální měsíc i při jiném zvoleném roce; hrad dostane bez zisku), `cardsInStock` (podle inventur hradů, jinak předané a neaktivované), `cardsInStockComputed`, `stockCountedAt` (jen pro jednoho partnera), `cardsInProduction`, `cardsDelivered`; vývojové dávky se nepočítají |
 | GET | `/admin/batches[?partnerId=…]` | Dávky kódů: `handedOverAt` (null = ve výrobě), `activatedCount`, `notActivatedCount` |
 | POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry; dávka je **ve výrobě** — kódy nefungují |
 | POST | `/admin/batches/{id}/handover` | Kartičky byly předány partnerovi → od teď kódy fungují a partner dávku vidí |
 | DELETE | `/admin/batches/{id}/handover` | Vrátit předání (omyl) — jen dokud z dávky nikdo nic nepoužil, jinak `409` |
 | GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
-| GET | `/admin/reports/monthly-activations?year=2026[&partnerId=…]` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
+| GET | `/admin/reports/monthly-activations?year=2026[&partnerId=…]` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerId`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
+| GET | `/admin/reports/partners?year=2026` | Srovnání všech hradů: `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (jako měsíční přehled), `cardsDelivered`, `cardsInStock` (podle inventury hradu), `cardsInStockComputed`, `stockCountedAt`, `cardsInProduction`, `activatedLast28Days`, `stockDays` (hra, které kartičky dojdou nejdřív) a `games[]` (totéž po hrách) (na kolik dní vydrží kartičky u hradu při tempu posledních 28 dní, `null` bez prodeje); i hrady bez kartiček; vývojové dávky se nepočítají |
+| GET | `/admin/reports/gameplay?year=2026[&partnerId=…]` | Jak se hraje: hry spuštěné v roce (Europe/Prague) kódy z prodaných kartiček, po hrách: `started`, `completed`, `unfinished` (opuštěné nebo vypršelé), `playing`, doba hraní dohraných her v sekundách (`durationP25Seconds`, `durationMedianSeconds`, `durationP75Seconds`, `durationWithPenaltyMedianSeconds`) a `stations[]` (`reached`, `solved`, `stoppedHere`, `medianSeconds` od odemčení po vyřešení, `wrongAttempts`, `teamsWithHint`). Jen pro správce, hrad vidí jen prodej |
 | GET | `/admin/partners`, `/admin/partners/{id}` | Partneři (hrady): `id`, `name`, `companyId` (IČ), `vatId` (DIČ), `contactEmail`, `contactPerson`, `phone`, `currentSharePct` (platný dnes), `shares` (`id`, `validFrom`, `sharePct`, včetně naplánovaných) |
 | POST | `/admin/partners` | Přidat partnera: `name` (povinné), `companyId` (8 číslic, unikátní), `vatId` (např. CZ12345678), `contactEmail`, `contactPerson`, `phone` → `201`; podíl se nastaví zvlášť |
 | PUT | `/admin/partners/{id}` | Upravit firemní údaje (stejná pole jako POST) → `200` |
@@ -266,7 +268,8 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | Metoda | Cesta | Popis |
 |---|---|---|
 | GET | `/partner/reports/monthly-activations?year=2026` | Jako přehled správce, jen řádky vlastního partnera |
-| GET | `/partner/summary?year=2026` | Vlastní souhrn: kartiček na skladě (předané a neaktivované), převzato celkem, aktivace, tržba, podíl (bez zisku provozovatele) |
+| GET | `/partner/summary?year=2026` | Vlastní souhrn: kartiček na skladě (`cardsInStock` podle poslední inventury hradu, jinak předané a neaktivované; `cardsInStockComputed` podle aktivací; `stockCountedAt`; `games[]` totéž po hrách), převzato celkem, aktivace, tržba, podíl (bez zisku provozovatele) |
+| POST | `/partner/stock-count?year=2026` | Inventura po hrách: `{ "games": [{ "gameId", "cardsInStock" }] }` = kolik kartiček každé hry hrad opravdu má (prodané neaktivované už ne) → aktualizovaný souhrn; víc než `cardsInStockComputed` hry nebo hra bez převzatých kartiček → `400`. Dál se počítá od inventury hry (+ předané, − aktivované po ní, nejvýš počet podle aktivací); vyúčtování se nemění |
 | GET | `/partner/batches` | Převzaté dávky (jen předané, bez vývojových): datum předání, kusů, aktivováno, zbývá (`notActivatedCount`) — podklad pro inventuru kartiček |
 | GET | `/partner/shares` | Vlastní podíly včetně naplánovaných (`validFrom`, `sharePct`) |
 | POST | `/partner/password` | Změna vlastního hesla `{ "currentPassword", "newPassword" }` → `204`; špatné současné heslo → `400` |
@@ -428,6 +431,6 @@ Staging (`deploy/staging/`):
 | Předgenerování | Úvodní stránka z `src/prerender.tsx` obsahuje nadpis a obsah, bez „Pokračovat ve hře“ | Vitest |
 | Frontend | `AnswerInput`, `HintList`, `formatDuration`, `tokenStorage`, toky v `App` (obnova po reloadu, 410 → úvod, odměna → finále) | Vitest + Testing Library (mock `fetch`) |
 | Kódy | Aktivace, platnost 5 h, pokračování na jiném zařízení, opuštěná hra, vypršení, vývojový kód, limit pokusů | MockMvc + Testcontainers |
-| Administrace | Přihlášení + CSRF, dávky, CSV, měsíční přehled bez vývojových kódů | MockMvc + `spring-security-test` |
+| Administrace | Přihlášení + CSRF, dávky, CSV, měsíční přehled bez vývojových kódů, srovnání hradů a statistiky hraní | MockMvc + `spring-security-test` |
 | Účty hradů | Hrad vidí jen svá data, nedostane se k API správce, zakládání/blokace účtů, reset a změna hesla | MockMvc + Testcontainers |
 | Ruční | Průchod demo hrou na šířce 360 px, administrace se skutečnou CSRF cookie | Playwright / DevTools, skutečný telefon |

@@ -115,6 +115,7 @@ export interface CreateBatchRequest {
 export interface MonthlyActivation {
   /** YYYY-MM in Europe/Prague */
   month: string
+  partnerId: string
   partnerName: string
   gameTitle: string
   activatedCount: number
@@ -131,12 +132,96 @@ export interface Summary {
   partnerShareCzk: number | null
   /** Revenue minus the partners' share; only for the operator. */
   profitCzk?: number | null
-  /** Handed over and not activated: cards the castle(s) should still have. */
+  /** This month (Europe/Prague) regardless of the chosen year. */
+  revenueThisMonthCzk: number | null
+  partnerShareThisMonthCzk: number | null
+  /** Only for the operator. */
+  profitThisMonthCzk?: number | null
+  /** Cards the castle(s) should still have: from the castle's latest stock count when there is one. */
   cardsInStock: number
+  /** Handed over and not activated, regardless of the stock counts. */
+  cardsInStockComputed: number
+  /** Latest stock count of the castle; null without one or for all castles. */
+  stockCountedAt: string | null
   /** Generated, not handed over yet. */
   cardsInProduction: number
   /** All cards ever handed over. */
   cardsDelivered: number
+  /** Stock of each game of the castle; empty for all castles. */
+  games: GameStock[]
+}
+
+/** Cards of one game at one castle; development batches are left out. */
+export interface GameStock {
+  gameId: string
+  gameTitle: string
+  cardsDelivered: number
+  /** From the castle's latest stock count of the game when there is one. */
+  cardsInStock: number
+  /** Handed over and not activated, regardless of the stock counts. */
+  cardsInStockComputed: number
+  stockCountedAt: string | null
+  cardsInProduction: number
+  activatedLast28Days: number
+  /** How many days the cards in stock last at that pace; null without sales in that time. */
+  stockDays: number | null
+}
+
+/** One castle in the comparison of all castles for a year; development batches are left out. */
+export interface PartnerStats {
+  partnerId: string
+  partnerName: string
+  activatedInYear: number
+  revenueCzk: number | null
+  partnerShareCzk: number | null
+  profitCzk: number | null
+  cardsDelivered: number
+  /** Cards the castle should still have: from its latest stock count when there is one. */
+  cardsInStock: number
+  /** Handed over and not activated, regardless of the stock counts. */
+  cardsInStockComputed: number
+  stockCountedAt: string | null
+  cardsInProduction: number
+  /** Pace of selling for the stock estimate, regardless of the chosen year. */
+  activatedLast28Days: number
+  /** The game whose cards run out first: days its cards last; null without sales in that time. */
+  stockDays: number | null
+  games: GameStock[]
+}
+
+/** One station in the games of a year. */
+export interface StationStats {
+  stationId: string
+  orderNo: number
+  title: string
+  /** Games that got to the station. */
+  reached: number
+  solved: number
+  /** Left or expired while the station was not solved yet. */
+  stoppedHere: number
+  /** From reaching to solving; null when nobody solved it. */
+  medianSeconds: number | null
+  wrongAttempts: number
+  teamsWithHint: number
+}
+
+/** Games started in a year with sold cards; durations only of completed games. */
+export interface GameStats {
+  gameId: string
+  gameTitle: string
+  partnerName: string
+  started: number
+  completed: number
+  /** Left by the players or expired before the end. */
+  unfinished: number
+  /** Still running and valid. */
+  playing: number
+  durationP25Seconds: number | null
+  durationMedianSeconds: number | null
+  durationP75Seconds: number | null
+  /** Including the penalties for hints, i.e. the final time. */
+  durationWithPenaltyMedianSeconds: number | null
+  stations: StationStats[]
 }
 
 function csrfHeader(): Record<string, string> {
@@ -187,6 +272,13 @@ export const adminApi = {
   monthlyActivations: (year: number, partnerId?: string) =>
     apiRequest<MonthlyActivation[]>(withPartner(`/admin/reports/monthly-activations?year=${year}`, partnerId)),
 
+  /** All castles side by side, with how long their cards last. */
+  partnerStats: (year: number) => apiRequest<PartnerStats[]>(`/admin/reports/partners?year=${year}`),
+
+  /** How the games are played; only for the operator. */
+  gameplay: (year: number, partnerId?: string) =>
+    apiRequest<GameStats[]>(withPartner(`/admin/reports/gameplay?year=${year}`, partnerId)),
+
   partners: () => apiRequest<Partner[]>('/admin/partners'),
 
   partner: (partnerId: string) => apiRequest<Partner>(partnerPath(partnerId)),
@@ -234,6 +326,14 @@ export const partnerApi = {
   batches: () => apiRequest<BatchSummary[]>('/partner/batches'),
 
   shares: () => apiRequest<PartnerShare[]>('/partner/shares'),
+
+  /** The castle's own count of the cards in stock per game, each at most its cardsInStockComputed. */
+  stockCount: (year: number, games: { gameId: string; cardsInStock: number }[]) =>
+    apiRequest<Summary>(`/partner/stock-count?year=${year}`, {
+      method: 'POST',
+      body: { games },
+      headers: csrfHeader(),
+    }),
 
   monthlyActivations: (year: number) =>
     apiRequest<MonthlyActivation[]>(`/partner/reports/monthly-activations?year=${year}`),

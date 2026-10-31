@@ -5,6 +5,7 @@ import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, type Partner } from './adminApi.ts'
 import BatchList from './BatchList.tsx'
 import { formatPercent } from './format.ts'
+import GameplayStats from './GameplayStats.tsx'
 import MonthlyReport from './MonthlyReport.tsx'
 import NewBatchForm from './NewBatchForm.tsx'
 import PartnerForm from './PartnerForm.tsx'
@@ -78,6 +79,7 @@ function PartnerView({ partner }: { partner: Partner }) {
             </div>
             <StatCards scope="admin" year={year} partnerId={partner.id} />
             <MonthlyReport scope="admin" year={year} partnerId={partner.id} />
+            <GameplayStats year={year} partnerId={partner.id} />
           </>
         )}
         {active === 'kody' && (

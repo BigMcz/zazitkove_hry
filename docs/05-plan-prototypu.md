@@ -152,7 +152,24 @@ Návrh v `02-architektura.md` kap. 4 „Offline režim“. Každý krok se dá n
 - [x] Oprava: TanStack Query v letadlovém režimu pozastavoval požadavky (`networkMode: 'always'`), ověřeno na telefonu
 - [x] Menší a rychlejší stažení: obrázky WebP 900 px (`tools/grafika/web_images.py`, demo 2,2 → 1,0 MB), stahování po 4 souborech v pořadí stanovišť
 - [ ] Nahrávky na 32 kb/s mono (asi −33 %, z původních nahrávek přes ffmpeg) — až s delší hrou
-- [ ] Krok 5: ověření na iPhonu a Androidu v letadlovém režimu, popis v README
+- [ ] Krok 5: ověření na telefonu v letadlovém režimu, popis v README. Ověřeno 2026-10-31: odpovědi, nahrávky a obrázky bez signálu, stahování na pozadí. Zbývá: obnovení stránky / znovuotevření prohlížeče bez signálu (basic auth na testovacím serveru), odeslání po návratu signálu na telefonu, druhá platforma (iPhone/Android), README
+
+## F7 — Statistiky v administraci
+
+Rozhodnuto 2026-10-31: hrad vidí dál jen prodej (co nejjednodušší přehled), statistiky hraní jsou jen pro správce. Bez nových tabulek, vše z existujících dat.
+
+- [x] Srovnání hradů na dashboardu: aktivace, tržba, podíl, zisk, kartičky u hradu, kolik procent předaných se prodalo; řazení podle sloupce, odkaz na detail hradu
+- [x] Upozornění na docházející kartičky: odhad, na kolik dní vydrží při tempu posledních 28 dní; varování pod 21 dní nebo když kartičky došly
+- [x] „Jak se hraje“ na dashboardu (všechny hry) a v přehledu hradu: spuštěno, dohráno, nedohráno, právě hraje, doba hraní (medián a rozpětí prostřední poloviny týmů), výsledný čas s penalizací
+- [x] Stanoviště: kolik týmů došlo, vyřešilo a skončilo, medián času, špatné odpovědi na tým, podíl týmů s nápovědou
+- [x] Inventura kartiček po hrách (V11): hrad může snížit počet kartiček každé hry na skladě (prodané, ale neaktivované kartičky), nikdy zvýšit; dál se počítá od inventury, s ní počítá i srovnání hradů a upozornění; vyúčtování jen z aktivací beze změny
+
+### Později
+
+- [ ] Graf aktivací po měsících se srovnáním s minulým rokem
+- [ ] Kdy se hraje: rozložení podle dne v týdnu a hodiny
+- [ ] Nejčastější špatné odpovědi stanoviště (jen pro správce; text hráčů, viz ochrana údajů)
+- [ ] Podíl akcí odeslaných dodatečně (hraní bez signálu) podle památky
 
 ## Další fáze
 

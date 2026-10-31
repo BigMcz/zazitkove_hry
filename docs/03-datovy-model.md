@@ -22,6 +22,9 @@ erDiagram
     partner ||--o{ access_code_batch : "odebírá"
     partner ||--o{ partner_user : "přihlašuje"
     partner ||--o{ partner_share : "podíl od data"
+    partner ||--o{ partner_stock_count : "inventura"
+    partner_user |o--o{ partner_stock_count : "zadal"
+    game ||--o{ partner_stock_count : "kartičky hry"
     game ||--o{ access_code_batch : "pro hru"
     access_code_batch ||--o{ access_code : "obsahuje"
     game ||--o{ game_session : "hraná v"
@@ -58,6 +61,15 @@ erDiagram
         date valid_from
         numeric share_pct
         timestamptz created_at
+    }
+    partner_stock_count {
+        uuid id PK
+        uuid partner_id FK
+        uuid game_id FK
+        timestamptz counted_at
+        int cards_in_stock
+        int computed_in_stock
+        uuid partner_user_id FK
     }
     location {
         uuid id PK
@@ -193,6 +205,7 @@ erDiagram
 |---|---|---|
 | `partner` | Správa hradu/zámku — smluvní partner | Firemní údaje: `company_id` (IČ, 8 číslic, unikátní), `vat_id` (DIČ), `contact_person`, `contact_email`, `phone`; podíl na tržbě je v `partner_share` (od V5) |
 | `partner_share` | Podíl partnera z tržby platný od data | `valid_from` (den podle Europe/Prague) — platí do dalšího záznamu; unikátní `(partner_id, valid_from)`; aktivovaný kód se vyúčtuje podle záznamu s nejvyšším `valid_from` ≤ den aktivace; budoucí datum = naplánovaná změna |
+| `partner_stock_count` | Inventura kartiček jedné hry zadaná hradem (V11) | Každá hra má své kartičky, inventura je proto po hrách (`game_id`). Kartička prodaná, ale neaktivovaná se podle aktivací počítá jako skladová, hrad proto může sklad snížit (nikdy zvýšit): `cards_in_stock` ≤ `computed_in_stock` (náš počet kartiček hry v okamžiku inventury). Sklad hry pak = její poslední inventura + kartičky hry předané po ní − aktivované po ní, nejvýš počet podle aktivací. Vyúčtování se nemění, účtují se jen aktivované kartičky; `partner_user_id` = kdo inventuru zadal |
 | `location` | Konkrétní místo (hrad Loket + město) | GPS pro mapu a budoucí ověřování polohy |
 | `game` | Jedna hra (příběh) | `slug` pro hezké URL; `status`: `DRAFT`, `PUBLISHED`, `ARCHIVED`; `language` zatím `cs` |
 | `station` | Stanoviště hry | Unikátní `(game_id, order_no)`; `task_type`: `TEXT`, `NUMBER`, `CHOICE`; GPS a obrázek volitelné |
@@ -598,6 +611,29 @@ CREATE TABLE session_event (
 CREATE INDEX ix_session_event_session ON session_event(session_id);
 ```
 
+### V11
+
+Soubor `backend/src/main/resources/db/migration/V11__partner_stock_count.sql`:
+
+```sql
+-- Stock count of the cards of one game entered by the castle (docs/03-datovy-model.md). We know only
+-- the activated cards; a card sold but never activated is still counted as in stock, so the castle can
+-- lower the number to what it really has. The stock then goes on from the latest count of the game:
+-- later deliveries are added, later activations subtracted, never above the number computed from the
+-- activations.
+CREATE TABLE partner_stock_count (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_id         UUID        NOT NULL REFERENCES partner(id) ON DELETE CASCADE,
+    game_id            UUID        NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    counted_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    cards_in_stock     INT         NOT NULL CHECK (cards_in_stock >= 0),
+    -- our number at the time of the count, for checking afterwards
+    computed_in_stock  INT         NOT NULL CHECK (computed_in_stock >= cards_in_stock),
+    partner_user_id    UUID        REFERENCES partner_user(id) ON DELETE SET NULL
+);
+CREATE INDEX ix_stock_count_partner_game ON partner_stock_count(partner_id, game_id, counted_at DESC);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -623,3 +659,4 @@ CREATE INDEX ix_session_event_session ON session_event(session_id);
 | V8 | Obrázky a vedení hráče: `game.cover_image_url`, `station.image_alt` (k `image_url` z V1), `station.listen_only` (poslechová úloha), `station.next_text` (kam jít dál) |
 | V9 | Tajenka: `station.puzzle_letter` — písmeno, které hráč získá vyřešením stanoviště |
 | V10 | Offline režim: tabulka `session_event` — přijaté akce z telefonu (idempotence podle `id` z telefonu, čas hraní) |
+| V11 | Inventura kartiček: tabulka `partner_stock_count` — hrad může snížit počet kartiček hry na skladě (prodané, ale neaktivované) |

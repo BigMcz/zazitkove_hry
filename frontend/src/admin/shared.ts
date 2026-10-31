@@ -13,6 +13,8 @@ export const adminKeys = {
     ['admin', 'report', scope, year, partnerId ?? 'all'] as const,
   summary: (scope: Scope, year: number, partnerId?: string) =>
     ['admin', 'summary', scope, year, partnerId ?? 'all'] as const,
+  partnerStats: (year: number) => ['admin', 'partner-stats', year] as const,
+  gameplay: (year: number, partnerId?: string) => ['admin', 'gameplay', year, partnerId ?? 'all'] as const,
   partners: ['admin', 'partners'] as const,
   partner: (partnerId: string) => ['admin', 'partners', partnerId] as const,
   ownShares: ['admin', 'own-shares'] as const,

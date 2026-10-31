@@ -5,6 +5,7 @@ import java.util.List;
 import cz.mibcon.zazitky.accesscode.AccessCodeAdminService;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.StockCountRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.ChangeOwnPasswordRequest;
 import cz.mibcon.zazitky.admin.PartnerAdminDtos.ShareDto;
@@ -62,6 +63,13 @@ public class PartnerPortalController {
     public Summary summary(@AuthenticationPrincipal PartnerUserDetails partner,
             @RequestParam @Min(2020) @Max(2100) int year) {
         return accessCodes.summary(year, partner.partnerId()).withoutProfit();
+    }
+
+    /** Own count of the cards in stock per game (at most our number); returns the updated key figures. */
+    @PostMapping("/stock-count")
+    public Summary stockCount(@AuthenticationPrincipal PartnerUserDetails partner,
+            @RequestParam @Min(2020) @Max(2100) int year, @Valid @RequestBody StockCountRequest request) {
+        return accessCodes.recordStockCount(partner.partnerId(), partner.userId(), request.games(), year);
     }
 
     /** Own share history including planned changes. */

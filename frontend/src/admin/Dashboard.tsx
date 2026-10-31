@@ -1,16 +1,13 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
-import PartnerForm from './PartnerForm.tsx'
-import PartnerUsers from './PartnerUsers.tsx'
-import Section from './Section.tsx'
+import GameplayStats from './GameplayStats.tsx'
+import PartnerComparison from './PartnerComparison.tsx'
 import StatCards from './StatCards.tsx'
 import YearSelect from './YearSelect.tsx'
 import { thisYear } from './shared.ts'
 
-/** Operator's home: key figures of all castles, adding a partner and the castles' accounts. */
+/** Operator's home: key figures and comparison of all castles and how the games are played. */
 export default function Dashboard() {
   const [year, setYear] = useState(thisYear)
-  const navigate = useNavigate()
 
   return (
     <>
@@ -19,10 +16,8 @@ export default function Dashboard() {
         <YearSelect year={year} onChange={setYear} />
       </div>
       <StatCards scope="admin" year={year} />
-      <Section title="Přidat partnera">
-        <PartnerForm onSaved={(partner) => navigate(`/admin/partneri/${partner.id}?sekce=podily`)} />
-      </Section>
-      <PartnerUsers />
+      <PartnerComparison year={year} />
+      <GameplayStats year={year} />
     </>
   )
 }

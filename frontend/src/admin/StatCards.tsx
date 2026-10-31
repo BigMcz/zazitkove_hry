@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, partnerApi, type Summary } from './adminApi.ts'
-import { formatMoney, formatNumber } from './format.ts'
+import { formatDateTime, formatMoney, formatNumber } from './format.ts'
+import StockCountButton from './StockCountButton.tsx'
 import { adminKeys, useLoggedOutOn401, type Scope } from './shared.ts'
 
 interface StatCardsProps {
@@ -30,15 +31,22 @@ export default function StatCards({ scope, year, partnerId }: StatCardsProps) {
         <div
           key={card.label}
           className={`flex flex-col gap-1 rounded-2xl border p-4 shadow-sm ${
-            card.highlight ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white'
+            card.highlight ? 'border-night bg-night text-white' : 'border-stone-300 bg-white'
           }`}
         >
           <span className={`text-sm font-semibold ${card.highlight ? 'text-stone-300' : 'text-stone-600'}`}>
             {card.label}
           </span>
-          <span className="text-2xl font-bold tabular-nums">{data ? card.value : '…'}</span>
+          <span className={`text-2xl font-bold tabular-nums ${card.highlight ? 'text-lime' : ''}`}>
+            {data ? card.value : '…'}
+          </span>
           {card.hint && (
             <span className={`text-xs ${card.highlight ? 'text-stone-300' : 'text-stone-500'}`}>{card.hint}</span>
+          )}
+          {card.stockCount && data && data.games.length > 0 && (
+            <span className="text-white [&_button]:text-white [&_button:hover]:text-lime">
+              <StockCountButton year={year} summary={data} />
+            </span>
           )}
         </div>
       ))}
@@ -51,6 +59,8 @@ interface Card {
   value: string
   hint?: string
   highlight?: boolean
+  /** The castle can correct this figure by its own stock count. */
+  stockCount?: boolean
 }
 
 function cards(isAdmin: boolean, year: number, data: Summary | undefined): Card[] {
@@ -64,8 +74,18 @@ function cards(isAdmin: boolean, year: number, data: Summary | undefined): Card[
       {
         label: 'Kartiček na skladě',
         value: value((s) => formatNumber(s.cardsInStock)),
-        hint: 'převzaté a dosud neaktivované',
+        hint: [
+          data && data.games.length > 1
+            ? data.games.map((game) => `${game.gameTitle} ${formatNumber(game.cardsInStock)}`).join(' · ')
+            : null,
+          data?.stockCountedAt
+            ? `podle vaší inventury z ${formatDateTime(data.stockCountedAt)}`
+            : 'převzaté a dosud neaktivované',
+        ]
+          .filter(Boolean)
+          .join(', '),
         highlight: true,
+        stockCount: true,
       },
       { label: 'Převzato celkem', value: value((s) => formatNumber(s.cardsDelivered)), hint: 'kartiček' },
       ...activations,
@@ -74,14 +94,26 @@ function cards(isAdmin: boolean, year: number, data: Summary | undefined): Card[
     ]
   }
   return [
-    ...activations,
+    activations[0],
+    { label: 'Tržba tento měsíc', value: value((s) => formatMoney(s.revenueThisMonthCzk)) },
+    { label: 'Podíl hradů tento měsíc', value: value((s) => formatMoney(s.partnerShareThisMonthCzk)) },
+    {
+      label: 'Zisk tento měsíc',
+      value: value((s) => formatMoney(s.profitThisMonthCzk ?? null)),
+      hint: 'tržba − podíl hradů',
+      highlight: true,
+    },
+    activations[1],
     { label: `Tržba ${year}`, value: value((s) => formatMoney(s.revenueCzk)) },
     { label: `Zisk ${year}`, value: value((s) => formatMoney(s.profitCzk ?? null)), hint: 'tržba − podíl hradů', highlight: true },
     { label: `Podíl hradů ${year}`, value: value((s) => formatMoney(s.partnerShareCzk)) },
     {
       label: 'Kartiček u hradů',
       value: value((s) => formatNumber(s.cardsInStock)),
-      hint: 'předané a neaktivované',
+      hint:
+        data && data.cardsInStock !== data.cardsInStockComputed
+          ? `podle inventur hradů, z aktivací ${formatNumber(data.cardsInStockComputed)}`
+          : 'předané a neaktivované',
     },
     { label: 'Ve výrobě', value: value((s) => formatNumber(s.cardsInProduction)), hint: 'zatím nepředané' },
     { label: 'Předáno celkem', value: value((s) => formatNumber(s.cardsDelivered)), hint: 'kartiček' },

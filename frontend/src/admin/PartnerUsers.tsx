@@ -7,26 +7,19 @@ import { formatDateTime } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, fieldLabel, linkButton, useLoggedOutOn401 } from './shared.ts'
 
-/**
- * Accounts of castle staff: they log in at the same address and see only their castle.
- *
- * @param partnerId only the accounts of this partner (new accounts are created for it); all when missing
- */
-export default function PartnerUsers({ partnerId }: { partnerId?: string }) {
+/** Accounts of one castle's staff: they log in at the same address and see only their castle. */
+export default function PartnerUsers({ partnerId }: { partnerId: string }) {
   const allUsers = useQuery({ queryKey: adminKeys.partnerUsers, queryFn: adminApi.partnerUsers })
   useLoggedOutOn401(allUsers.error)
-  const users = {
-    ...allUsers,
-    data: partnerId ? allUsers.data?.filter((user) => user.partnerId === partnerId) : allUsers.data,
-  }
+  const users = { ...allUsers, data: allUsers.data?.filter((user) => user.partnerId === partnerId) }
 
   return (
-    <Section title={partnerId ? 'Přístupy do administrace' : 'Přístupy hradů do administrace'}>
+    <Section title="Přístupy do administrace">
       <p className="text-stone-700">
         Správa hradu se přihlašuje na stránce /admin a vidí jen svůj sklad kartiček, převzaté dávky a měsíční počty
         aktivací. Počáteční heslo předejte bezpečně, mohou si ho pak změnit.
       </p>
-      <NewPartnerUserForm fixedPartnerId={partnerId} />
+      <NewPartnerUserForm partnerId={partnerId} />
       {users.isPending && <p role="status">Načítám…</p>}
       {users.isError && <ErrorBanner message={users.error.message} onRetry={() => void users.refetch()} />}
       {users.data?.length === 0 && <p>Zatím žádné účty.</p>}
@@ -36,7 +29,6 @@ export default function PartnerUsers({ partnerId }: { partnerId?: string }) {
             <thead className="border-b border-stone-300 text-stone-700">
               <tr>
                 <th className="py-2 pr-3">Jméno</th>
-                {!partnerId && <th className="py-2 pr-3">Partner</th>}
                 <th className="py-2 pr-3">Stav</th>
                 <th className="py-2 pr-3">Poslední přihlášení</th>
                 <th className="py-2">Akce</th>
@@ -44,7 +36,7 @@ export default function PartnerUsers({ partnerId }: { partnerId?: string }) {
             </thead>
             <tbody>
               {users.data.map((user) => (
-                <PartnerUserRow key={user.id} user={user} showPartner={!partnerId} />
+                <PartnerUserRow key={user.id} user={user} />
               ))}
             </tbody>
           </table>
@@ -54,10 +46,8 @@ export default function PartnerUsers({ partnerId }: { partnerId?: string }) {
   )
 }
 
-function NewPartnerUserForm({ fixedPartnerId }: { fixedPartnerId?: string }) {
+function NewPartnerUserForm({ partnerId }: { partnerId: string }) {
   const queryClient = useQueryClient()
-  const partners = useQuery({ queryKey: adminKeys.partners, queryFn: adminApi.partners })
-  const [partnerId, setPartnerId] = useState('')
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
@@ -70,29 +60,15 @@ function NewPartnerUserForm({ fixedPartnerId }: { fixedPartnerId?: string }) {
       return queryClient.invalidateQueries({ queryKey: adminKeys.partnerUsers })
     },
   })
-  useLoggedOutOn401(partners.error ?? create.error)
-
-  const selectedPartner = fixedPartnerId || partnerId || partners.data?.[0]?.id || ''
+  useLoggedOutOn401(create.error)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    create.mutate({ partnerId: selectedPartner, username: username.trim(), displayName: displayName.trim() || null, password })
+    create.mutate({ partnerId, username: username.trim(), displayName: displayName.trim() || null, password })
   }
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 border-b border-stone-200 pb-5 sm:grid-cols-2">
-      {!fixedPartnerId && (
-        <label className={fieldLabel}>
-          Partner
-          <select value={selectedPartner} onChange={(event) => setPartnerId(event.target.value)} className={input}>
-            {partners.data?.map((partner) => (
-              <option key={partner.id} value={partner.id}>
-                {partner.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       <label className={fieldLabel}>
         Přihlašovací jméno
         <input
@@ -141,7 +117,7 @@ function NewPartnerUserForm({ fixedPartnerId }: { fixedPartnerId?: string }) {
       )}
       <button
         type="submit"
-        disabled={create.isPending || !selectedPartner}
+        disabled={create.isPending}
         className={`${buttonPrimary} sm:col-span-2`}
       >
         Vytvořit účet
@@ -150,7 +126,7 @@ function NewPartnerUserForm({ fixedPartnerId }: { fixedPartnerId?: string }) {
   )
 }
 
-function PartnerUserRow({ user, showPartner }: { user: PartnerUser; showPartner: boolean }) {
+function PartnerUserRow({ user }: { user: PartnerUser }) {
   const queryClient = useQueryClient()
   const [settingPassword, setSettingPassword] = useState(false)
   const [password, setPassword] = useState('')
@@ -179,7 +155,6 @@ function PartnerUserRow({ user, showPartner }: { user: PartnerUser; showPartner:
         <span className="font-semibold">{user.username}</span>
         {user.displayName && <span className="block text-stone-600">{user.displayName}</span>}
       </td>
-      {showPartner && <td className="py-2 pr-3">{user.partnerName}</td>}
       <td className="py-2 pr-3">{user.enabled ? 'aktivní' : <strong className="text-red-800">zablokovaný</strong>}</td>
       <td className="py-2 pr-3 whitespace-nowrap">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : '—'}</td>
       <td className="py-2">

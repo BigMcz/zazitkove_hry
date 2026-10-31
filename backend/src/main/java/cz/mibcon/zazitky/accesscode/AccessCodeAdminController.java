@@ -9,6 +9,7 @@ import java.util.UUID;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.CreateBatchRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.PartnerStats;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -84,6 +85,12 @@ public class AccessCodeAdminController {
     public List<MonthlyActivation> monthlyActivations(@RequestParam @Min(2020) @Max(2100) int year,
             @RequestParam(required = false) UUID partnerId) {
         return adminService.monthlyActivations(year, partnerId);
+    }
+
+    /** All partners side by side: money, cards and how long the cards in stock last. */
+    @GetMapping("/reports/partners")
+    public List<PartnerStats> partnerStats(@RequestParam @Min(2020) @Max(2100) int year) {
+        return adminService.partnerStats(year);
     }
 
     /** Key figures of all partners (partnerId missing) or one partner, incl. the operator's profit. */

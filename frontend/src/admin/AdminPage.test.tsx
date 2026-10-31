@@ -1,11 +1,19 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createQueryClient } from '../queryClient.ts'
 import AdminPage from './AdminPage.tsx'
-import type { AdminSession, BatchSummary, MonthlyActivation, Partner, Summary } from './adminApi.ts'
+import type {
+  AdminSession,
+  BatchSummary,
+  GameStats,
+  MonthlyActivation,
+  Partner,
+  PartnerStats,
+  Summary,
+} from './adminApi.ts'
 import { firstOfNextMonth, todayInPrague } from './format.ts'
 
 const adminSession: AdminSession = { username: 'admin', role: 'ADMIN', partnerName: null }
@@ -61,18 +69,162 @@ const summary: Summary = {
   revenueCzk: 1800,
   partnerShareCzk: 450,
   profitCzk: 1350,
+  revenueThisMonthCzk: 600,
+  partnerShareThisMonthCzk: 150,
+  profitThisMonthCzk: 450,
   cardsInStock: 88,
+  cardsInStockComputed: 88,
+  stockCountedAt: null,
   cardsInProduction: 50,
   cardsDelivered: 100,
+  games: [],
+}
+
+const castleSummary: Summary = {
+  ...summary,
+  profitCzk: undefined,
+  games: [
+    {
+      gameId: 'g1',
+      gameTitle: 'Tajemství katova klíče',
+      cardsDelivered: 100,
+      cardsInStock: 60,
+      cardsInStockComputed: 60,
+      stockCountedAt: null,
+      cardsInProduction: 0,
+      activatedLast28Days: 4,
+      stockDays: 420,
+    },
+    {
+      gameId: 'g2',
+      gameTitle: 'Bílá paní',
+      cardsDelivered: 30,
+      cardsInStock: 28,
+      cardsInStockComputed: 28,
+      stockCountedAt: null,
+      cardsInProduction: 0,
+      activatedLast28Days: 1,
+      stockDays: 784,
+    },
+  ],
 }
 
 const reportRow: MonthlyActivation = {
   month: '2026-10',
+  partnerId: 'p1',
   partnerName: 'Demo partner',
   gameTitle: 'Tajemství katova klíče',
   activatedCount: 12,
   revenueCzk: 1800,
   partnerShareCzk: 450,
+}
+
+const partnerStats: PartnerStats[] = [
+  {
+    partnerId: 'p1',
+    partnerName: 'Demo partner',
+    activatedInYear: 12,
+    revenueCzk: 1800,
+    partnerShareCzk: 450,
+    profitCzk: 1350,
+    cardsDelivered: 100,
+    cardsInStock: 88,
+    cardsInStockComputed: 88,
+    stockCountedAt: null,
+    cardsInProduction: 50,
+    activatedLast28Days: 4,
+    stockDays: 616,
+    games: [
+      {
+        gameId: 'g1',
+        gameTitle: 'Tajemství katova klíče',
+        cardsDelivered: 100,
+        cardsInStock: 88,
+        cardsInStockComputed: 88,
+        stockCountedAt: null,
+        cardsInProduction: 50,
+        activatedLast28Days: 4,
+        stockDays: 616,
+      },
+    ],
+  },
+  {
+    partnerId: 'p9',
+    partnerName: 'Jiný hrad',
+    activatedInYear: 40,
+    revenueCzk: 6000,
+    partnerShareCzk: 1500,
+    profitCzk: 4500,
+    cardsDelivered: 50,
+    cardsInStock: 10,
+    cardsInStockComputed: 14,
+    stockCountedAt: '2026-10-30T09:00:00Z',
+    cardsInProduction: 0,
+    activatedLast28Days: 28,
+    stockDays: 10,
+    games: [
+      {
+        gameId: 'g9',
+        gameTitle: 'Cizí hra',
+        cardsDelivered: 30,
+        cardsInStock: 10,
+        cardsInStockComputed: 14,
+        stockCountedAt: '2026-10-30T09:00:00Z',
+        cardsInProduction: 0,
+        activatedLast28Days: 28,
+        stockDays: 10,
+      },
+      {
+        gameId: 'g8',
+        gameTitle: 'Druhá hra',
+        cardsDelivered: 20,
+        cardsInStock: 0,
+        cardsInStockComputed: 0,
+        stockCountedAt: null,
+        cardsInProduction: 0,
+        activatedLast28Days: 0,
+        stockDays: null,
+      },
+    ],
+  },
+]
+
+const gameStats: GameStats = {
+  gameId: 'g1',
+  gameTitle: 'Tajemství katova klíče',
+  partnerName: 'Demo partner',
+  started: 10,
+  completed: 6,
+  unfinished: 2,
+  playing: 2,
+  durationP25Seconds: 2400,
+  durationMedianSeconds: 3125,
+  durationP75Seconds: 4500,
+  durationWithPenaltyMedianSeconds: 3300,
+  stations: [
+    {
+      stationId: 'st1',
+      orderNo: 1,
+      title: 'Brána',
+      reached: 10,
+      solved: 9,
+      stoppedHere: 0,
+      medianSeconds: 300,
+      wrongAttempts: 5,
+      teamsWithHint: 2,
+    },
+    {
+      stationId: 'st2',
+      orderNo: 2,
+      title: 'Hladomorna',
+      reached: 9,
+      solved: 6,
+      stoppedHere: 2,
+      medianSeconds: 1260,
+      wrongAttempts: 14,
+      teamsWithHint: 6,
+    },
+  ],
 }
 
 const partnerUser = {
@@ -132,11 +284,16 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
       return json({ ...batchInProduction, handedOverAt: '2026-10-28T10:00:00Z' })
     }
     if (path.startsWith('/api/v1/admin/reports/monthly-activations?year=')) return json([reportRow])
-    if (path.startsWith('/api/v1/partner/summary?year=')) return json({ ...summary, profitCzk: undefined })
+    if (path.startsWith('/api/v1/admin/reports/partners?year=')) return json(partnerStats)
+    if (path.startsWith('/api/v1/admin/reports/gameplay?year=')) return json([gameStats])
+    if (path.startsWith('/api/v1/partner/summary?year=')) return json(castleSummary)
     if (path === '/api/v1/partner/batches') return json([deliveredBatch])
     if (path === '/api/v1/partner/shares') return json(demoPartner.shares)
     if (path.startsWith('/api/v1/partner/reports/monthly-activations?year=')) return json([reportRow])
     if (path === '/api/v1/partner/password' && method === 'POST') return new Response(null, { status: 204 })
+    if (path.startsWith('/api/v1/partner/stock-count?year=') && method === 'POST') {
+      return json({ ...castleSummary, stockCountedAt: '2026-10-31T10:00:00Z' })
+    }
     throw new Error(`Unexpected request ${method} ${path}`)
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -192,7 +349,48 @@ describe('AdminPage — operator', () => {
     const profit = (await screen.findByText(/^Zisk \d{4}$/)).parentElement as HTMLElement
     expect(await within(profit).findByText(/1\s350/)).toBeInTheDocument()
     expect(screen.getByText('Kartiček u hradů').parentElement).toHaveTextContent('88')
+    expect(screen.getByText('Tržba tento měsíc').parentElement).toHaveTextContent(/600/)
+    expect(screen.getByText('Podíl hradů tento měsíc').parentElement).toHaveTextContent(/150/)
+    expect(screen.getByText('Zisk tento měsíc').parentElement).toHaveTextContent(/450/)
     expect(screen.getByText('Ve výrobě').parentElement).toHaveTextContent('50')
+  })
+
+  it('compares the castles, warns about cards running out and sorts by a column', async () => {
+    mockAdminApi(true)
+    renderAdmin()
+
+    const table = (await screen.findByRole('columnheader', { name: 'Vydrží' })).closest('table') as HTMLElement
+    const names = () => within(table).getAllByRole('link').map((link) => link.textContent)
+    expect(names()).toEqual(['Jiný hrad', 'Demo partner'])
+    expect(screen.getByText(/^Docházejí kartičky/)).toHaveTextContent(
+      'Docházejí kartičky: Jiný hrad, Cizí hra (10 ks, asi 10 dní), Jiný hrad, Druhá hra (došly).',
+    )
+    expect(within(table).getByRole('link', { name: 'Demo partner' }).closest('tr')).toHaveTextContent('12 %')
+    expect(within(table).getByRole('link', { name: 'Jiný hrad' }).closest('tr')).toHaveTextContent('10 z 14')
+
+    await userEvent.click(within(table).getByRole('button', { name: 'Vydrží' }))
+    expect(names()).toEqual(['Demo partner', 'Jiný hrad'])
+    await userEvent.click(within(table).getByRole('button', { name: /^Vydrží/ }))
+    expect(names()).toEqual(['Jiný hrad', 'Demo partner'])
+  })
+
+  it('shows how the games are played with the stations where teams struggle', async () => {
+    mockAdminApi(true)
+    renderAdmin()
+
+    const game = await screen.findByRole('article', { name: 'Tajemství katova klíče' })
+    expect(within(game).getByText('Dohráno').parentElement).toHaveTextContent('75 % ze skončených her')
+    expect(within(game).getByText('Doba hraní').parentElement).toHaveTextContent('52 minpolovina týmů 40 min až 1 h 15 min')
+    const station = within(game).getByRole('cell', { name: '2. Hladomorna' }).closest('tr') as HTMLElement
+    expect(within(station).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      '2. Hladomorna',
+      '9',
+      '6',
+      '2',
+      '21 min',
+      '1,6',
+      '67 %',
+    ])
   })
 
   it('lists castles in the left menu and opens one', async () => {
@@ -213,15 +411,20 @@ describe('AdminPage — operator', () => {
     document.cookie = 'XSRF-TOKEN=csrf-1'
     renderAdmin()
 
-    await userEvent.type(await screen.findByLabelText('Název firmy'), 'Hrad Loket')
-    await userEvent.type(screen.getByLabelText('IČ'), '87654321')
-    await userEvent.type(screen.getByLabelText('DIČ'), 'CZ87654321')
-    await userEvent.type(screen.getByLabelText('Kontaktní osoba'), 'Jana Nováková')
-    await userEvent.type(screen.getByLabelText('E-mail'), 'pokladna@hrad.cz')
-    await userEvent.type(screen.getByLabelText('Telefon'), '+420 352 111 222')
-    await userEvent.click(screen.getByRole('button', { name: 'Přidat partnera' }))
+    expect(await screen.findByRole('heading', { name: 'Všechny hrady' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Název firmy')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '+ Přidat partnera' }))
+    const dialog = screen.getByRole('dialog', { name: 'Nový partner' })
+    await userEvent.type(within(dialog).getByLabelText('Název firmy'), 'Hrad Loket')
+    await userEvent.type(within(dialog).getByLabelText('IČ'), '87654321')
+    await userEvent.type(within(dialog).getByLabelText('DIČ'), 'CZ87654321')
+    await userEvent.type(within(dialog).getByLabelText('Kontaktní osoba'), 'Jana Nováková')
+    await userEvent.type(within(dialog).getByLabelText('E-mail'), 'pokladna@hrad.cz')
+    await userEvent.type(within(dialog).getByLabelText('Telefon'), '+420 352 111 222')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Přidat partnera' }))
 
     expect(await screen.findByTestId('url')).toHaveTextContent('/admin/partneri/p2?sekce=podily')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     const create = calls(fetchMock, '/api/v1/admin/partners', 'POST')[0]?.[1]
     expect(JSON.parse(String(create?.body))).toEqual({
       name: 'Hrad Loket',
@@ -234,26 +437,23 @@ describe('AdminPage — operator', () => {
     expect(create?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-1' })
   })
 
-  it('manages accounts of all castles on the dashboard', async () => {
+  it('closes the new partner dialog without saving', async () => {
     const fetchMock = mockAdminApi(true)
     renderAdmin()
 
-    const heading = await screen.findByRole('heading', { name: 'Přístupy hradů do administrace' })
-    const section = heading.closest('section') as HTMLElement
-    expect(await within(section).findByText('jiny')).toBeInTheDocument()
-    await within(section).findByRole('option', { name: 'Demo partner' })
-    await userEvent.type(within(section).getByLabelText('Přihlašovací jméno'), 'novy')
-    await userEvent.type(within(section).getByLabelText(/Počáteční heslo/), 'Silne-heslo-1')
-    await userEvent.click(within(section).getByRole('button', { name: 'Vytvořit účet' }))
+    await userEvent.click(await screen.findByRole('button', { name: '+ Přidat partnera' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calls(fetchMock, '/api/v1/admin/partners', 'POST')).toEqual([])
+  })
 
-    expect(await within(section).findByText(/Účet novy pro Demo partner/)).toBeInTheDocument()
-    const create = calls(fetchMock, '/api/v1/admin/partner-users', 'POST')[0]?.[1]
-    expect(JSON.parse(String(create?.body))).toEqual({
-      partnerId: 'p1',
-      username: 'novy',
-      displayName: null,
-      password: 'Silne-heslo-1',
-    })
+  it('keeps the castles’ accounts off the dashboard', async () => {
+    mockAdminApi(true)
+    renderAdmin()
+
+    expect(await screen.findByRole('heading', { name: 'Všechny hrady' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Přístupy/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Vytvořit účet' })).not.toBeInTheDocument()
   })
 
   it('shows only the partner’s data on its overview tab', async () => {
@@ -265,6 +465,9 @@ describe('AdminPage — operator', () => {
     const requested = fetchMock.mock.calls.map(([url]) => String(url))
     expect(requested.some((url) => url.startsWith('/api/v1/admin/dashboard?') && url.endsWith('partnerId=p1'))).toBe(true)
     expect(requested.some((url) => url.includes('monthly-activations') && url.endsWith('partnerId=p1'))).toBe(true)
+    expect(requested.some((url) => url.includes('/reports/gameplay') && url.endsWith('partnerId=p1'))).toBe(true)
+    expect(requested.some((url) => url.includes('/reports/partners'))).toBe(false)
+    expect(await screen.findByRole('article', { name: 'Tajemství katova klíče' })).not.toHaveTextContent('Demo partner')
   })
 
   it('generates codes for the partner’s games and marks a printed batch as handed over', async () => {
@@ -406,6 +609,36 @@ describe('AdminPage — castle', () => {
       .map(([url]) => String(url))
       .filter((url) => url.startsWith('/api/v1/admin/') && !/\/(session|login)$/.test(url))
     expect(adminCalls).toEqual([])
+  })
+
+  it('lets the castle lower its stock to the cards it really has', async () => {
+    const fetchMock = mockAdminApi('partner')
+    document.cookie = 'XSRF-TOKEN=csrf-7'
+    renderAdmin()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Upravit podle skutečnosti' }))
+    expect(screen.getByText('Kartiček na skladě').parentElement).toHaveTextContent(
+      'Tajemství katova klíče 60 · Bílá paní 28, převzaté a dosud neaktivované',
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Kartičky na skladě' })
+    const field = within(dialog).getByLabelText(/^Tajemství katova klíče/)
+    expect(field).toHaveAttribute('max', '60')
+    expect(within(dialog).getByLabelText(/^Bílá paní/)).toHaveAttribute('max', '28')
+    await userEvent.clear(field)
+    await userEvent.type(field, '55')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Uložit' }))
+
+    expect(await screen.findByText('Kartiček na skladě')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const request = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/api/v1/partner/stock-count'))
+    expect(String(request?.[0])).toMatch(/year=\d{4}$/)
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      games: [
+        { gameId: 'g1', cardsInStock: 55 },
+        { gameId: 'g2', cardsInStock: 28 },
+      ],
+    })
+    expect(request?.[1]?.headers).toMatchObject({ 'X-XSRF-TOKEN': 'csrf-7' })
   })
 
   it('changes the password from the key icon in the header', async () => {
