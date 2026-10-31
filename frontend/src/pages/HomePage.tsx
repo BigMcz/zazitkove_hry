@@ -397,6 +397,8 @@ const aboutPoints = [
   },
 ]
 
+const heritageSitePoints = ['Příběh přímo z vaší památky', 'Pro rodiny, školy i dospělé', 'Bez instalace aplikace']
+
 /** Offer for castles and other heritage sites, the actual customers of StoryHold. */
 function ForHeritageSites() {
   return (
@@ -411,11 +413,18 @@ function ForHeritageSites() {
           Spravujete hrad, zámek nebo jinou památku?
         </h2>
         <p className="max-w-2xl text-lg leading-relaxed text-stone-300">
-          Připravíme pro vás hru na míru: příběh podle skutečné historie místa, namluvené texty a úkoly, které provedou
-          návštěvníky po zajímavých místech. Postaráme se o všechno, od příběhu až po tisk kartiček. Vy je jen prodáváte
-          na pokladně, bez nákladů a starostí navíc, a v administraci vidíte přehled prodaných kódů.
+          Připravíme pro vás hru na míru. Příběh podle skutečné historie místa, namluvené texty a úkoly, které provedou
+          návštěvníky po zajímavých místech. Návštěvníci objeví zákoutí, kolem kterých běžně projdou, zdrží se u vás déle
+          a odnesou si zážitek, o kterém budou vyprávět.
         </p>
-        <p className="text-stone-400">Podmínky spolupráce domluvíme individuálně.</p>
+        <ul aria-label="Co hra památce přináší" className="flex flex-wrap gap-2">
+          {heritageSitePoints.map((point) => (
+            <li key={point} className="rounded-full border border-night-line px-3 py-1 text-sm text-stone-300">
+              {point}
+            </li>
+          ))}
+        </ul>
+        <p className="text-stone-400">Ozvěte se nám, rádi vám ukážeme, jak by hra mohla vypadat právě u vás.</p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
         <a
