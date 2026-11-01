@@ -308,7 +308,7 @@ Krá! Kolik lesklých knoflíků mám v hnízdě?
 
 ## Obrázky
 
-Osm obrázků (cover + 7 kroků) ve stylu dětské obrázkové knihy, formát 4:3, zdrojové soubory do `grafika/deti/`, do hry se převedou na `.webp` jako u dospělé verze. Pravidla z `docs/grafika.md` platí dál: žádný text v obrázku a ke každému promptu stejný stylový dodatek.
+Osm obrázků (cover + 7 kroků) ve stylu dětské obrázkové knihy, formát 4:3, zdrojové soubory do `grafika/deti-poklad-mistra-husse/` (tam je i pracovní návod `obrazky-prompty.md` s celými prompty a postupem s referencemi postav), do hry se převedou na `.webp` jako u dospělé verze. Pravidla z `docs/grafika.md` platí dál: žádný text v obrázku a ke každému promptu stejný stylový dodatek.
 
 - **Nic, co se počítá, nesmí stavět na obrázku.** AI počty věcí nedodrží. Odpověď je vždy v nahrávce a textu, obrázek jen dokresluje. Výjimka je krok 4: mříž musí mít 3 svislé a 2 vodorovné tyče, jinak generovat znovu nebo mříž oříznout.
 - **Nic strašidelného:** žádné zbraně, řetězy ani temné kobky. Vězení je prázdné a prosvícené.

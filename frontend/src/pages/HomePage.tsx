@@ -322,6 +322,7 @@ const demoGames: DemoGame[] = [
     code: 'DEMO-DETI',
     title: 'Poklad mistra Husse',
     label: 'Hrad Loket · pro děti od 6 let · ukázka zdarma',
+    image: { src: '/images/deti/cover.webp', alt: 'Pan Huss ukazuje prázdné kapsy, krkavec Kryštof drží v zobáku klíček' },
     description: [
       'Krkavec Kryštof sebral starému panu Hussovi klíček od truhly. Vrátí ho jen tomu, kdo vyřeší všechny jeho hádanky.',
       'Děti počítají, poslouchají a vybírají, rodič čte a zadává odpovědi. Za každou hádanku je jedno písmenko a z nich na konci kouzelné slovo, které otevře truhlu.',

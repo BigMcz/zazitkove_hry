@@ -28,7 +28,7 @@ DELETE FROM game WHERE id = '00000000-0000-0001-0000-000000000003';
 -- ---------------------------------------------------------
 INSERT INTO game (id, location_id, slug, title, subtitle, intro_text, outro_text,
                   estimated_minutes, session_validity_hours, language, status, for_children, wrong_answer_text,
-                  intro_audio_url)
+                  intro_audio_url, cover_image_url)
 VALUES ('00000000-0000-0001-0000-000000000003', '00000000-0000-0000-0000-000000000002',
         'deti-poklad-mistra-husse',
         'Poklad mistra Husse',
@@ -46,14 +46,15 @@ Za každou hádanku ti Kryštof dá jedno písmenko. Na konci z nich složíš k
 
 Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.',
         30, 24, 'cs', 'PUBLISHED', TRUE, 'Krá, to ne! Zkus to znovu.',
-        -- Nahrávky z audio/deti-poklad-mistra-husse/ (ElevenLabs), ostatní se doplní postupně
-        '/audio/deti/intro.mp3');
+        -- Nahrávky z audio/deti-poklad-mistra-husse/ (ElevenLabs), obrázky z grafika/deti-poklad-mistra-husse/
+        -- (ChatGPT, převod tools/grafika/web_images.py); ostatní se doplní postupně
+        '/audio/deti/intro.mp3', '/images/deti/cover.webp');
 
 -- ---------------------------------------------------------
 -- Kroky (stanoviště)
 -- ---------------------------------------------------------
 INSERT INTO station (id, game_id, order_no, title, story_text, task_text, task_type, reward_text, next_text,
-                     listen_only, puzzle_letter) VALUES
+                     image_url, image_alt, listen_only, puzzle_letter) VALUES
 ('00000000-0000-0001-0001-000000000001', '00000000-0000-0001-0000-000000000003', 1,
  'Vyhlídka nad Ohří',
  'Huss: „Podívej se dolů. Vidíš řeku? Jmenuje se Ohře. Teče kolem skály a ohýbá se, jako když ohneš ruku. Zkus to taky! Ohni ruku. Ta špička uprostřed je tvůj loket.“
@@ -63,6 +64,7 @@ Kryštof: „Krá! A teď moje hádanka!“',
  'CHOICE',
  'Krá! Správně! Řeka dělá loket, a proto se hrad jmenuje Loket. Tady máš první písmenko: P. P jako písař!',
  'Dojdi k hradní bráně. Kryštof už tam na tebe čeká.',
+ '/images/deti/st01.webp', 'Krkavec Kryštof letí nad hradem na skále v ohybu řeky',
  FALSE, 'P'),
 ('00000000-0000-0001-0001-000000000002', '00000000-0000-0001-0000-000000000003', 2,
  'Hradní brána',
@@ -73,6 +75,7 @@ Kryštof: „Krá! A jaký klíč přijde teď?“',
  'CHOICE',
  'Krá! Stříbrný! Druhé písmenko je O.',
  'Projdi na nádvoří. Kryštof si pro tebe připravil zvukovou hádanku.',
+ '/images/deti/st02.webp', 'Vlídný žalářník se zlatými a stříbrnými klíči a Kryštofem na rameni',
  FALSE, 'O'),
 ('00000000-0000-0001-0001-000000000003', '00000000-0000-0001-0000-000000000003', 3,
  'Kdo se ozval?',
@@ -85,6 +88,7 @@ Krá!“',
  'NUMBER',
  'Krá! Čtyři! Kůň, pes, kohout a kočka. Koně tahali vozy a kočky chytaly myši. Písmenko K.',
  'Sestup do sklepení k vězení. Neboj, dnes už je prázdné.',
+ '/images/deti/st03.webp', 'Kryštof zpívá na okraji studny na hradním nádvoří',
  TRUE, 'K'),
 ('00000000-0000-0001-0001-000000000004', '00000000-0000-0001-0000-000000000003', 4,
  'Mříže',
@@ -95,6 +99,7 @@ Kryštof: „Krá! Tři tyče jdou shora dolů a dvě tyče zleva doprava.“',
  'NUMBER',
  'Krá! Pět! Přes takovou mříž neproletí ani krkavec. Písmenko L.',
  'Vyjdi nahoru do hradního paláce. Tam Huss psal svou kroniku.',
+ NULL, NULL,
  FALSE, 'L'),
 ('00000000-0000-0001-0001-000000000005', '00000000-0000-0001-0000-000000000003', 5,
  'Husí brk',
@@ -105,6 +110,7 @@ Kryštof: „Krá! A z kterého ptáka bylo Hussovo pero? Napovím: zní to skor
  'CHOICE',
  'Krá! Z husy! Husí brky se opravdu používaly nejčastěji. Huss a husa, to se pamatuje samo. Písmenko A.',
  'Vystoupej na hradní věž. Tam má Kryštof své hnízdo.',
+ NULL, NULL,
  FALSE, 'A'),
 ('00000000-0000-0001-0001-000000000006', '00000000-0000-0001-0000-000000000003', 6,
  'Kryštofovo hnízdo',
@@ -117,6 +123,7 @@ Krá!“',
  'NUMBER',
  'Krá! Šest! A ten nejlesklejší poklad je klíček od truhly. Dám ti ho, až řekneš tajné slovo. Poslední písmenko je D.',
  'Vrať se na nádvoří k truhle. Huss tam čeká.',
+ NULL, NULL,
  TRUE, 'D'),
 ('00000000-0000-0001-0001-000000000007', '00000000-0000-0001-0000-000000000003', 7,
  'Truhla',
@@ -127,6 +134,7 @@ Kryštof: „Krá! Přečti je za sebou a řekni tajné slovo!“',
  'TEXT',
  'Cvak! Zámek povolil a víko truhly se pomalu otevírá.',
  NULL,
+ NULL, NULL,
  FALSE, NULL);
 
 -- ---------------------------------------------------------
