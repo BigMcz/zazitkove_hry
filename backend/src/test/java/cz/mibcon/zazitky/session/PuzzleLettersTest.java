@@ -19,11 +19,24 @@ class PuzzleLettersTest {
     void slotsAreAScrambledPermutationStableForTheSession() {
         UUID sessionId = UUID.randomUUID();
 
-        List<Integer> slots = PuzzleLetters.scrambledSlots(sessionId, 9);
+        List<Integer> slots = PuzzleLetters.slots(sessionId, false, 9);
 
         assertThat(slots).containsExactlyInAnyOrderElementsOf(IntStream.range(0, 9).boxed().toList());
         assertThat(slots).isNotEqualTo(IntStream.range(0, 9).boxed().toList());
-        assertThat(PuzzleLetters.scrambledSlots(sessionId, 9)).isEqualTo(slots);
+        assertThat(PuzzleLetters.slots(sessionId, false, 9)).isEqualTo(slots);
+    }
+
+    @Test
+    void aGameForChildrenKeepsTheLettersInOrder() {
+        assertThat(PuzzleLetters.slots(UUID.randomUUID(), true, 6)).containsExactly(0, 1, 2, 3, 4, 5);
+
+        Station first = station("P");
+        Station second = station("O");
+        Puzzle puzzle = PuzzleLetters.of(UUID.randomUUID(), true, List.of(first, second, station(null)),
+                Set.of(second.getId()), second.getId());
+
+        assertThat(puzzle.slots()).containsExactly(null, "O");
+        assertThat(puzzle.latestSlot()).isEqualTo(1);
     }
 
     @Test
@@ -34,7 +47,7 @@ class PuzzleLettersTest {
         Station last = station(null);
         UUID sessionId = UUID.randomUUID();
 
-        Puzzle puzzle = PuzzleLetters.of(sessionId, List.of(first, second, third, last),
+        Puzzle puzzle = PuzzleLetters.of(sessionId, false, List.of(first, second, third, last),
                 Set.of(first.getId(), second.getId()), second.getId());
 
         assertThat(puzzle.slots()).hasSize(3).containsOnlyOnce("P", "O").containsOnlyOnce((String) null);
@@ -43,7 +56,7 @@ class PuzzleLettersTest {
 
     @Test
     void noPuzzleWithoutLetters() {
-        assertThat(PuzzleLetters.of(UUID.randomUUID(), List.of(station(null)), Set.of(), null)).isNull();
+        assertThat(PuzzleLetters.of(UUID.randomUUID(), false, List.of(station(null)), Set.of(), null)).isNull();
     }
 
     private static Station station(String letter) {

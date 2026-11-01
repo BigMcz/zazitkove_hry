@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -152,7 +153,8 @@ public class SessionService {
 
         if (!evaluation.correct()) {
             boolean missingNumber = station.getTaskType() == TaskType.NUMBER && evaluation.normalizedAnswer().isEmpty();
-            return AnswerResult.wrong(missingNumber ? NOT_A_NUMBER_MESSAGE : WRONG_ANSWER_MESSAGE);
+            String wrong = Objects.requireNonNullElse(session.getGame().getWrongAnswerText(), WRONG_ANSWER_MESSAGE);
+            return AnswerResult.wrong(missingNumber ? NOT_A_NUMBER_MESSAGE : wrong);
         }
 
         progress.setStatus(ProgressStatus.SOLVED);
@@ -331,7 +333,7 @@ public class SessionService {
                 .map(item -> item.getStation().getId())
                 .collect(Collectors.toSet());
         UUID lastSolvedId = solved.isEmpty() ? null : solved.getLast().id();
-        Puzzle puzzle = PuzzleLetters.of(session.getId(), stations, solvedIds, lastSolvedId);
+        Puzzle puzzle = PuzzleLetters.of(session.getId(), game.isForChildren(), stations, solvedIds, lastSolvedId);
 
         Finale finale = session.getStatus() != SessionStatus.COMPLETED ? null : new Finale(
                 game.getOutroText(),
@@ -343,7 +345,7 @@ public class SessionService {
         return new SessionState(
                 includeToken ? session.getToken() : null,
                 session.getStatus(),
-                new GameRef(game.getId(), game.getTitle()),
+                new GameRef(game.getId(), game.getTitle(), game.isForChildren()),
                 session.getTeamName(),
                 session.getStartedAt(),
                 session.getPenaltySeconds(),

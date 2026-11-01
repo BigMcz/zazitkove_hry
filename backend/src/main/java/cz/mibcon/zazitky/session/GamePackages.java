@@ -59,15 +59,15 @@ class GamePackages {
                 .toList();
         Map<UUID, Integer> puzzleSlots = null;
         if (!withLetter.isEmpty()) {
-            List<Integer> slots = PuzzleLetters.scrambledSlots(session.getId(), withLetter.size());
+            List<Integer> slots = PuzzleLetters.slots(session.getId(), game.isForChildren(), withLetter.size());
             puzzleSlots = new LinkedHashMap<>();
             for (int i = 0; i < withLetter.size(); i++) {
                 puzzleSlots.put(withLetter.get(i).getId(), slots.get(i));
             }
         }
 
-        SessionInfo info = new SessionInfo(game.getTitle(), session.getTeamName(), session.getStartedAt(),
-                session.getExpiresAt());
+        SessionInfo info = new SessionInfo(game.getTitle(), game.isForChildren(), game.getWrongAnswerText(),
+                session.getTeamName(), session.getStartedAt(), session.getExpiresAt());
         return new SessionPackage(game.getId(), info, PackageCrypto.KDF_ITERATIONS, sealed.firstStation(),
                 sealed.stations(), puzzleSlots, unlockedKeys, sealed.media());
     }

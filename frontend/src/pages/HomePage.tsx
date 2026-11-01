@@ -294,64 +294,107 @@ function Steps() {
   )
 }
 
-/** Development code of the demo game (seeded in the dev profile): never expires, every use starts a new game. */
-const DEMO_CODE = 'DEMO-KATA'
+interface DemoGame {
+  /** Development code of the demo game (seeded in the dev profile): never expires, every use starts a new game. */
+  code: string
+  title: string
+  label: string
+  image?: { src: string; alt: string }
+  description: string[]
+  facts: string[]
+  playLabel: string
+}
 
-const demoFacts = ['Skutečný příběh z roku 1822', '10 zastavení', 'asi 30 minut', 'Namluvený příběh']
+const demoGames: DemoGame[] = [
+  {
+    code: 'DEMO-KATA',
+    title: 'Katova povinnost',
+    label: 'Hrad Loket · ukázka zdarma',
+    image: { src: '/images/demo/cover.webp', alt: 'Starý kat Karl Huss s úředním dopisem v zámeckém muzeu' },
+    description: [
+      'Léto 1822. Do loketského žaláře přichází Karl Huss, poslední chebský kat. Muž, který psal kroniku, učil odsouzeného jeho poslední roli a o třináct let později musel vracet přeplatek za popravu.',
+      'Projděte s ním jeho cestu hradem, poslouchejte jeho vyprávění, rozluštěte deset hádanek a složte tajenku: slovo, podle kterého mistr Huss žil.',
+    ],
+    facts: ['Skutečný příběh z roku 1822', '10 zastavení', 'asi 30 minut', 'Namluvený příběh'],
+    playLabel: 'Zahrát ukázku',
+  },
+  {
+    code: 'DEMO-DETI',
+    title: 'Poklad mistra Husse',
+    label: 'Hrad Loket · pro děti od 6 let · ukázka zdarma',
+    description: [
+      'Krkavec Kryštof sebral starému panu Hussovi klíček od truhly. Vrátí ho jen tomu, kdo vyřeší všechny jeho hádanky.',
+      'Děti počítají, poslouchají a vybírají, rodič čte a zadává odpovědi. Za každou hádanku je jedno písmenko a z nich na konci kouzelné slovo, které otevře truhlu.',
+    ],
+    facts: ['Pro děti od 6 let', '7 zastavení', 'asi 30 minut', 'Nápovědy bez penalizace'],
+    playLabel: 'Zahrát dětskou ukázku',
+  },
+]
 
 function OurGames() {
-  const { enterCode, error, pending } = useEnterCode()
-
   return (
     <section id="nase-hry" aria-labelledby="nase-hry-nadpis" className="flex scroll-mt-8 flex-col gap-6">
       <Eyebrow>Naše hry</Eyebrow>
       <h2 id="nase-hry-nadpis" className="text-4xl font-extrabold tracking-tight sm:text-5xl">
         Příběhy, které se staly.
       </h2>
-      <article className="mt-4 grid overflow-hidden rounded-3xl border border-night-line bg-night-card md:grid-cols-2">
+      {demoGames.map((game) => (
+        <DemoGameCard key={game.code} game={game} />
+      ))}
+    </section>
+  )
+}
+
+function DemoGameCard({ game }: { game: DemoGame }) {
+  const { enterCode, error, pending } = useEnterCode()
+
+  return (
+    <article
+      className={`mt-4 grid overflow-hidden rounded-3xl border border-night-line bg-night-card ${
+        game.image ? 'md:grid-cols-2' : ''
+      }`}
+    >
+      {game.image && (
         <img
-          src="/images/demo/cover.webp"
-          alt="Starý kat Karl Huss s úředním dopisem v zámeckém muzeu"
+          src={game.image.src}
+          alt={game.image.alt}
           loading="lazy"
           className="aspect-[4/3] size-full object-cover"
         />
-        <div className="flex flex-col items-start gap-5 p-6 md:p-8">
-          <p className="rounded-full bg-lime px-3 py-1 text-xs font-bold tracking-[0.12em] text-night uppercase">
-            Hrad Loket · ukázka zdarma
+      )}
+      <div className="flex flex-col items-start gap-5 p-6 md:p-8">
+        <p className="rounded-full bg-lime px-3 py-1 text-xs font-bold tracking-[0.12em] text-night uppercase">
+          {game.label}
+        </p>
+        <h3 className="text-3xl font-extrabold tracking-tight">{game.title}</h3>
+        {game.description.map((paragraph) => (
+          <p key={paragraph} className="leading-relaxed text-stone-300">
+            {paragraph}
           </p>
-          <h3 className="text-3xl font-extrabold tracking-tight">Katova povinnost</h3>
-          <p className="leading-relaxed text-stone-300">
-            Léto 1822. Do loketského žaláře přichází Karl Huss, poslední chebský kat. Muž, který psal kroniku, učil
-            odsouzeného jeho poslední roli a o třináct let později musel vracet přeplatek za popravu.
+        ))}
+        <ul aria-label="O hře" className="flex flex-wrap gap-2">
+          {game.facts.map((fact) => (
+            <li key={fact} className="rounded-full border border-night-line px-3 py-1 text-sm text-stone-300">
+              {fact}
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => enterCode(game.code)}
+          disabled={pending}
+          className="min-h-12 rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {pending ? 'Spouštím…' : game.playLabel}
+        </button>
+        <p className="-mt-2 text-sm text-stone-400">Hned teď a bez kartičky, stačí mobil.</p>
+        {error && (
+          <p role="alert" className="rounded-xl border-l-4 border-red-500 bg-night px-4 py-3 text-red-200">
+            {error.message}
           </p>
-          <p className="leading-relaxed text-stone-300">
-            Projděte s ním jeho cestu hradem, poslouchejte jeho vyprávění, rozluštěte deset hádanek a složte tajenku:
-            slovo, podle kterého mistr Huss žil.
-          </p>
-          <ul aria-label="O hře" className="flex flex-wrap gap-2">
-            {demoFacts.map((fact) => (
-              <li key={fact} className="rounded-full border border-night-line px-3 py-1 text-sm text-stone-300">
-                {fact}
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => enterCode(DEMO_CODE)}
-            disabled={pending}
-            className="min-h-12 rounded-full bg-lime px-6 font-bold text-night transition-colors hover:bg-lime-dark disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {pending ? 'Spouštím…' : 'Zahrát ukázku'}
-          </button>
-          <p className="-mt-2 text-sm text-stone-400">Hned teď a bez kartičky, stačí mobil.</p>
-          {error && (
-            <p role="alert" className="rounded-xl border-l-4 border-red-500 bg-night px-4 py-3 text-red-200">
-              {error.message}
-            </p>
-          )}
-        </div>
-      </article>
-    </section>
+        )}
+      </div>
+    </article>
   )
 }
 

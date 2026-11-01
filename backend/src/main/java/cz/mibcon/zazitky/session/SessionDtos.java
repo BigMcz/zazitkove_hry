@@ -64,7 +64,8 @@ public final class SessionDtos {
             Finale finale) {
     }
 
-    public record GameRef(UUID id, String title) {
+    /** @param forChildren puzzle letters in order, no time or penalties shown, a diploma at the end */
+    public record GameRef(UUID id, String title, boolean forChildren) {
     }
 
     public record Progress(int solved, int total) {

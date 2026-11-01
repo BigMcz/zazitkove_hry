@@ -17,7 +17,7 @@ const TOKEN = '6f1c2a9e-1111-4222-8333-944455556666'
 
 const inProgress: SessionState = {
   status: 'IN_PROGRESS',
-  game: { id: 'g1', title: 'Tajemství katova klíče' },
+  game: { id: 'g1', title: 'Tajemství katova klíče', forChildren: false },
   teamName: null,
   startedAt: '2026-10-28T10:00:00Z',
   penaltySeconds: 0,
@@ -185,6 +185,19 @@ describe('App', () => {
     expect(localStorage.getItem('zazitky.voiceMuted')).toBe('1')
   })
 
+  it('starts the children demo game with its own code', async () => {
+    const fetchMock = mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'DEMO-DETI', game: demoGame, resumesGame: false, validUntil: null }),
+    })
+    renderApp('/')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zahrát dětskou ukázku' }))
+
+    expect(await screen.findByRole('heading', { name: 'Tajemství katova klíče' })).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][1]?.body).toBe('{"code":"DEMO-DETI"}')
+  })
+
   it('continues the game of a code that is already in use', async () => {
     mockApi({
       'POST /api/v1/access-codes/check': () =>
@@ -245,6 +258,7 @@ describe('App', () => {
       '02 / Odemkněte příběh',
       '03 / Rozhlédněte se',
       'Katova povinnost',
+      'Poklad mistra Husse',
       'Začíná to na pokladně.',
       'Nabitý mobil',
       'Sluchátka',
@@ -463,5 +477,31 @@ describe('App', () => {
     expect(screen.getByText(/Vyřešili jste všech 5 úkolů\. Nápovědu jste potřebovali jen výjimečně/)).toBeInTheDocument()
     expect(screen.getByText('25 min')).toBeInTheDocument()
     expect(screen.getByText('4 min')).toBeInTheDocument()
+  })
+
+  it('ends a game for children with a diploma instead of times', async () => {
+    tokenStorage.set(TOKEN)
+    mockApi({
+      'GET /api/v1/sessions/current': () =>
+        json({
+          ...inProgress,
+          game: { id: 'g2', title: 'Poklad mistra Husse', forChildren: true },
+          status: 'COMPLETED',
+          teamName: 'Kryštofovi',
+          startedAt: '2026-11-01T10:00:00Z',
+          progress: { solved: 7, total: 7 },
+          currentStation: null,
+          finale: { outroText: 'Poklad! Krá!', totalSeconds: 1500, hintsUsed: 3 },
+        }),
+    })
+    renderApp('/play')
+
+    const diploma = await screen.findByRole('region', { name: 'Diplom' })
+    expect(diploma).toHaveTextContent('Kryštofovi')
+    expect(diploma).toHaveTextContent('za vyřešení všech 7 hádanek ve hře Poklad mistra Husse')
+    expect(diploma).toHaveTextContent('1. 11. 2026')
+    expect(screen.getByText(/Vyřešili jste všech 7 úkolů\./)).not.toHaveTextContent('Nápověd')
+    expect(screen.queryByText('Celkový čas')).not.toBeInTheDocument()
+    expect(screen.queryByText('25 min')).not.toBeInTheDocument()
   })
 })

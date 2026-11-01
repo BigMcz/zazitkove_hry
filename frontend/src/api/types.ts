@@ -81,7 +81,8 @@ export interface SessionState {
   /** Only in the response to POST /sessions. */
   token?: string
   status: SessionStatus
-  game: { id: string; title: string }
+  /** forChildren: puzzle letters in order, no time or penalties shown, a diploma at the end. */
+  game: { id: string; title: string; forChildren: boolean }
   teamName: string | null
   startedAt: string
   penaltySeconds: number

@@ -57,6 +57,21 @@ describe('localGame', () => {
     expect((await localAnswer(pack, atTower, 's2', '56 schodů', DURING_GAME)).result.correct).toBe(true)
   })
 
+  it('speaks to children with the message of the game', async () => {
+    const pack = await game()
+    const children: GamePackage = {
+      ...pack,
+      session: { ...pack.session, forChildren: true, wrongAnswerText: 'Krá, to ne! Zkus to znovu.' },
+    }
+
+    expect((await localAnswer(children, emptyProgress(), 's1', 'Tvar věže', DURING_GAME)).result.message).toBe(
+      'Krá, to ne! Zkus to znovu.',
+    )
+    expect((await localState(children, emptyProgress(), DURING_GAME)).game.forChildren).toBe(true)
+    // A package downloaded before the games for children
+    expect((await localState(pack, emptyProgress(), DURING_GAME)).game.forChildren).toBe(false)
+  })
+
   it('refuses a station that is not active', async () => {
     const pack = await game()
     await expect(localAnswer(pack, emptyProgress(), 's2', '56', DURING_GAME)).rejects.toThrow('není aktivní')

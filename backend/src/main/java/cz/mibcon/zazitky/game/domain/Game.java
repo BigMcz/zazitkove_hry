@@ -60,6 +60,13 @@ public class Game {
     @Column(length = 500)
     private String coverImageUrl;
 
+    /** A game for children: puzzle letters in order, no time or penalties shown, a diploma at the end. */
+    private boolean forChildren;
+
+    /** Message after a wrong answer; null = the default one. */
+    @Column(length = 300)
+    private String wrongAnswerText;
+
     private Integer estimatedMinutes;
 
     @Column(nullable = false)
@@ -163,6 +170,22 @@ public class Game {
 
     public void setCoverImageUrl(String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
+    }
+
+    public boolean isForChildren() {
+        return forChildren;
+    }
+
+    public void setForChildren(boolean forChildren) {
+        this.forChildren = forChildren;
+    }
+
+    public String getWrongAnswerText() {
+        return wrongAnswerText;
+    }
+
+    public void setWrongAnswerText(String wrongAnswerText) {
+        this.wrongAnswerText = wrongAnswerText;
     }
 
     public Integer getEstimatedMinutes() {

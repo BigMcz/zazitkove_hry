@@ -18,6 +18,27 @@ describe('HintList', () => {
     expect(onReveal).toHaveBeenCalledOnce()
   })
 
+  it('reveals a hint of a game for children right away and without time', async () => {
+    const onReveal = vi.fn()
+    const { rerender } = render(
+      <HintList revealedHints={[]} hintsAvailable={1} nextHintPenaltySeconds={0} withoutPenalty onReveal={onReveal} />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Potřebuju nápovědu' }))
+    expect(onReveal).toHaveBeenCalledOnce()
+
+    rerender(
+      <HintList
+        revealedHints={[{ ...firstHint, penaltySeconds: 0 }]}
+        hintsAvailable={0}
+        nextHintPenaltySeconds={null}
+        withoutPenalty
+        onReveal={onReveal}
+      />,
+    )
+    expect(screen.getByRole('listitem')).toHaveTextContent(/^Nápověda 1Myslí se/)
+  })
+
   it('can cancel the confirmation', async () => {
     const onReveal = vi.fn()
     render(<HintList revealedHints={[]} hintsAvailable={1} nextHintPenaltySeconds={60} onReveal={onReveal} />)

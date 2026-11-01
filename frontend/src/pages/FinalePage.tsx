@@ -40,13 +40,22 @@ export default function FinalePage() {
       <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
         <p className="font-serif text-2xl font-bold text-emerald-900">Gratulujeme!</p>
         <p className="mt-1 text-lg text-stone-900">
-          Vyřešili jste všech {state.progress.total} úkolů. {praiseForHints(finale.hintsUsed)}
+          Vyřešili jste všech {state.progress.total} úkolů.
+          {!state.game.forChildren && ` ${praiseForHints(finale.hintsUsed)}`}
         </p>
       </div>
 
       {finale.outroAudioUrl && <VoicePlayer src={finale.outroAudioUrl} />}
       <StoryText text={finale.outroText} />
 
+      {state.game.forChildren ? (
+        <Diploma
+          teamName={state.teamName}
+          gameTitle={state.game.title}
+          tasks={state.progress.total}
+          playedAt={state.startedAt}
+        />
+      ) : (
       <section aria-labelledby="summary-heading" className={card}>
         <h2 id="summary-heading" className="mb-3 text-xl font-bold">
           {state.teamName ? `Výsledek týmu ${state.teamName}` : 'Tvůj výsledek'}
@@ -60,10 +69,43 @@ export default function FinalePage() {
           <dd className="text-right font-semibold">{finale.hintsUsed}</dd>
         </dl>
       </section>
+      )}
 
       <button type="button" onClick={() => leaveGame()} className={buttonPrimary}>
         Zpět na začátek
       </button>
     </Page>
+  )
+}
+
+/** Instead of times and penalties a game for children ends with a diploma to show (or photograph). */
+function Diploma({
+  teamName,
+  gameTitle,
+  tasks,
+  playedAt,
+}: {
+  teamName: string | null
+  gameTitle: string
+  tasks: number
+  playedAt: string
+}) {
+  return (
+    <section
+      aria-labelledby="diploma-heading"
+      className="flex flex-col items-center gap-2 rounded-2xl border-4 border-double border-amber-600 bg-amber-50 px-5 py-8 text-center"
+    >
+      <p aria-hidden="true" className="text-4xl">
+        🏅
+      </p>
+      <h2 id="diploma-heading" className="font-serif text-3xl font-bold text-stone-950">
+        Diplom
+      </h2>
+      {teamName && <p className="font-serif text-2xl font-bold text-amber-900">{teamName}</p>}
+      <p className="text-lg text-stone-900">
+        za vyřešení všech {tasks} hádanek ve hře <strong>{gameTitle}</strong>
+      </p>
+      <p className="text-sm text-stone-700">{new Date(playedAt).toLocaleDateString('cs-CZ')}</p>
+    </section>
   )
 }

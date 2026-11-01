@@ -8,6 +8,8 @@ interface HintListProps {
   hintsAvailable: number
   nextHintPenaltySeconds: number | null
   pending?: boolean
+  /** A game for children: hints say nothing about time and need no confirmation. */
+  withoutPenalty?: boolean
   onReveal: () => void
 }
 
@@ -17,6 +19,7 @@ export default function HintList({
   hintsAvailable,
   nextHintPenaltySeconds,
   pending = false,
+  withoutPenalty = false,
   onReveal,
 }: HintListProps) {
   const [confirming, setConfirming] = useState(false)
@@ -36,7 +39,8 @@ export default function HintList({
           {revealedHints.map((hint) => (
             <li key={hint.orderNo} className="rounded-xl bg-amber-50 p-4 text-base text-stone-900">
               <span className="block text-sm font-semibold text-stone-700">
-                Nápověda {hint.orderNo} · +{formatDuration(hint.penaltySeconds)}
+                Nápověda {hint.orderNo}
+                {!withoutPenalty && ` · +${formatDuration(hint.penaltySeconds)}`}
               </span>
               {hint.text}
             </li>
@@ -47,7 +51,12 @@ export default function HintList({
       {hintsAvailable === 0 && <p className="text-base text-stone-700">Další nápověda už není.</p>}
 
       {hintsAvailable > 0 && !confirming && (
-        <button type="button" disabled={pending} onClick={() => setConfirming(true)} className={buttonSecondary}>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => (withoutPenalty ? onReveal() : setConfirming(true))}
+          className={buttonSecondary}
+        >
           {revealedHints.length === 0 ? 'Potřebuju nápovědu' : 'Další nápověda'}
         </button>
       )}

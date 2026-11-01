@@ -171,6 +171,16 @@ Rozhodnuto 2026-10-31: hrad vidí dál jen prodej (co nejjednodušší přehled)
 - [ ] Nejčastější špatné odpovědi stanoviště (jen pro správce; text hráčů, viz ochrana údajů)
 - [ ] Podíl akcí odeslaných dodatečně (hraní bez signálu) podle památky
 
+## F8 — Dětská demo hra „Poklad mistra Husse“ (`docs/06-prototypova-detska-hra.md`)
+
+Rozhodnuto 2026-11-01: druhá demo hra pro děti od 6 let na stejné lokalitě; úpravy aplikace pro děti zapne jeden příznak hry.
+
+- [x] Krok 1: hra v dev seedu (`R__demo_game_children.sql`, kód `DEMO-DETI`) bez obrázků a nahrávek, druhá karta ukázky na úvodní stránce; seed dospělé hry partnera a lokalitu jen přepisuje, aby nesmazal dětskou hru
+- [x] Krok 2: příznak `for_children` na hře (V12): písmena tajenky v pořadí, nápovědy bez údaje o penalizaci, finále bez časů s diplomem; vlastní hláška špatné odpovědi
+- [ ] Krok 3: obrázky (`/images/deti/*.webp`) a nahrávky (`/audio/deti/*.mp3`)
+- [ ] Krok 4 (volitelně): obrázek u možnosti výběru (`station_choice.image_url`)
+- [ ] Krok 5: vyzkoušet s dítětem na testovacím serveru, s hradem doladit okno s mříží, věž a místo pro truhlu
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady

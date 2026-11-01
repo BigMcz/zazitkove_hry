@@ -90,6 +90,8 @@ erDiagram
         varchar intro_audio_url
         varchar outro_audio_url
         varchar cover_image_url
+        boolean for_children
+        varchar wrong_answer_text
         int estimated_minutes
         int session_validity_hours
         varchar language
@@ -634,12 +636,28 @@ CREATE TABLE partner_stock_count (
 CREATE INDEX ix_stock_count_partner_game ON partner_stock_count(partner_id, game_id, counted_at DESC);
 ```
 
+### V12
+
+Soubor `backend/src/main/resources/db/migration/V12__game_for_children.sql`:
+
+```sql
+-- =========================================================
+-- Hra pro děti (docs/06-prototypova-detska-hra.md).
+-- for_children: písmena tajenky v pořadí (nezpřeházená), nápovědy bez údaje o penalizaci,
+--               finále bez časů s diplomem.
+-- wrong_answer_text: hláška po špatné odpovědi, NULL = výchozí „To není ono. Zkus to znovu.“
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN for_children      BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN wrong_answer_text VARCHAR(300);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
 |---|---|---|
 | `db/migration` | `V1__init_schema.sql`, `V2__…` | Všechna prostředí |
-| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) + vývojový účet hradu `hrad` / `hrad-loket` | Jen profil `dev` |
+| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) + vývojový účet hradu `hrad` / `hrad-loket`; `R__demo_game_children.sql` (repeatable, běží po něm) — dětská hra na stejné lokalitě + kód `DEMO-DETI` | Jen profil `dev` |
 
 - Seed demo hry je **repeatable migrace** — spustí se znovu při každé změně obsahu souboru, takže herní texty lze ladit bez nových verzí schématu. Seed musí být idempotentní: nejprve smaže demo partnera/lokalitu/hru podle pevných UUID (kaskádně i stanoviště a relace), pak je vloží znovu.
 - Pevná UUID v seedu (např. `00000000-0000-0000-0000-00000000000x`) usnadní testy a ladění.
@@ -660,3 +678,4 @@ CREATE INDEX ix_stock_count_partner_game ON partner_stock_count(partner_id, game
 | V9 | Tajenka: `station.puzzle_letter` — písmeno, které hráč získá vyřešením stanoviště |
 | V10 | Offline režim: tabulka `session_event` — přijaté akce z telefonu (idempotence podle `id` z telefonu, čas hraní) |
 | V11 | Inventura kartiček: tabulka `partner_stock_count` — hrad může snížit počet kartiček hry na skladě (prodané, ale neaktivované) |
+| V12 | Hra pro děti: `game.for_children` (písmena tajenky v pořadí, nápovědy bez údaje o penalizaci, finále bez časů s diplomem), `game.wrong_answer_text` (vlastní hláška po špatné odpovědi) |

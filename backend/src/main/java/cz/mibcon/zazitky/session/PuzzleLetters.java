@@ -14,6 +14,7 @@ import cz.mibcon.zazitky.session.SessionDtos.Puzzle;
 /**
  * Letters of the final puzzle collected so far, in a scrambled order. The order is derived from the
  * session id, so it stays the same for the whole game (also after a reload or on another device).
+ * A game for children keeps the letters in order: reading the word is the puzzle.
  */
 final class PuzzleLetters {
 
@@ -21,13 +22,14 @@ final class PuzzleLetters {
     }
 
     /** @return null when no station of the game gives a letter */
-    static Puzzle of(UUID sessionId, List<Station> stations, Set<UUID> solvedStationIds, UUID lastSolvedStationId) {
+    static Puzzle of(UUID sessionId, boolean inOrder, List<Station> stations, Set<UUID> solvedStationIds,
+            UUID lastSolvedStationId) {
         List<Station> withLetter = stations.stream().filter(station -> station.getPuzzleLetter() != null).toList();
         if (withLetter.isEmpty()) {
             return null;
         }
 
-        List<Integer> slotOf = scrambledSlots(sessionId, withLetter.size());
+        List<Integer> slotOf = slots(sessionId, inOrder, withLetter.size());
         List<String> slots = new ArrayList<>(Collections.nCopies(withLetter.size(), (String) null));
         Integer latestSlot = null;
         for (int i = 0; i < withLetter.size(); i++) {
@@ -42,8 +44,11 @@ final class PuzzleLetters {
         return new Puzzle(slots, latestSlot);
     }
 
-    /** Slot of the i-th letter; never the original order, which would give the word away. */
-    static List<Integer> scrambledSlots(UUID sessionId, int size) {
+    /** Slot of the i-th letter; when scrambled never the original order, which would give the word away. */
+    static List<Integer> slots(UUID sessionId, boolean inOrder, int size) {
+        if (inOrder) {
+            return IntStream.range(0, size).boxed().toList();
+        }
         List<Integer> slots = new ArrayList<>(IntStream.range(0, size).boxed().toList());
         Collections.shuffle(slots, new Random(sessionId.getMostSignificantBits() ^ sessionId.getLeastSignificantBits()));
         if (size > 1 && IntStream.range(0, size).allMatch(i -> slots.get(i) == i)) {

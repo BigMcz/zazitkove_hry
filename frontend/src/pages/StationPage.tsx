@@ -156,6 +156,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
         hintsAvailable={station.hintsAvailable}
         nextHintPenaltySeconds={station.nextHintPenaltySeconds}
         pending={revealHint.isPending}
+        withoutPenalty={state.game.forChildren}
         onReveal={handleHint}
       />
 

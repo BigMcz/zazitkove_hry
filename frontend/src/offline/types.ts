@@ -7,7 +7,16 @@ import type { TaskType } from '../api/types.ts'
 export interface GamePackage {
   gameId: string
   /** What the phone needs to play without the server. */
-  session: { gameTitle: string; teamName: string | null; startedAt: string; expiresAt: string }
+  session: {
+    gameTitle: string
+    /** Missing in packages downloaded before the games for children. */
+    forChildren?: boolean
+    /** Message after a wrong answer, null = the default one. */
+    wrongAnswerText?: string | null
+    teamName: string | null
+    startedAt: string
+    expiresAt: string
+  }
   /** PBKDF2-HMAC-SHA256 iterations for the answer keys. */
   kdfIterations: number
   firstStation: StationContent

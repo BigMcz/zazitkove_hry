@@ -1,7 +1,8 @@
 -- =========================================================
 -- Demo hra „Katova povinnost“ (docs/04-prototypova-hra.md)
--- Repeatable migrace, běží jen v profilu dev. Idempotentní: nejprve smaže demo data
--- podle pevných UUID (kaskádně i stanoviště a rozehrané relace demo hry), pak je vloží znovu.
+-- Repeatable migrace, běží jen v profilu dev. Idempotentní: nejprve smaže demo hru podle pevných UUID
+-- (kaskádně i stanoviště a rozehrané relace), pak ji vloží znovu. Partnera, lokalitu a vývojový účet
+-- jen přepíše, protože na stejné lokalitě stojí i dětská hra (R__demo_game_children.sql, běží po této).
 --
 -- Pevná UUID:
 --   00000000-0000-0000-0000-00000000000X  partner (1), lokalita (2), hra (3)
@@ -23,18 +24,20 @@ DELETE FROM access_code WHERE batch_id IN
     (SELECT id FROM access_code_batch WHERE game_id = '00000000-0000-0000-0000-000000000003');
 DELETE FROM access_code_batch WHERE game_id = '00000000-0000-0000-0000-000000000003';
 DELETE FROM game WHERE id = '00000000-0000-0000-0000-000000000003';
-DELETE FROM location WHERE id = '00000000-0000-0000-0000-000000000002';
-DELETE FROM partner WHERE id = '00000000-0000-0000-0000-000000000001';
 
 INSERT INTO partner (id, name, contact_person, contact_email)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner', 'Jan Kastelán', 'demo@example.cz');
+VALUES ('00000000-0000-0000-0000-000000000001', 'Demo partner', 'Jan Kastelán', 'demo@example.cz')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, contact_person = EXCLUDED.contact_person,
+                               contact_email = EXCLUDED.contact_email;
 
 -- Podíl Demo partnera 50 % od začátku roku 2026 (historie podílů, viz partner_share)
 INSERT INTO partner_share (id, partner_id, valid_from, share_pct)
-VALUES ('00000000-0000-0000-0008-000000000001', '00000000-0000-0000-0000-000000000001', DATE '2026-01-01', 50.00);
+VALUES ('00000000-0000-0000-0008-000000000001', '00000000-0000-0000-0000-000000000001', DATE '2026-01-01', 50.00)
+ON CONFLICT (partner_id, valid_from) DO UPDATE SET share_pct = EXCLUDED.share_pct;
 
 INSERT INTO location (id, partner_id, name, city)
-VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Hrad Loket (demo)', 'Loket');
+VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Hrad Loket (demo)', 'Loket')
+ON CONFLICT (id) DO UPDATE SET partner_id = EXCLUDED.partner_id, name = EXCLUDED.name, city = EXCLUDED.city;
 
 -- ---------------------------------------------------------
 -- Hra
@@ -258,4 +261,6 @@ VALUES ('00000000-0000-0000-0006-000000000001', '00000000-0000-0000-0005-0000000
 -- ---------------------------------------------------------
 INSERT INTO partner_user (id, partner_id, username, password_hash, display_name)
 VALUES ('00000000-0000-0000-0007-000000000001', '00000000-0000-0000-0000-000000000001', 'hrad',
-        '{bcrypt}$2a$10$xgzBVRPfBX5BRJLbpvvpbO77bHzUG9KWgs.O/bI7GcStYQPUUaT/m', 'Pokladna Demo hradu');
+        '{bcrypt}$2a$10$xgzBVRPfBX5BRJLbpvvpbO77bHzUG9KWgs.O/bI7GcStYQPUUaT/m', 'Pokladna Demo hradu')
+ON CONFLICT (id) DO UPDATE SET username = EXCLUDED.username, password_hash = EXCLUDED.password_hash,
+                               display_name = EXCLUDED.display_name;

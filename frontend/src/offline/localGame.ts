@@ -112,7 +112,7 @@ export async function localState(pack: GamePackage, progress: LocalProgress, now
 
   return {
     status: finished ? 'COMPLETED' : expired ? 'EXPIRED' : 'IN_PROGRESS',
-    game: { id: pack.gameId, title: pack.session.gameTitle },
+    game: { id: pack.gameId, title: pack.session.gameTitle, forChildren: pack.session.forChildren ?? false },
     teamName: pack.session.teamName,
     startedAt: pack.session.startedAt,
     penaltySeconds: penalty,
@@ -166,7 +166,8 @@ export async function localAnswer(
   const sealed = pack.stations.find((candidate) => candidate.id === stationId)
   const solved = sealed && normalized !== '' ? await solveStation(sealed, normalized, pack.kdfIterations) : null
   if (!solved) {
-    const message = isNumber && normalized === '' ? NOT_A_NUMBER_MESSAGE : WRONG_ANSWER_MESSAGE
+    const message =
+      isNumber && normalized === '' ? NOT_A_NUMBER_MESSAGE : (pack.session.wrongAnswerText ?? WRONG_ANSWER_MESSAGE)
     return { result: { correct: false, message }, solved: null, finished: false }
   }
   const { unlocked } = solved

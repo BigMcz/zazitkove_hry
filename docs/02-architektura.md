@@ -169,7 +169,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 | POST | `/sessions` | Zahájit hru kódem. Body: `{ "code": "ABCD-2345", "teamName": "Kuchtovi" }` → `201` + stav relace včetně `token`; když kód pokračuje v existující hře, `200` + její stav a token (`teamName` se ignoruje) |
 | GET | `/sessions/current` | Aktuální stav relace (pro obnovu i po každém kroku) |
 | POST | `/sessions/current/sync` | Akce zahrané v telefonu (offline), v pořadí: `{ "events": [ { "id": "<uuid z telefonu>", "type": "ANSWER", "stationId": "…", "answer": "…", "at": "2026-10-31T10:05:00Z" }, { "id": "…", "type": "HINT", "stationId": "…", "at": "…" } ] }` → stav relace. Stejná pravidla jako jednotlivé požadavky, ale v čase hraní; už přijatá akce (stejné `id`) se přeskočí, akce, kterou pravidla už nedovolí (stanoviště vyřešené jinde, žádná další nápověda), se zapíše bez účinku. Čas se drží mezi startem hry a přijetím a nejde zpět. Akce z doby platnosti kódu platí i po jejím vypršení; když hra ani tak není dokončená, odpověď je `410` (akce zůstanou zapsané). Max. 500 akcí |
-| GET | `/sessions/current/package` | Offline balíček rozehrané hry (`SessionPackage`): první stanoviště otevřeně, ostatní obsah zašifrovaný odpověďmi, klíče už vyřešených stanovišť, pořadí tajenky, seznam obrázků a zvuků, údaje relace (název hry, tým, start, platnost). Bez přijímaných odpovědí. Hra mimo `IN_PROGRESS` a `COMPLETED` → `409` |
+| GET | `/sessions/current/package` | Offline balíček rozehrané hry (`SessionPackage`): první stanoviště otevřeně, ostatní obsah zašifrovaný odpověďmi, klíče už vyřešených stanovišť, pořadí tajenky, seznam obrázků a zvuků, údaje relace (název hry, `forChildren`, `wrongAnswerText`, tým, start, platnost). Bez přijímaných odpovědí. Hra mimo `IN_PROGRESS` a `COMPLETED` → `409` |
 | POST | `/sessions/current/stations/{stationId}/answers` | Odeslat odpověď. Body: `{ "answer": "1625" }` |
 | POST | `/sessions/current/stations/{stationId}/hints` | Odkrýt další nápovědu → odkryté nápovědy a nová penalizace |
 | POST | `/sessions/current/abandon` | Opustit hru → `204` (opakované volání je bez efektu) |
@@ -179,7 +179,8 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 {
   "token": "e3f1…",            // jen v odpovědi na POST /sessions
   "status": "IN_PROGRESS",
-  "game": { "id": "4b0c…", "title": "Prokletí loketského kata" },
+  "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "forChildren": false },
+                              // forChildren: hra pro děti (tajenka v pořadí, nápovědy bez penalizace, finále s diplomem)
   "teamName": "Kuchtovi",
   "startedAt": "2026-10-28T10:15:00Z",
   "penaltySeconds": 60,
@@ -201,7 +202,8 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
   },
   "solvedStations": [ { "id": "…", "orderNo": 1, "title": "…", "rewardText": "…", "rewardAudioUrl": null, "nextText": "…" } ],
   "puzzle": { "slots": [null, "P", null, null, null, null, null, null, null], "latestSlot": 1 },
-                              // tajenka: písmena vyřešených stanovišť zpřeházeně (pořadí pevné pro hru, odvozené z id relace),
+                              // tajenka: písmena vyřešených stanovišť zpřeházeně (pořadí pevné pro hru, odvozené z id relace;
+                              // hra pro děti je má v pořadí),
                               // null = ještě nezískané; latestSlot = písmeno z posledního vyřešeného; null, když hra tajenku nemá
   "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3 }
 }
@@ -209,7 +211,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 
 ```json
 // POST …/answers  → 200
-{ "correct": false, "message": "To není ono. Zkus to znovu." }   // u NUMBER bez číslic: "Odpověď musí obsahovat číslo."
+{ "correct": false, "message": "To není ono. Zkus to znovu." }   // nebo game.wrong_answer_text; u NUMBER bez číslic: "Odpověď musí obsahovat číslo."
 { "correct": true, "rewardText": "…", "rewardAudioUrl": "…", "nextText": "Vystoupej k hradní bráně.",
   "nextStationId": "b2…", "gameCompleted": false }
 // poslední stanoviště: nextStationId (a obvykle i nextText) chybí, gameCompleted = true
@@ -324,7 +326,7 @@ Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduj
 - Po správné odpovědi klient přejde na `/play/reward` s textem odměny; stav relace se obnoví až tam (jinak by stránka stanoviště přesměrovala dřív, než se odměna zobrazí). Po reloadu odměnové stránky se zobrazí odměna posledního vyřešeného stanoviště.
 - **Namluvené texty:** úvod hry, příběh stanoviště, odměna a závěr mohou mít zvuk (MP3, pole `introAudioUrl`, `storyAudioUrl`, `rewardAudioUrl`, `outroAudioUrl`; null = jen text). `VoicePlayer` zvuk po otevření stránky zkusí spustit sám (prohlížeč to obvykle dovolí, protože předcházelo klepnutí hráče); když to prohlížeč zablokuje (hlavně iPhone), zůstává tlačítko „Poslechnout“. „Ztlumit“ si zařízení pamatuje v `localStorage` (`zazitky.voiceMuted`) a další texty se pak samy nespouští. Text zůstává na obrazovce jako titulky. Soubory jsou zatím ve `frontend/public/audio/` (zabalí se do JAR, server podporuje Range požadavky, které iPhone pro přehrávání vyžaduje).
 - **Obrázky a vedení hráče:** úvod hry (`coverImageUrl`) a stanoviště (`imageUrl`, `imageAlt`) mohou mít obrázek ve `frontend/public/images/`, jako WebP 900 px široký (`tools/grafika/web_images.py` z předlohy v `grafika/`; hra je celá stahuje do telefonu, demo: 11 obrázků = 1 MB). Chybí-li soubor (nahrávka nebo obrázek se teprve připravuje), přehrávač i obrázek se skryjí a hra jde dál jen s textem. U poslechové úlohy (`listenOnly`) je text příběhu skrytý za tlačítkem „Zobrazit přepis“; když nahrávka chybí, zobrazí se text rovnou. Pod odměnou je rámeček „Kam dál“ (`nextText`).
-- **Tajenka:** hra si písmena pamatuje za hráče. Na stanovišti i u odměny je řádek „Tajenka“ se získanými písmeny, zpřeházenými, aby poslední krok zůstal hádankou; u odměny je nově získané písmeno zvýrazněné (`puzzle.latestSlot`).
+- **Tajenka:** hra si písmena pamatuje za hráče. Na stanovišti i u odměny je řádek „Tajenka“ se získanými písmeny, zpřeházenými, aby poslední krok zůstal hádankou (hra pro děti je má v pořadí, přečíst slovo je pro ně hádanka dost); u odměny je nově získané písmeno zvýrazněné (`puzzle.latestSlot`).
 - `NUMBER` používá textové pole s `inputMode="numeric"` (numerická klávesnice, ale odpověď typu „56 schodů“ projde). `CHOICE` jsou velká tlačítka, klepnutí rovnou odešle odpověď.
 - Nápověda stojí čas, proto se odkrývá až po potvrzení, které ukazuje výši penalizace (`nextHintPenaltySeconds`).
 - Zahájení nové hry při existujícím tokenu nejdřív zavolá `abandon` na starou relaci.
@@ -403,7 +405,7 @@ Staging (`deploy/staging/`):
 - `Caddyfile` — `reverse_proxy app:8080`, basic auth se dvěma účty z proměnných (`BASIC_AUTH_*` pro tým, `PRESENTATION_AUTH_*` = `ukazka` pro prezentace), `X-Robots-Tag: noindex, nofollow`.
 - Tajemství (`DB_PASSWORD`, `ADMIN_PASSWORD`, hash basic auth) jen v `~/storyhold/.env` na serveru (práva 600), vzor `deploy/staging/.env.example`. Každá služba dostane jen své proměnné.
 - Pevně v `compose.yaml`: `PUBLIC_URL=https://test.storyhold.cz`, `FORWARD_HEADERS_STRATEGY=native`, `SESSION_COOKIE_SECURE=true`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/seed`.
-- Seed na stagingu vytvoří i vývojový kód `DEMO-KATA` a účet hradu `hrad` / `hrad-loket` (heslo je v repozitáři, za basic auth přijatelné). Heslo účtu jde v administraci změnit, ale každá změna `R__demo_game.sql` seed spustí znovu: vrátí heslo, smaže rozehrané hry demo hry a dávky kódů k ní (Q9).
+- Seed na stagingu vytvoří i vývojové kódy `DEMO-KATA` a `DEMO-DETI` (dětská hra, `R__demo_game_children.sql`) a účet hradu `hrad` / `hrad-loket` (heslo je v repozitáři, za basic auth přijatelné). Heslo účtu jde v administraci změnit, ale každá změna `R__demo_game.sql` seed spustí znovu: vrátí heslo, smaže rozehrané hry demo hry a dávky kódů k ní (Q9). Totéž platí pro `R__demo_game_children.sql` a dětskou hru.
 
 ### DNS a e-mail (`storyhold.cz`, WEDOS)
 
