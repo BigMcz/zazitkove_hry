@@ -1,5 +1,5 @@
 import { QueryClientProvider, onlineManager } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -52,6 +52,7 @@ const demoGame = {
   coverImageUrl: '/images/demo/cover.jpg',
   estimatedMinutes: 20,
   stationCount: 5,
+  forChildren: false,
 }
 
 const gamePackage: GamePackage = {
@@ -183,6 +184,18 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Hrát bez zvuku' }))
     expect(screen.getByText('Píše se rok 1621.')).toBeInTheDocument()
     expect(localStorage.getItem('zazitky.voiceMuted')).toBe('1')
+  })
+
+  it('asks a game for children for the name on the diploma', async () => {
+    mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'DEMO-DETI', game: { ...demoGame, forChildren: true }, resumesGame: false, validUntil: null }),
+    })
+    renderApp('/?kod=DEMO-DETI')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pustit úvod' }))
+    expect(screen.getByLabelText(/Jméno na diplom/)).toHaveAccessibleDescription(/dostane malý hráč diplom/)
+    expect(screen.queryByLabelText(/Název týmu/)).not.toBeInTheDocument()
   })
 
   it('starts the children demo game with its own code', async () => {
@@ -491,13 +504,22 @@ describe('App', () => {
           startedAt: '2026-11-01T10:00:00Z',
           progress: { solved: 7, total: 7 },
           currentStation: null,
-          finale: { outroText: 'Poklad! Krá!', totalSeconds: 1500, hintsUsed: 3 },
+          finale: {
+            outroText: 'Poklad! Krá!',
+            totalSeconds: 1500,
+            hintsUsed: 3,
+            diplomaTitle: 'Pomocník kronikáře',
+            diplomaImageUrl: '/images/deti/diplom.webp',
+          },
         }),
     })
     renderApp('/play')
 
     const diploma = await screen.findByRole('region', { name: 'Diplom' })
+    expect(diploma).toHaveTextContent('Pomocník kronikáře')
     expect(diploma).toHaveTextContent('Kryštofovi')
+    expect(within(diploma).getByRole('presentation')).toHaveAttribute('src', '/images/deti/diplom.webp')
+    expect(screen.getByRole('button', { name: 'Uložit diplom' })).toBeInTheDocument()
     expect(diploma).toHaveTextContent('za vyřešení všech 7 hádanek ve hře Poklad mistra Husse')
     expect(diploma).toHaveTextContent('1. 11. 2026')
     expect(screen.getByText(/Vyřešili jste všech 7 úkolů\./)).not.toHaveTextContent('Nápověd')

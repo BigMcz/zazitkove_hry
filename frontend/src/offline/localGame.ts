@@ -130,6 +130,8 @@ export async function localState(pack: GamePackage, progress: LocalProgress, now
                 (new Date(progress.finishedAt).getTime() - new Date(pack.session.startedAt).getTime()) / 1000,
               ) + penalty,
             hintsUsed: contents.reduce((sum, station) => sum + revealedCount(progress, station), 0),
+            diplomaTitle: finale.diplomaTitle ?? null,
+            diplomaImageUrl: finale.diplomaImageUrl ?? null,
           }
         : null,
   }

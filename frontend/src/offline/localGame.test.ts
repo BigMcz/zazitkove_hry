@@ -118,7 +118,14 @@ describe('localGame', () => {
     expect(state.status).toBe('COMPLETED')
     expect(state.currentStation).toBeNull()
     // 40 minutes of play + 60 s for the hint
-    expect(state.finale).toEqual({ outroText: 'Konec hry', outroAudioUrl: null, totalSeconds: 2460, hintsUsed: 1 })
+    expect(state.finale).toEqual({
+      outroText: 'Konec hry',
+      outroAudioUrl: null,
+      totalSeconds: 2460,
+      hintsUsed: 1,
+      diplomaTitle: null,
+      diplomaImageUrl: null,
+    })
   })
 
   it('expires with the code', async () => {

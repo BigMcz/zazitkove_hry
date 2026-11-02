@@ -67,6 +67,14 @@ public class Game {
     @Column(length = 300)
     private String wrongAnswerText;
 
+    /** Title on the diploma of a game for children, e.g. „Pomocník kronikáře“; null = none. */
+    @Column(length = 100)
+    private String diplomaTitle;
+
+    /** Picture on the diploma; null = the cover picture. */
+    @Column(length = 500)
+    private String diplomaImageUrl;
+
     private Integer estimatedMinutes;
 
     @Column(nullable = false)
@@ -186,6 +194,27 @@ public class Game {
 
     public void setWrongAnswerText(String wrongAnswerText) {
         this.wrongAnswerText = wrongAnswerText;
+    }
+
+    public String getDiplomaTitle() {
+        return diplomaTitle;
+    }
+
+    public void setDiplomaTitle(String diplomaTitle) {
+        this.diplomaTitle = diplomaTitle;
+    }
+
+    public String getDiplomaImageUrl() {
+        return diplomaImageUrl;
+    }
+
+    public void setDiplomaImageUrl(String diplomaImageUrl) {
+        this.diplomaImageUrl = diplomaImageUrl;
+    }
+
+    /** The diploma picture, or the cover when the game has none of its own. */
+    public String diplomaImageOrCover() {
+        return diplomaImageUrl != null ? diplomaImageUrl : coverImageUrl;
     }
 
     public Integer getEstimatedMinutes() {

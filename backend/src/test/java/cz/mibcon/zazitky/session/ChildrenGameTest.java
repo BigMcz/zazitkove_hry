@@ -1,5 +1,6 @@
 package cz.mibcon.zazitky.session;
 
+import static org.hamcrest.Matchers.endsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,6 +56,26 @@ class ChildrenGameTest {
     }
 
     @Test
+    void endsWithADiplomaForTheNameFromTheStart() throws Exception {
+        mvc.perform(post("/api/v1/access-codes/check").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"DEMO-DETI\"}"))
+                .andExpect(jsonPath("$.game.forChildren").value(true));
+        String token = startGame();
+        String[] answers = {"Řeka se ohýbá jako ruka", "Stříbrný", "4", "5", "Z husy", "6", "poklad"};
+        for (int i = 0; i < answers.length; i++) {
+            answer(token, "00000000-0000-0001-0001-%012d".formatted(i + 1), answers[i])
+                    .andExpect(jsonPath("$.correct").value(true));
+        }
+
+        state(token)
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.teamName").value("Kryštofovi"))
+                .andExpect(jsonPath("$.finale.diplomaTitle").value("Pomocník kronikáře"))
+                .andExpect(jsonPath("$.finale.diplomaImageUrl").value("/images/deti/diplom.webp"))
+                .andExpect(jsonPath("$.finale.outroText").value(endsWith("Ukaž ho doma všem! Krá krá!“")));
+    }
+
+    @Test
     void theAdultGameStaysAsItWas() throws Exception {
         String body = mvc.perform(post("/api/v1/sessions").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\",\"teamName\":null}"))
@@ -63,6 +84,9 @@ class ChildrenGameTest {
         String token = JsonPath.read(body, "$.token");
 
         state(token).andExpect(jsonPath("$.game.forChildren").value(false));
+        mvc.perform(post("/api/v1/access-codes/check").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\"}"))
+                .andExpect(jsonPath("$.game.forChildren").value(false));
         answer(token, SessionApiTest.STATION_1, "Tvar hradní věže")
                 .andExpect(jsonPath("$.message").value(SessionService.WRONG_ANSWER_MESSAGE));
         mvc.perform(get("/api/v1/sessions/current/package").header(SessionController.TOKEN_HEADER, token))

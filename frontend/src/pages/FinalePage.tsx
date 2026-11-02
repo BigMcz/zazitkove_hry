@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router'
+import Diploma from '../components/Diploma.tsx'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { formatDuration } from '../components/formatDuration.ts'
 import Page from '../components/Page.tsx'
@@ -50,10 +51,14 @@ export default function FinalePage() {
 
       {state.game.forChildren ? (
         <Diploma
-          teamName={state.teamName}
-          gameTitle={state.game.title}
-          tasks={state.progress.total}
-          playedAt={state.startedAt}
+          content={{
+            name: state.teamName,
+            title: finale.diplomaTitle ?? null,
+            gameTitle: state.game.title,
+            tasks: state.progress.total,
+            playedAt: state.startedAt,
+            imageUrl: finale.diplomaImageUrl ?? null,
+          }}
         />
       ) : (
       <section aria-labelledby="summary-heading" className={card}>
@@ -78,34 +83,3 @@ export default function FinalePage() {
   )
 }
 
-/** Instead of times and penalties a game for children ends with a diploma to show (or photograph). */
-function Diploma({
-  teamName,
-  gameTitle,
-  tasks,
-  playedAt,
-}: {
-  teamName: string | null
-  gameTitle: string
-  tasks: number
-  playedAt: string
-}) {
-  return (
-    <section
-      aria-labelledby="diploma-heading"
-      className="flex flex-col items-center gap-2 rounded-2xl border-4 border-double border-amber-600 bg-amber-50 px-5 py-8 text-center"
-    >
-      <p aria-hidden="true" className="text-4xl">
-        🏅
-      </p>
-      <h2 id="diploma-heading" className="font-serif text-3xl font-bold text-stone-950">
-        Diplom
-      </h2>
-      {teamName && <p className="font-serif text-2xl font-bold text-amber-900">{teamName}</p>}
-      <p className="text-lg text-stone-900">
-        za vyřešení všech {tasks} hádanek ve hře <strong>{gameTitle}</strong>
-      </p>
-      <p className="text-sm text-stone-700">{new Date(playedAt).toLocaleDateString('cs-CZ')}</p>
-    </section>
-  )
-}

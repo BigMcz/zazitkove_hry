@@ -340,7 +340,9 @@ public class SessionService {
                 game.getOutroAudioUrl(),
                 Duration.between(session.getStartedAt(), session.getFinishedAt()).toSeconds()
                         + session.getPenaltySeconds(),
-                progress.stream().mapToInt(SessionProgress::getHintsUsed).sum());
+                progress.stream().mapToInt(SessionProgress::getHintsUsed).sum(),
+                game.getDiplomaTitle(),
+                game.diplomaImageOrCover());
 
         return new SessionState(
                 includeToken ? session.getToken() : null,

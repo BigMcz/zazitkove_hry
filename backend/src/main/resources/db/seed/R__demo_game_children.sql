@@ -13,7 +13,7 @@
 --   00000000-0000-0001-0005-000000000001  vývojová dávka kódů, 00000000-0000-0001-0006-000000000001 její kód
 --
 -- Hra pro děti (for_children, V12): písmena v pořadí, bez časů, diplom; Kryštofova hláška po špatné odpovědi.
--- Obrázky a nahrávky zatím nejsou (NULL), doplní se s nimi. Nápovědy jsou bez penalizace.
+-- Nápovědy jsou bez penalizace.
 -- accepted_answer.normalized_value se vyplňuje ručně podle TextNormalizer; shodu hlídá DemoGameSeedTest.
 -- =========================================================
 
@@ -28,7 +28,7 @@ DELETE FROM game WHERE id = '00000000-0000-0001-0000-000000000003';
 -- ---------------------------------------------------------
 INSERT INTO game (id, location_id, slug, title, subtitle, intro_text, outro_text,
                   estimated_minutes, session_validity_hours, language, status, for_children, wrong_answer_text,
-                  intro_audio_url, cover_image_url)
+                  intro_audio_url, outro_audio_url, cover_image_url, diploma_title, diploma_image_url)
 VALUES ('00000000-0000-0001-0000-000000000003', '00000000-0000-0000-0000-000000000002',
         'deti-poklad-mistra-husse',
         'Poklad mistra Husse',
@@ -44,11 +44,14 @@ Za každou hádanku ti Kryštof dá jedno písmenko. Na konci z nich složíš k
 
 „Děkuji, písaři. Podívejme, co je v truhle… Staré mince a kamínky do mé sbírky. A tady dole čistá kniha. Do té začneme psát novou kroniku. A první zápis bude o tobě, můj nejšikovnější pomocníku.“
 
-Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.',
+Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.
+
+„Krá! A ještě něco! Tohle se ti povedlo perfektně. Všechny moje hádanky máš vyřešené, to se mi ještě nestalo! Za to od nás dostáváš diplom pomocníka kronikáře. Najdeš ho hned tady dole. Ukaž ho doma všem! Krá krá!“',
         30, 24, 'cs', 'PUBLISHED', TRUE, 'Krá, to ne! Zkus to znovu.',
         -- Nahrávky z audio/deti-poklad-mistra-husse/ (ElevenLabs), obrázky z grafika/deti-poklad-mistra-husse/
         -- (ChatGPT, převod tools/grafika/web_images.py); ostatní se doplní postupně
-        '/audio/deti/intro.mp3', '/images/deti/cover.webp');
+        '/audio/deti/intro.mp3', '/audio/deti/zaver.mp3', '/images/deti/cover.webp', 'Pomocník kronikáře',
+        '/images/deti/diplom.webp');
 
 -- ---------------------------------------------------------
 -- Kroky (stanoviště)
@@ -76,7 +79,7 @@ Kryštof: „Krá! A jaký klíč přijde teď?“',
  'CHOICE',
  'Krá! Stříbrný! Druhé písmenko je O.',
  'Projdi na nádvoří. Kryštof si pro tebe připravil zvukovou hádanku.',
- NULL, NULL,
+ '/audio/deti/st02-pribeh.mp3', '/audio/deti/st02-odmena.mp3',
  '/images/deti/st02.webp', 'Vlídný žalářník se zlatými a stříbrnými klíči a Kryštofem na rameni',
  FALSE, 'O'),
 ('00000000-0000-0001-0001-000000000003', '00000000-0000-0001-0000-000000000003', 3,
@@ -90,7 +93,7 @@ Krá!“',
  'NUMBER',
  'Krá! Čtyři! Kůň, pes, kohout a kočka. Koně tahali vozy a kočky chytaly myši. Písmenko K.',
  'Sestup do sklepení k vězení. Neboj, dnes už je prázdné.',
- NULL, NULL,
+ '/audio/deti/st03-pribeh.mp3', '/audio/deti/st03-odmena.mp3',
  '/images/deti/st03.webp', 'Kryštof zpívá na okraji studny na hradním nádvoří',
  TRUE, 'K'),
 ('00000000-0000-0001-0001-000000000004', '00000000-0000-0001-0000-000000000003', 4,
@@ -102,8 +105,8 @@ Kryštof: „Krá! Tři tyče jdou shora dolů a dvě tyče zleva doprava.“',
  'NUMBER',
  'Krá! Pět! Přes takovou mříž neproletí ani krkavec. Písmenko L.',
  'Vyjdi nahoru do hradního paláce. Tam Huss psal svou kroniku.',
- NULL, NULL,
- NULL, NULL,
+ '/audio/deti/st04-pribeh.mp3', '/audio/deti/st04-odmena.mp3',
+ '/images/deti/st04.webp', 'Kryštof nakukuje do prosvíceného sklepa oknem s mříží',
  FALSE, 'L'),
 ('00000000-0000-0001-0001-000000000005', '00000000-0000-0001-0000-000000000003', 5,
  'Husí brk',
@@ -114,8 +117,8 @@ Kryštof: „Krá! A z kterého ptáka bylo Hussovo pero? Napovím: zní to skor
  'CHOICE',
  'Krá! Z husy! Husí brky se opravdu používaly nejčastěji. Huss a husa, to se pamatuje samo. Písmenko A.',
  'Vystoupej na hradní věž. Tam má Kryštof své hnízdo.',
- NULL, NULL,
- NULL, NULL,
+ '/audio/deti/st05-pribeh.mp3', '/audio/deti/st05-odmena.mp3',
+ '/images/deti/st05.webp', 'Pan Huss píše husím brkem do kroniky, Kryštof ho pozoruje z knihovny',
  FALSE, 'A'),
 ('00000000-0000-0001-0001-000000000006', '00000000-0000-0001-0000-000000000003', 6,
  'Kryštofovo hnízdo',
@@ -128,8 +131,8 @@ Krá!“',
  'NUMBER',
  'Krá! Šest! A ten nejlesklejší poklad je klíček od truhly. Dám ti ho, až řekneš tajné slovo. Poslední písmenko je D.',
  'Vrať se na nádvoří k truhle. Huss tam čeká.',
- NULL, NULL,
- NULL, NULL,
+ '/audio/deti/st06-pribeh.mp3', '/audio/deti/st06-odmena.mp3',
+ '/images/deti/st06.webp', 'Kryštof sedí v hnízdě plném lesklých knoflíků a se zlatým klíčkem na hradní věži',
  TRUE, 'D'),
 ('00000000-0000-0001-0001-000000000007', '00000000-0000-0001-0000-000000000003', 7,
  'Truhla',
@@ -140,8 +143,8 @@ Kryštof: „Krá! Přečti je za sebou a řekni tajné slovo!“',
  'TEXT',
  'Cvak! Zámek povolil a víko truhly se pomalu otevírá.',
  NULL,
- NULL, NULL,
- NULL, NULL,
+ '/audio/deti/st07-pribeh.mp3', '/audio/deti/st07-odmena.mp3',
+ '/images/deti/st07.webp', 'Kryštof podává panu Hussovi klíček u otevírající se truhly',
  FALSE, NULL);
 
 -- ---------------------------------------------------------

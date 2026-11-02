@@ -1,6 +1,6 @@
 # 06 — Dětská hra „Poklad mistra Husse“ (od 6 let)
 
-> **Stav: v dev seedu bez obrázků a nahrávek** (`R__demo_game_children.sql`, kód `DEMO-DETI`, příznak `for_children`, postup v `docs/05-plan-prototypu.md` F8). Dětská verze dema „Katova povinnost“ (`docs/04-prototypova-hra.md`). Obsahuje příběh, úkoly, texty k namluvení a prompty na obrázky.
+> **Stav: v dev seedu se všemi obrázky a nahrávkami** (`R__demo_game_children.sql`, kód `DEMO-DETI`, příznak `for_children`, postup v `docs/05-plan-prototypu.md` F8). Dětská verze dema „Katova povinnost“ (`docs/04-prototypova-hra.md`). Obsahuje příběh, úkoly, texty k namluvení a prompty na obrázky.
 
 ## Koncept
 
@@ -29,6 +29,10 @@ Hra běží vedle dospělé „Katovy povinnosti“ jako samostatná hra na stej
 | `estimated_minutes` | 30 |
 | `session_validity_hours` | 24 |
 | `status` | `PUBLISHED` |
+| `for_children` | `TRUE` |
+| `wrong_answer_text` | Krá, to ne! Zkus to znovu. |
+| `diploma_title` | Pomocník kronikáře |
+| `diploma_image_url` | `/images/deti/diplom.webp` |
 | Partner / lokalita | Demo partner / Hrad Loket |
 | Obrázky / zvuky | `/images/deti/`, `/audio/deti/` |
 
@@ -49,6 +53,8 @@ Hra běží vedle dospělé „Katovy povinnosti“ jako samostatná hra na stej
 **Huss:** Děkuji, písaři. Podívejme, co je v truhle… Staré mince a kamínky do mé sbírky. A tady dole čistá kniha. Do té začneme psát novou kroniku. A první zápis bude o tobě, můj nejšikovnější pomocníku.
 
 **Vypravěč:** Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.
+
+**Kryštof:** Krá! A ještě něco! Tohle se ti povedlo perfektně. Všechny moje hádanky máš vyřešené, to se mi ještě nestalo! Za to od nás dostáváš diplom pomocníka kronikáře. Najdeš ho hned tady dole. Ukaž ho doma všem! Krá krá!
 
 ---
 
@@ -304,6 +310,8 @@ Krá! Kolik lesklých knoflíků mám v hnízdě?
 
 **Vypravěč:** Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.
 
+**Kryštof:** Krá! A ještě něco! Tohle se ti povedlo perfektně. Všechny moje hádanky máš vyřešené, to se mi ještě nestalo! Za to od nás dostáváš diplom pomocníka kronikáře. Najdeš ho hned tady dole. Ukaž ho doma všem! Krá krá!
+
 ---
 
 ## Obrázky
@@ -420,7 +428,7 @@ Hra jde nahrát do seedu bez změny schématu. Hotovo v `R__demo_game_children.s
 | Rozšíření | Proč | Náročnost |
 |---|---|---|
 | ~~Vlastní hláška špatné odpovědi pro hru („Krá, to ne! Zkus to znovu.“)~~ hotovo (`game.wrong_answer_text`, V12); namluvená zatím ne | Výchozí zní úředně | malá |
-| ~~Finále bez času a penalizací, místo nich diplom se jménem týmu~~ hotovo (`game.for_children`, V12) | Soutěž s časem šestileté nezajímá | malá |
+| ~~Finále bez času a penalizací, místo nich diplom se jménem týmu~~ hotovo (`game.for_children`, V12): diplom s vlastním obrázkem (`game.diploma_image_url`, V14) a titulem (`game.diploma_title`, V13), jméno dítěte zadané na začátku hry, tlačítko „Uložit diplom“ (obrázek PNG A4 ke sdílení, uložení nebo tisku), na konci závěru Kryštofova pochvala | Soutěž s časem šestileté nezajímá | malá |
 | ~~Sbíraná písmena jako políčka na obrazovce stanoviště~~ hotovo (V9, u dětské hry v pořadí) | Dítě vidí, jak tajenka roste, a nemusí si písmena pamatovat | střední |
 | Obrázek u každé možnosti `CHOICE` | Dítě, které nečte, vybere samo | střední (`station_choice.image_url`) |
 | Odměna na pokladně po ukázání finále (samolepka, razítko) | Hmatatelný konec hry, argument pro hrad | jen dohoda s hradem |

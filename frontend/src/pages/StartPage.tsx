@@ -138,12 +138,19 @@ export default function StartPage() {
 
       <form onSubmit={(event) => void handleStart(event)} className="flex flex-col gap-3">
         <label htmlFor="team-name" className="text-base font-semibold text-stone-800">
-          Název týmu <span className="font-normal text-stone-600">(nepovinné)</span>
+          {game.forChildren ? 'Jméno na diplom' : 'Název týmu'}{' '}
+          <span className="font-normal text-stone-600">(nepovinné)</span>
         </label>
+        {game.forChildren && (
+          <p id="team-name-hint" className="-mt-2 text-sm text-stone-600">
+            Na konci hry dostane malý hráč diplom. Třeba Anička, nebo Anička a Tomáš.
+          </p>
+        )}
         <input
           id="team-name"
           type="text"
           autoComplete="off"
+          aria-describedby={game.forChildren ? 'team-name-hint' : undefined}
           maxLength={100}
           value={teamName}
           onChange={(event) => setTeamName(event.target.value)}

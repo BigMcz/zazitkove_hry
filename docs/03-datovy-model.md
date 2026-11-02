@@ -92,6 +92,8 @@ erDiagram
         varchar cover_image_url
         boolean for_children
         varchar wrong_answer_text
+        varchar diploma_title
+        varchar diploma_image_url
         int estimated_minutes
         int session_validity_hours
         varchar language
@@ -652,6 +654,32 @@ ALTER TABLE game
     ADD COLUMN wrong_answer_text VARCHAR(300);
 ```
 
+### V13
+
+Soubor `backend/src/main/resources/db/migration/V13__game_diploma_title.sql`:
+
+```sql
+-- =========================================================
+-- Diplom na konci hry pro děti (game.for_children, V12).
+-- diploma_title: titul na diplomu, např. „Pomocník kronikáře“; NULL = diplom bez titulu.
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN diploma_title VARCHAR(100);
+```
+
+### V14
+
+Soubor `backend/src/main/resources/db/migration/V14__game_diploma_image.sql`:
+
+```sql
+-- =========================================================
+-- Vlastní obrázek na diplom hry pro děti.
+-- diploma_image_url: cesta k obrázku na webu, NULL = na diplomu je obrázek hry (cover_image_url).
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN diploma_image_url VARCHAR(500);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -679,3 +707,5 @@ ALTER TABLE game
 | V10 | Offline režim: tabulka `session_event` — přijaté akce z telefonu (idempotence podle `id` z telefonu, čas hraní) |
 | V11 | Inventura kartiček: tabulka `partner_stock_count` — hrad může snížit počet kartiček hry na skladě (prodané, ale neaktivované) |
 | V12 | Hra pro děti: `game.for_children` (písmena tajenky v pořadí, nápovědy bez údaje o penalizaci, finále bez časů s diplomem), `game.wrong_answer_text` (vlastní hláška po špatné odpovědi) |
+| V13 | Diplom hry pro děti: `game.diploma_title` (titul na diplomu, např. „Pomocník kronikáře“) |
+| V14 | Vlastní obrázek na diplom: `game.diploma_image_url` (NULL = obrázek hry `cover_image_url`) |

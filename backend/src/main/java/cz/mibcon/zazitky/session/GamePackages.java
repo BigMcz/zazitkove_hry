@@ -82,7 +82,8 @@ class GamePackages {
             Unlocked unlocked = new Unlocked(station.getRewardText(), station.getRewardAudioUrl(),
                     station.getNextText(), station.getPuzzleLetter(),
                     next == null ? null : content(next),
-                    next == null ? new Finale(game.getOutroText(), game.getOutroAudioUrl()) : null);
+                    next == null ? new Finale(game.getOutroText(), game.getOutroAudioUrl(),
+                            game.getDiplomaTitle(), game.diplomaImageOrCover()) : null);
 
             byte[] rawKey = PackageCrypto.randomBytes(32);
             SecretKey contentKey = PackageCrypto.contentKey(rawKey);
@@ -120,7 +121,7 @@ class GamePackages {
                 .flatMap(station -> Stream.of(station.getImageUrl(), station.getStoryAudioUrl(),
                         station.getRewardAudioUrl()));
         Set<String> media = new LinkedHashSet<>();
-        Stream.of(intro, stations, Stream.of(game.getOutroAudioUrl()))
+        Stream.of(intro, stations, Stream.of(game.getOutroAudioUrl(), game.getDiplomaImageUrl()))
                 .flatMap(part -> part)
                 .filter(Objects::nonNull)
                 .forEach(media::add);

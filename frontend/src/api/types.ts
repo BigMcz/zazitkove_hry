@@ -15,6 +15,8 @@ export interface GameDetail {
   coverImageUrl: string | null
   estimatedMinutes: number | null
   stationCount: number
+  /** A game for children: the start asks for the name on the diploma instead of a team name. */
+  forChildren: boolean
 }
 
 /** Result of checking an access code typed by the player. */
@@ -75,6 +77,10 @@ export interface Finale {
   outroAudioUrl: string | null
   totalSeconds: number
   hintsUsed: number
+  /** Title on the diploma of a game for children, null = none. */
+  diplomaTitle?: string | null
+  /** Picture on the diploma, null = none. */
+  diplomaImageUrl?: string | null
 }
 
 export interface SessionState {

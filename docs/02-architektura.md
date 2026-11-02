@@ -156,7 +156,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
   "code": "ABCD-2345",
   "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "…", "introText": "Píše se rok 1625…",
             "introAudioUrl": "/audio/demo/intro.mp3", "coverImageUrl": "/images/demo/cover.webp",
-            "estimatedMinutes": 45, "stationCount": 5 },
+            "estimatedMinutes": 45, "stationCount": 5, "forChildren": false },
   "resumesGame": false,       // true = kód už je použitý, POST /sessions vrátí jeho rozehranou hru
   "validUntil": null          // po aktivaci konec platnosti; null i u vývojového kódu bez expirace
 }
@@ -205,7 +205,8 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
                               // tajenka: písmena vyřešených stanovišť zpřeházeně (pořadí pevné pro hru, odvozené z id relace;
                               // hra pro děti je má v pořadí),
                               // null = ještě nezískané; latestSlot = písmeno z posledního vyřešeného; null, když hra tajenku nemá
-  "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3 }
+  "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3,
+                              //   "diplomaTitle": null, "diplomaImageUrl": "…" } (titul a obrázek pro diplom hry pro děti)
 }
 ```
 

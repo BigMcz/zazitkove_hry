@@ -13,5 +13,7 @@ public record GameDetailDto(
         /** Picture on the intro screen, null = none. */
         String coverImageUrl,
         Integer estimatedMinutes,
-        long stationCount) {
+        long stationCount,
+        /** A game for children: the start asks for the name on the diploma instead of a team name. */
+        boolean forChildren) {
 }

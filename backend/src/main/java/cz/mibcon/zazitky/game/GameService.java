@@ -31,6 +31,7 @@ public class GameService {
                 game.getIntroAudioUrl(),
                 game.getCoverImageUrl(),
                 game.getEstimatedMinutes(),
-                stations.countByGameId(game.getId()));
+                stations.countByGameId(game.getId()),
+                game.isForChildren());
     }
 }

@@ -108,7 +108,12 @@ public final class SessionDtos {
     public record Puzzle(List<String> slots, Integer latestSlot) {
     }
 
-    public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed) {
+    /**
+     * @param diplomaTitle  title on the diploma of a game for children, null = none
+     * @param diplomaImageUrl picture on the diploma, null = none
+     */
+    public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed, String diplomaTitle,
+            String diplomaImageUrl) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
