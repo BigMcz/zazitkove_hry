@@ -61,12 +61,19 @@ describe('localGame', () => {
     const pack = await game()
     const children: GamePackage = {
       ...pack,
-      session: { ...pack.session, forChildren: true, wrongAnswerText: 'Krá, to ne! Zkus to znovu.' },
+      session: {
+        ...pack.session,
+        forChildren: true,
+        wrongAnswerText: 'Krá, to ne! Zkus to znovu.',
+        wrongAnswerAudioUrl: '/audio/deti/spatne.mp3',
+      },
     }
 
-    expect((await localAnswer(children, emptyProgress(), 's1', 'Tvar věže', DURING_GAME)).result.message).toBe(
-      'Krá, to ne! Zkus to znovu.',
-    )
+    expect((await localAnswer(children, emptyProgress(), 's1', 'Tvar věže', DURING_GAME)).result).toEqual({
+      correct: false,
+      message: 'Krá, to ne! Zkus to znovu.',
+      messageAudioUrl: '/audio/deti/spatne.mp3',
+    })
     expect((await localState(children, emptyProgress(), DURING_GAME)).game.forChildren).toBe(true)
     // A package downloaded before the games for children
     expect((await localState(pack, emptyProgress(), DURING_GAME)).game.forChildren).toBe(false)

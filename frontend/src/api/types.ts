@@ -103,6 +103,8 @@ export interface SessionState {
 export interface AnswerResult {
   correct: boolean
   message?: string
+  /** Recording of the message (e.g. Kryštof after a wrong answer). */
+  messageAudioUrl?: string
   rewardText?: string
   rewardAudioUrl?: string
   nextText?: string

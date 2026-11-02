@@ -14,6 +14,7 @@ import PuzzleLetters from '../components/PuzzleLetters.tsx'
 import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
+import { playOnce } from '../components/playOnce.ts'
 import { buttonSecondary, linkSubtle } from '../components/ui.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 
@@ -94,6 +95,9 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
             navigate('/play/reward', { state: rewardState })
           } else {
             setFeedback(result.message ?? 'To není ono. Zkus to znovu.')
+            if (result.messageAudioUrl) {
+              playOnce(result.messageAudioUrl)
+            }
           }
         },
         onError: (err) => setError(onError(err)),

@@ -120,6 +120,8 @@ public final class SessionDtos {
     public record AnswerResult(
             boolean correct,
             String message,
+            /** Recording of the message, null = text only. */
+            String messageAudioUrl,
             String rewardText,
             String rewardAudioUrl,
             /** Where to go next, null = no direction. */
@@ -127,12 +129,12 @@ public final class SessionDtos {
             UUID nextStationId,
             Boolean gameCompleted) {
 
-        static AnswerResult wrong(String message) {
-            return new AnswerResult(false, message, null, null, null, null, null);
+        static AnswerResult wrong(String message, String messageAudioUrl) {
+            return new AnswerResult(false, message, messageAudioUrl, null, null, null, null, null);
         }
 
         static AnswerResult solved(String rewardText, String rewardAudioUrl, String nextText, UUID nextStationId) {
-            return new AnswerResult(true, null, rewardText, rewardAudioUrl, nextText, nextStationId,
+            return new AnswerResult(true, null, null, rewardText, rewardAudioUrl, nextText, nextStationId,
                     nextStationId == null);
         }
     }

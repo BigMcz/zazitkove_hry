@@ -67,6 +67,10 @@ public class Game {
     @Column(length = 300)
     private String wrongAnswerText;
 
+    /** Recording of the message after a wrong answer; null = text only. */
+    @Column(length = 500)
+    private String wrongAnswerAudioUrl;
+
     /** Title on the diploma of a game for children, e.g. „Pomocník kronikáře“; null = none. */
     @Column(length = 100)
     private String diplomaTitle;
@@ -194,6 +198,14 @@ public class Game {
 
     public void setWrongAnswerText(String wrongAnswerText) {
         this.wrongAnswerText = wrongAnswerText;
+    }
+
+    public String getWrongAnswerAudioUrl() {
+        return wrongAnswerAudioUrl;
+    }
+
+    public void setWrongAnswerAudioUrl(String wrongAnswerAudioUrl) {
+        this.wrongAnswerAudioUrl = wrongAnswerAudioUrl;
     }
 
     public String getDiplomaTitle() {

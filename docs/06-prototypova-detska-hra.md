@@ -427,7 +427,7 @@ Hra jde nahrát do seedu bez změny schématu. Hotovo v `R__demo_game_children.s
 
 | Rozšíření | Proč | Náročnost |
 |---|---|---|
-| ~~Vlastní hláška špatné odpovědi pro hru („Krá, to ne! Zkus to znovu.“)~~ hotovo (`game.wrong_answer_text`, V12); namluvená zatím ne | Výchozí zní úředně | malá |
+| ~~Vlastní hláška špatné odpovědi pro hru („Krá, to ne! Zkus to znovu.“)~~ hotovo (`game.wrong_answer_text`, V12), namluvená Kryštofem (`game.wrong_answer_audio_url`, V15) | Výchozí zní úředně | malá |
 | ~~Finále bez času a penalizací, místo nich diplom se jménem týmu~~ hotovo (`game.for_children`, V12): diplom s vlastním obrázkem (`game.diploma_image_url`, V14) a titulem (`game.diploma_title`, V13), jméno dítěte zadané na začátku hry, tlačítko „Uložit diplom“ (obrázek PNG A4 ke sdílení, uložení nebo tisku), na konci závěru Kryštofova pochvala | Soutěž s časem šestileté nezajímá | malá |
 | ~~Sbíraná písmena jako políčka na obrazovce stanoviště~~ hotovo (V9, u dětské hry v pořadí) | Dítě vidí, jak tajenka roste, a nemusí si písmena pamatovat | střední |
 | Obrázek u každé možnosti `CHOICE` | Dítě, které nečte, vybere samo | střední (`station_choice.image_url`) |

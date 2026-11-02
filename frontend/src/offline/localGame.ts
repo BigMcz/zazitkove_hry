@@ -168,9 +168,15 @@ export async function localAnswer(
   const sealed = pack.stations.find((candidate) => candidate.id === stationId)
   const solved = sealed && normalized !== '' ? await solveStation(sealed, normalized, pack.kdfIterations) : null
   if (!solved) {
-    const message =
-      isNumber && normalized === '' ? NOT_A_NUMBER_MESSAGE : (pack.session.wrongAnswerText ?? WRONG_ANSWER_MESSAGE)
-    return { result: { correct: false, message }, solved: null, finished: false }
+    const result: AnswerResult =
+      isNumber && normalized === ''
+        ? { correct: false, message: NOT_A_NUMBER_MESSAGE }
+        : {
+            correct: false,
+            message: pack.session.wrongAnswerText ?? WRONG_ANSWER_MESSAGE,
+            messageAudioUrl: pack.session.wrongAnswerAudioUrl ?? undefined,
+          }
+    return { result, solved: null, finished: false }
   }
   const { unlocked } = solved
   return {

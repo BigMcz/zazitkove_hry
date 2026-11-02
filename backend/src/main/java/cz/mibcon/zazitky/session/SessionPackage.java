@@ -28,9 +28,12 @@ public record SessionPackage(
         /** Pictures and sounds of the game to download for playing without a signal. */
         List<String> media) {
 
-    /** @param wrongAnswerText message after a wrong answer, null = the default one */
-    public record SessionInfo(String gameTitle, boolean forChildren, String wrongAnswerText, String teamName,
-            Instant startedAt, Instant expiresAt) {
+    /**
+     * @param wrongAnswerText     message after a wrong answer, null = the default one
+     * @param wrongAnswerAudioUrl recording of that message, null = text only
+     */
+    public record SessionInfo(String gameTitle, boolean forChildren, String wrongAnswerText,
+            String wrongAnswerAudioUrl, String teamName, Instant startedAt, Instant expiresAt) {
     }
 
     public record StationContent(

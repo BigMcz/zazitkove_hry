@@ -213,6 +213,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 ```json
 // POST …/answers  → 200
 { "correct": false, "message": "To není ono. Zkus to znovu." }   // nebo game.wrong_answer_text; u NUMBER bez číslic: "Odpověď musí obsahovat číslo."
+{ "correct": false, "message": "Krá, to ne! Zkus to znovu.", "messageAudioUrl": "/audio/deti/spatne.mp3" }   // hra s game.wrong_answer_audio_url: telefon hlášku přehraje (ne u chybějícího čísla, ne při ztlumeném hlasu)
 { "correct": true, "rewardText": "…", "rewardAudioUrl": "…", "nextText": "Vystoupej k hradní bráně.",
   "nextStationId": "b2…", "gameCompleted": false }
 // poslední stanoviště: nextStationId (a obvykle i nextText) chybí, gameCompleted = true

@@ -1,6 +1,7 @@
 package cz.mibcon.zazitky.session;
 
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,7 +36,8 @@ class ChildrenGameTest {
 
         answer(token, STATION_1, "Hrad má tvar boty")
                 .andExpect(jsonPath("$.correct").value(false))
-                .andExpect(jsonPath("$.message").value("Krá, to ne! Zkus to znovu."));
+                .andExpect(jsonPath("$.message").value("Krá, to ne! Zkus to znovu."))
+                .andExpect(jsonPath("$.messageAudioUrl").value("/audio/deti/spatne.mp3"));
         hint(token, STATION_1).andExpect(jsonPath("$.penaltySeconds").value(0));
         answer(token, STATION_1, "Řeka se ohýbá jako ruka").andExpect(jsonPath("$.correct").value(true));
         answer(token, STATION_2, "stříbrný").andExpect(jsonPath("$.correct").value(true));
@@ -51,6 +53,8 @@ class ChildrenGameTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.session.forChildren").value(true))
                 .andExpect(jsonPath("$.session.wrongAnswerText").value("Krá, to ne! Zkus to znovu."))
+                .andExpect(jsonPath("$.session.wrongAnswerAudioUrl").value("/audio/deti/spatne.mp3"))
+                .andExpect(jsonPath("$.media", hasItem("/audio/deti/spatne.mp3")))
                 .andExpect(jsonPath("$.puzzleSlots['" + STATION_1 + "']").value(0))
                 .andExpect(jsonPath("$.puzzleSlots['" + STATION_2 + "']").value(1));
     }
@@ -88,7 +92,8 @@ class ChildrenGameTest {
                         .content("{\"code\":\"" + IntegrationTest.DEV_CODE + "\"}"))
                 .andExpect(jsonPath("$.game.forChildren").value(false));
         answer(token, SessionApiTest.STATION_1, "Tvar hradní věže")
-                .andExpect(jsonPath("$.message").value(SessionService.WRONG_ANSWER_MESSAGE));
+                .andExpect(jsonPath("$.message").value(SessionService.WRONG_ANSWER_MESSAGE))
+                .andExpect(jsonPath("$.messageAudioUrl").doesNotExist());
         mvc.perform(get("/api/v1/sessions/current/package").header(SessionController.TOKEN_HEADER, token))
                 .andExpect(jsonPath("$.session.forChildren").value(false))
                 .andExpect(jsonPath("$.session.wrongAnswerText").isEmpty());

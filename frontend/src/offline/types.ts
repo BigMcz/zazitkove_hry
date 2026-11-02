@@ -13,6 +13,8 @@ export interface GamePackage {
     forChildren?: boolean
     /** Message after a wrong answer, null = the default one. */
     wrongAnswerText?: string | null
+    /** Recording of that message, null = text only. */
+    wrongAnswerAudioUrl?: string | null
     teamName: string | null
     startedAt: string
     expiresAt: string

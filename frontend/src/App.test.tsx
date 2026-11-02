@@ -455,6 +455,26 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Hradní věž' })).toBeInTheDocument()
   })
 
+  it('plays the recording of the message after a wrong answer', async () => {
+    const played: string[] = []
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (this: HTMLMediaElement) {
+      played.push(this.getAttribute('src') ?? this.src)
+      return Promise.resolve()
+    })
+    tokenStorage.set(TOKEN)
+    mockApi({
+      'GET /api/v1/sessions/current': () => json(inProgress),
+      'POST /api/v1/sessions/current/stations/s2/answers': () =>
+        json({ correct: false, message: 'Krá, to ne! Zkus to znovu.', messageAudioUrl: '/audio/deti/spatne.mp3' }),
+    })
+    renderApp('/play')
+
+    await userEvent.type(await screen.findByLabelText('Tvoje odpověď'), '60{Enter}')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Krá, to ne! Zkus to znovu.')
+    expect(played.some((src) => src.endsWith('/audio/deti/spatne.mp3'))).toBe(true)
+  })
+
   it('clears an expired game and returns home with the server message', async () => {
     tokenStorage.set(TOKEN)
     mockApi({

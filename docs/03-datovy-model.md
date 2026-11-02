@@ -92,6 +92,7 @@ erDiagram
         varchar cover_image_url
         boolean for_children
         varchar wrong_answer_text
+        varchar wrong_answer_audio_url
         varchar diploma_title
         varchar diploma_image_url
         int estimated_minutes
@@ -680,6 +681,19 @@ ALTER TABLE game
     ADD COLUMN diploma_image_url VARCHAR(500);
 ```
 
+### V15
+
+Soubor `backend/src/main/resources/db/migration/V15__game_wrong_answer_audio.sql`:
+
+```sql
+-- =========================================================
+-- Namluvená hláška po špatné odpovědi (hra pro děti).
+-- wrong_answer_audio_url: cesta k nahrávce na webu, NULL = hláška jen jako text.
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN wrong_answer_audio_url VARCHAR(500);
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
@@ -709,3 +723,4 @@ ALTER TABLE game
 | V12 | Hra pro děti: `game.for_children` (písmena tajenky v pořadí, nápovědy bez údaje o penalizaci, finále bez časů s diplomem), `game.wrong_answer_text` (vlastní hláška po špatné odpovědi) |
 | V13 | Diplom hry pro děti: `game.diploma_title` (titul na diplomu, např. „Pomocník kronikáře“) |
 | V14 | Vlastní obrázek na diplom: `game.diploma_image_url` (NULL = obrázek hry `cover_image_url`) |
+| V15 | Namluvená hláška po špatné odpovědi: `game.wrong_answer_audio_url` (NULL = jen text) |

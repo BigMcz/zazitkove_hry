@@ -153,8 +153,12 @@ public class SessionService {
 
         if (!evaluation.correct()) {
             boolean missingNumber = station.getTaskType() == TaskType.NUMBER && evaluation.normalizedAnswer().isEmpty();
-            String wrong = Objects.requireNonNullElse(session.getGame().getWrongAnswerText(), WRONG_ANSWER_MESSAGE);
-            return AnswerResult.wrong(missingNumber ? NOT_A_NUMBER_MESSAGE : wrong);
+            if (missingNumber) {
+                return AnswerResult.wrong(NOT_A_NUMBER_MESSAGE, null);
+            }
+            Game game = session.getGame();
+            return AnswerResult.wrong(Objects.requireNonNullElse(game.getWrongAnswerText(), WRONG_ANSWER_MESSAGE),
+                    game.getWrongAnswerAudioUrl());
         }
 
         progress.setStatus(ProgressStatus.SOLVED);

@@ -28,6 +28,7 @@ DELETE FROM game WHERE id = '00000000-0000-0001-0000-000000000003';
 -- ---------------------------------------------------------
 INSERT INTO game (id, location_id, slug, title, subtitle, intro_text, outro_text,
                   estimated_minutes, session_validity_hours, language, status, for_children, wrong_answer_text,
+                  wrong_answer_audio_url,
                   intro_audio_url, outro_audio_url, cover_image_url, diploma_title, diploma_image_url)
 VALUES ('00000000-0000-0001-0000-000000000003', '00000000-0000-0000-0000-000000000002',
         'deti-poklad-mistra-husse',
@@ -47,7 +48,7 @@ Za každou hádanku ti Kryštof dá jedno písmenko. Na konci z nich složíš k
 Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. Krkavce Kryštofa jsme si vymysleli. Ale skuteční krkavci jsou moc chytří ptáci a umí napodobit spoustu zvuků.
 
 „Krá! A ještě něco! Tohle se ti povedlo perfektně. Všechny moje hádanky máš vyřešené, to se mi ještě nestalo! Za to od nás dostáváš diplom pomocníka kronikáře. Najdeš ho hned tady dole. Ukaž ho doma všem! Krá krá!“',
-        30, 24, 'cs', 'PUBLISHED', TRUE, 'Krá, to ne! Zkus to znovu.',
+        30, 24, 'cs', 'PUBLISHED', TRUE, 'Krá, to ne! Zkus to znovu.', '/audio/deti/spatne.mp3',
         -- Nahrávky z audio/deti-poklad-mistra-husse/ (ElevenLabs), obrázky z grafika/deti-poklad-mistra-husse/
         -- (ChatGPT, převod tools/grafika/web_images.py); ostatní se doplní postupně
         '/audio/deti/intro.mp3', '/audio/deti/zaver.mp3', '/images/deti/cover.webp', 'Pomocník kronikáře',

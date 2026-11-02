@@ -67,7 +67,7 @@ class GamePackages {
         }
 
         SessionInfo info = new SessionInfo(game.getTitle(), game.isForChildren(), game.getWrongAnswerText(),
-                session.getTeamName(), session.getStartedAt(), session.getExpiresAt());
+                game.getWrongAnswerAudioUrl(), session.getTeamName(), session.getStartedAt(), session.getExpiresAt());
         return new SessionPackage(game.getId(), info, PackageCrypto.KDF_ITERATIONS, sealed.firstStation(),
                 sealed.stations(), puzzleSlots, unlockedKeys, sealed.media());
     }
@@ -116,7 +116,8 @@ class GamePackages {
 
     /** In the order they are needed, so that the nearest stations are in the phone first and the ending last. */
     private static List<String> media(Game game) {
-        Stream<String> intro = Stream.of(game.getCoverImageUrl(), game.getIntroAudioUrl());
+        Stream<String> intro = Stream.of(game.getCoverImageUrl(), game.getIntroAudioUrl(),
+                game.getWrongAnswerAudioUrl());
         Stream<String> stations = game.getStations().stream()
                 .flatMap(station -> Stream.of(station.getImageUrl(), station.getStoryAudioUrl(),
                         station.getRewardAudioUrl()));
