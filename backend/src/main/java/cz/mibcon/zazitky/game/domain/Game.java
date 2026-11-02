@@ -79,6 +79,10 @@ public class Game {
     @Column(length = 500)
     private String diplomaImageUrl;
 
+    /** Picture at the top of the finale; null = none. */
+    @Column(length = 500)
+    private String outroImageUrl;
+
     private Integer estimatedMinutes;
 
     @Column(nullable = false)
@@ -222,6 +226,14 @@ public class Game {
 
     public void setDiplomaImageUrl(String diplomaImageUrl) {
         this.diplomaImageUrl = diplomaImageUrl;
+    }
+
+    public String getOutroImageUrl() {
+        return outroImageUrl;
+    }
+
+    public void setOutroImageUrl(String outroImageUrl) {
+        this.outroImageUrl = outroImageUrl;
     }
 
     /** The diploma picture, or the cover when the game has none of its own. */

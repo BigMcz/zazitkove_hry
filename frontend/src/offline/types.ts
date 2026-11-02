@@ -77,10 +77,11 @@ export interface Unlocked {
   nextText: string | null
   puzzleLetter: string | null
   next: StationContent | null
-  /** diplomaTitle and diplomaImageUrl are missing in packages downloaded before the diploma. */
+  /** outroImageUrl, diplomaTitle and diplomaImageUrl are missing in packages downloaded before them. */
   finale: {
     outroText: string
     outroAudioUrl: string | null
+    outroImageUrl?: string | null
     diplomaTitle?: string | null
     diplomaImageUrl?: string | null
   } | null

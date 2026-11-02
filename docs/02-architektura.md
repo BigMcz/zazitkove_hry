@@ -205,8 +205,9 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
                               // tajenka: písmena vyřešených stanovišť zpřeházeně (pořadí pevné pro hru, odvozené z id relace;
                               // hra pro děti je má v pořadí),
                               // null = ještě nezískané; latestSlot = písmeno z posledního vyřešeného; null, když hra tajenku nemá
-  "finale": null              // po dokončení: { "outroText": "…", "totalSeconds": 2710, "hintsUsed": 3,
-                              //   "diplomaTitle": null, "diplomaImageUrl": "…" } (titul a obrázek pro diplom hry pro děti)
+  "finale": null              // po dokončení: { "outroText": "…", "outroImageUrl": "…", "totalSeconds": 2710, "hintsUsed": 3,
+                              //   "diplomaTitle": null, "diplomaImageUrl": "…" } (obrázek nad závěrem, null = bez obrázku;
+                              //   titul a obrázek pro diplom hry pro děti)
 }
 ```
 

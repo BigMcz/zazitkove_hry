@@ -75,7 +75,11 @@ public record SessionPackage(
             Finale finale) {
     }
 
-    /** @param diplomaTitle title on the diploma of a game for children, null = none */
-    public record Finale(String outroText, String outroAudioUrl, String diplomaTitle, String diplomaImageUrl) {
+    /**
+     * @param outroImageUrl picture at the top of the finale, null = none
+     * @param diplomaTitle  title on the diploma of a game for children, null = none
+     */
+    public record Finale(String outroText, String outroAudioUrl, String outroImageUrl, String diplomaTitle,
+            String diplomaImageUrl) {
     }
 }

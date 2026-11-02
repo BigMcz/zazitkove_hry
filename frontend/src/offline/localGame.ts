@@ -125,6 +125,7 @@ export async function localState(pack: GamePackage, progress: LocalProgress, now
         ? {
             outroText: finale.outroText,
             outroAudioUrl: finale.outroAudioUrl,
+            outroImageUrl: finale.outroImageUrl ?? null,
             totalSeconds:
               Math.round(
                 (new Date(progress.finishedAt).getTime() - new Date(pack.session.startedAt).getTime()) / 1000,

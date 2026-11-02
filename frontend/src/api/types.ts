@@ -75,6 +75,8 @@ export interface Puzzle {
 export interface Finale {
   outroText: string
   outroAudioUrl: string | null
+  /** Picture at the top of the finale, null = none. */
+  outroImageUrl?: string | null
   totalSeconds: number
   hintsUsed: number
   /** Title on the diploma of a game for children, null = none. */

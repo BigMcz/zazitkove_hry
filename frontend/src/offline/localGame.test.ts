@@ -128,6 +128,7 @@ describe('localGame', () => {
     expect(state.finale).toEqual({
       outroText: 'Konec hry',
       outroAudioUrl: null,
+      outroImageUrl: null,
       totalSeconds: 2460,
       hintsUsed: 1,
       diplomaTitle: null,

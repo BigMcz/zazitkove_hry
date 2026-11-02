@@ -29,7 +29,8 @@ DELETE FROM game WHERE id = '00000000-0000-0001-0000-000000000003';
 INSERT INTO game (id, location_id, slug, title, subtitle, intro_text, outro_text,
                   estimated_minutes, session_validity_hours, language, status, for_children, wrong_answer_text,
                   wrong_answer_audio_url,
-                  intro_audio_url, outro_audio_url, cover_image_url, diploma_title, diploma_image_url)
+                  intro_audio_url, outro_audio_url, cover_image_url, diploma_title, diploma_image_url,
+                  outro_image_url)
 VALUES ('00000000-0000-0001-0000-000000000003', '00000000-0000-0000-0000-000000000002',
         'deti-poklad-mistra-husse',
         'Poklad mistra Husse',
@@ -52,7 +53,7 @@ Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. K
         -- Nahrávky z audio/deti-poklad-mistra-husse/ (ElevenLabs), obrázky z grafika/deti-poklad-mistra-husse/
         -- (ChatGPT, převod tools/grafika/web_images.py); ostatní se doplní postupně
         '/audio/deti/intro.mp3', '/audio/deti/zaver.mp3', '/images/deti/cover.webp', 'Pomocník kronikáře',
-        '/images/deti/diplom.webp');
+        '/images/deti/diplom.webp', '/images/deti/zaver.webp');
 
 -- ---------------------------------------------------------
 -- Kroky (stanoviště)

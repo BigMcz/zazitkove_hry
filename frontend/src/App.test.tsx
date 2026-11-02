@@ -526,6 +526,7 @@ describe('App', () => {
           currentStation: null,
           finale: {
             outroText: 'Poklad! Krá!',
+            outroImageUrl: '/images/deti/zaver.webp',
             totalSeconds: 1500,
             hintsUsed: 3,
             diplomaTitle: 'Pomocník kronikáře',
@@ -539,6 +540,7 @@ describe('App', () => {
     expect(diploma).toHaveTextContent('Pomocník kronikáře')
     expect(diploma).toHaveTextContent('Kryštofovi')
     expect(within(diploma).getByRole('presentation')).toHaveAttribute('src', '/images/deti/diplom.webp')
+    expect(document.querySelector('img[src="/images/deti/zaver.webp"]')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Uložit diplom' })).toBeInTheDocument()
     expect(diploma).toHaveTextContent('za vyřešení všech 7 hádanek ve hře Poklad mistra Husse')
     expect(diploma).toHaveTextContent('1. 11. 2026')

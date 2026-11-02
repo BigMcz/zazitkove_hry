@@ -342,6 +342,7 @@ public class SessionService {
         Finale finale = session.getStatus() != SessionStatus.COMPLETED ? null : new Finale(
                 game.getOutroText(),
                 game.getOutroAudioUrl(),
+                game.getOutroImageUrl(),
                 Duration.between(session.getStartedAt(), session.getFinishedAt()).toSeconds()
                         + session.getPenaltySeconds(),
                 progress.stream().mapToInt(SessionProgress::getHintsUsed).sum(),

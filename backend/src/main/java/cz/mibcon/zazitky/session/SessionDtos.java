@@ -109,11 +109,12 @@ public final class SessionDtos {
     }
 
     /**
+     * @param outroImageUrl picture at the top of the finale, null = none
      * @param diplomaTitle  title on the diploma of a game for children, null = none
      * @param diplomaImageUrl picture on the diploma, null = none
      */
-    public record Finale(String outroText, String outroAudioUrl, long totalSeconds, int hintsUsed, String diplomaTitle,
-            String diplomaImageUrl) {
+    public record Finale(String outroText, String outroAudioUrl, String outroImageUrl, long totalSeconds, int hintsUsed,
+            String diplomaTitle, String diplomaImageUrl) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

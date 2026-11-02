@@ -4,6 +4,7 @@ import ErrorBanner from '../components/ErrorBanner.tsx'
 import { formatDuration } from '../components/formatDuration.ts'
 import Page from '../components/Page.tsx'
 import { praiseForHints } from '../components/praiseForHints.ts'
+import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { buttonPrimary, card } from '../components/ui.ts'
@@ -37,6 +38,8 @@ export default function FinalePage() {
         <p className="text-sm font-semibold tracking-wide text-emerald-800 uppercase">Hra dokončena</p>
         <h1 className="font-serif text-3xl font-bold text-stone-950">{state.game.title}</h1>
       </header>
+
+      {finale.outroImageUrl && <StoryImage src={finale.outroImageUrl} alt="" />}
 
       <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
         <p className="font-serif text-2xl font-bold text-emerald-900">Gratulujeme!</p>

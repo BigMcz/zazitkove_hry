@@ -55,6 +55,7 @@ class ChildrenGameTest {
                 .andExpect(jsonPath("$.session.wrongAnswerText").value("Krá, to ne! Zkus to znovu."))
                 .andExpect(jsonPath("$.session.wrongAnswerAudioUrl").value("/audio/deti/spatne.mp3"))
                 .andExpect(jsonPath("$.media", hasItem("/audio/deti/spatne.mp3")))
+                .andExpect(jsonPath("$.media", hasItem("/images/deti/zaver.webp")))
                 .andExpect(jsonPath("$.puzzleSlots['" + STATION_1 + "']").value(0))
                 .andExpect(jsonPath("$.puzzleSlots['" + STATION_2 + "']").value(1));
     }
@@ -74,6 +75,7 @@ class ChildrenGameTest {
         state(token)
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.teamName").value("Kryštofovi"))
+                .andExpect(jsonPath("$.finale.outroImageUrl").value("/images/deti/zaver.webp"))
                 .andExpect(jsonPath("$.finale.diplomaTitle").value("Pomocník kronikáře"))
                 .andExpect(jsonPath("$.finale.diplomaImageUrl").value("/images/deti/diplom.webp"))
                 .andExpect(jsonPath("$.finale.outroText").value(endsWith("Ukaž ho doma všem! Krá krá!“")));
