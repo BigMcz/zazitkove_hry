@@ -2,13 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
-import { adminApi, type GameStock, type PartnerStats } from './adminApi.ts'
-import { formatDays, formatMoney, formatNumber, formatShare } from './format.ts'
+import { adminApi, type PartnerStats } from './adminApi.ts'
+import { formatMoney, formatNumber, formatShare } from './format.ts'
 import Section from './Section.tsx'
+import { isRunningOut, stockLasts } from './stock.ts'
 import { adminKeys, useLoggedOutOn401 } from './shared.ts'
-
-/** Below this many days of cards a castle is listed as running out (printing and handing over takes time). */
-export const LOW_STOCK_DAYS = 21
 
 interface Column {
   label: string
@@ -42,19 +40,6 @@ function columns(year: number): Column[] {
     },
     { label: 'Vydrží', sortValue: (row) => row.stockDays, render: stockLasts },
   ]
-}
-
-/** For the castle: the game whose cards run out first. */
-function stockLasts(row: PartnerStats | GameStock): string {
-  if (row.stockDays !== null) {
-    return `asi ${formatDays(row.stockDays)}`
-  }
-  return row.cardsInStock > 0 ? 'bez prodeje' : '—'
-}
-
-/** Cards of the game for less than LOW_STOCK_DAYS at the current pace, or none left after earlier deliveries. */
-function isRunningOut(game: GameStock): boolean {
-  return (game.stockDays !== null && game.stockDays < LOW_STOCK_DAYS) || (game.cardsDelivered > 0 && game.cardsInStock === 0)
 }
 
 /** Games running out, named by the castle (and the game when the castle has more of them). */

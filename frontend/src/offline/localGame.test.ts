@@ -79,6 +79,22 @@ describe('localGame', () => {
     expect((await localState(pack, emptyProgress(), DURING_GAME)).game.forChildren).toBe(false)
   })
 
+  it('plays a language version in its language', async () => {
+    const pack = await game()
+    const german: GamePackage = { ...pack, session: { ...pack.session, language: 'de' } }
+
+    expect((await localState(german, emptyProgress(), DURING_GAME)).game.language).toBe('de')
+    expect((await localAnswer(german, emptyProgress(), 's1', 'Tvar věže', DURING_GAME)).result.message).toBe(
+      'Das ist es nicht. Versuch es noch einmal.',
+    )
+    const atTower = await solve(german, emptyProgress(), 's1', 'ohyb řeky')
+    expect((await localAnswer(german, atTower, 's2', 'sechsundfünfzig', DURING_GAME)).result.message).toBe(
+      'Die Antwort muss eine Zahl enthalten.',
+    )
+    // A package downloaded before the language versions is Czech
+    expect((await localState(pack, emptyProgress(), DURING_GAME)).game.language).toBe('cs')
+  })
+
   it('refuses a station that is not active', async () => {
     const pack = await game()
     await expect(localAnswer(pack, emptyProgress(), 's2', '56', DURING_GAME)).rejects.toThrow('není aktivní')

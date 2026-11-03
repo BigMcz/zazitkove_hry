@@ -136,16 +136,18 @@ class StockCountTest {
     }
 
     private UUID game(String title) {
-        return jdbc.queryForObject("""
+        UUID gameId = jdbc.queryForObject("""
                 INSERT INTO game (location_id, slug, title, intro_text, outro_text)
                 VALUES (?, ?, ?, 'Úvod', 'Závěr') RETURNING id
                 """, UUID.class, location, "stock-" + UUID.randomUUID(), title);
+        jdbc.update("INSERT INTO game_price (game_id, valid_from, price_czk) VALUES (?, DATE '2020-01-01', 100)", gameId);
+        return gameId;
     }
 
     private UUID batch(UUID gameId, int quantity, String handedOverAt) {
         UUID batchId = jdbc.queryForObject("""
-                INSERT INTO access_code_batch (partner_id, game_id, quantity, unit_price_czk, handed_over_at)
-                VALUES (?, ?, ?, 100, %s) RETURNING id
+                INSERT INTO access_code_batch (partner_id, game_id, quantity, handed_over_at)
+                VALUES (?, ?, ?, %s) RETURNING id
                 """.formatted(handedOverAt), UUID.class, partnerId, gameId, quantity);
         for (int i = 0; i < quantity; i++) {
             jdbc.update("INSERT INTO access_code (batch_id, code) VALUES (?, ?)", batchId,

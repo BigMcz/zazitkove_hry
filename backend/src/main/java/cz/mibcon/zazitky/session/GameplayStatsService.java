@@ -92,7 +92,8 @@ public class GameplayStatsService {
                         Collectors.mapping(GameStation::station, Collectors.toList())));
 
         return jdbc.query(SESSIONS + """
-                SELECT g.id, g.title, p.name AS partner_name,
+                SELECT g.id, g.title, g.language, coalesce(g.main_game_id, g.id) AS main_game_id,
+                       coalesce(m.title, g.title) AS main_game_title, p.name AS partner_name,
                        count(*) AS started,
                        count(*) FILTER (WHERE s.status = 'COMPLETED') AS completed,
                        count(*) FILTER (WHERE s.playing) AS playing,
@@ -102,17 +103,20 @@ public class GameplayStatsService {
                            FILTER (WHERE s.status = 'COMPLETED') AS duration_with_penalty
                 FROM s
                 JOIN game g ON g.id = s.game_id
+                LEFT JOIN game m ON m.id = g.main_game_id
                 JOIN location l ON l.id = g.location_id
                 JOIN partner p ON p.id = l.partner_id
-                GROUP BY g.id, g.title, p.name
-                ORDER BY p.name, g.title
+                GROUP BY g.id, g.title, g.language, g.main_game_id, m.title, p.name
+                ORDER BY p.name, main_game_title, g.main_game_id IS NOT NULL, g.language
                 """, params, (rs, row) -> {
                     UUID gameId = rs.getObject("id", UUID.class);
                     long started = rs.getLong("started");
                     long completed = rs.getLong("completed");
                     long playing = rs.getLong("playing");
                     Long[] duration = durations(rs);
-                    return new GameStats(gameId, rs.getString("title"), rs.getString("partner_name"),
+                    return new GameStats(gameId, rs.getString("title"), rs.getString("language"),
+                            rs.getObject("main_game_id", UUID.class), rs.getString("main_game_title"),
+                            rs.getString("partner_name"),
                             started, completed, started - completed - playing, playing,
                             duration[0], duration[1], duration[2], seconds(rs, "duration_with_penalty"),
                             stations.getOrDefault(gameId, List.of()));

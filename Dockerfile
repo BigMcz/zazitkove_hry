@@ -22,6 +22,8 @@ RUN ./mvnw -B -q package -DskipTests && cp target/zazitky-*.jar /app/app.jar
 
 # ---- 3) Runtime ---------------------------------------------------------
 FROM eclipse-temurin:21-jre-alpine
+# Náhledy kartiček (PDFBox → PNG) používají Java 2D v headless režimu, ta na Alpine potřebuje fontconfig a font
+RUN apk add --no-cache fontconfig ttf-dejavu
 RUN addgroup -S app && adduser -S app -G app
 USER app
 WORKDIR /app

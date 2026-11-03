@@ -99,6 +99,41 @@ class GameplayStatsTest {
     }
 
     @Test
+    void showsEachLanguageVersionUnderItsMainGame() throws Exception {
+        UUID german = insert("""
+                INSERT INTO game (location_id, main_game_id, slug, title, intro_text, outro_text, language, status)
+                SELECT location_id, id, slug || '-de', 'Statistisches Spiel', 'Einleitung', 'Schluss', 'de', 'PUBLISHED'
+                FROM game WHERE id = ? RETURNING id
+                """, gameId);
+        UUID germanStation = insert("""
+                INSERT INTO station (game_id, order_no, title, story_text, task_text, task_type, reward_text)
+                VALUES (?, 1, 'Station 1', 'Geschichte', 'Aufgabe', 'TEXT', 'Belohnung') RETURNING id
+                """, german);
+        UUID sold = batch(false);
+        progress(session(sold, "COMPLETED", 30, 0, false), station1, 0, 30, 1, 0);
+        UUID germanSession = session(sold, "COMPLETED", 40, 0, false);
+        jdbc.update("UPDATE game_session SET game_id = ? WHERE id = ?", german, germanSession);
+        progress(germanSession, germanStation, 0, 40, 1, 0);
+
+        mvc.perform(get("/api/v1/admin/reports/gameplay").with(admin())
+                        .param("year", String.valueOf(t0.atZone(ZoneId.of("Europe/Prague")).getYear()))
+                        .param("partnerId", partnerId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].gameId").value(gameId.toString()))
+                .andExpect(jsonPath("$[0].language").value("cs"))
+                .andExpect(jsonPath("$[0].mainGameId").value(gameId.toString()))
+                .andExpect(jsonPath("$[0].started").value(1))
+                .andExpect(jsonPath("$[1].gameId").value(german.toString()))
+                .andExpect(jsonPath("$[1].gameTitle").value("Statistisches Spiel"))
+                .andExpect(jsonPath("$[1].language").value("de"))
+                .andExpect(jsonPath("$[1].mainGameId").value(gameId.toString()))
+                .andExpect(jsonPath("$[1].mainGameTitle").value("Statistická hra"))
+                .andExpect(jsonPath("$[1].started").value(1))
+                .andExpect(jsonPath("$[1].stations[0].title").value("Station 1"));
+    }
+
+    @Test
     void showsNothingWithoutGamesInTheYearAndOnlyToTheAdmin() throws Exception {
         session(batch(false), "COMPLETED", 30, 0, false);
 

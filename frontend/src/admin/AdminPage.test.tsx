@@ -8,13 +8,17 @@ import AdminPage from './AdminPage.tsx'
 import type {
   AdminSession,
   BatchSummary,
+  CardTemplate,
+  PrintStatus,
+  GamePrices,
+  MonthBilling,
   GameStats,
   MonthlyActivation,
   Partner,
   PartnerStats,
   Summary,
 } from './adminApi.ts'
-import { firstOfNextMonth, todayInPrague } from './format.ts'
+import { addMonths, firstOfNextMonth, todayInPrague } from './format.ts'
 
 const adminSession: AdminSession = { username: 'admin', role: 'ADMIN', partnerName: null }
 const partnerSession: AdminSession = { username: 'hrad', role: 'PARTNER', partnerName: 'Demo partner' }
@@ -37,18 +41,22 @@ const demoPartner: Partner = {
 
 const deliveredBatch: BatchSummary = {
   id: 'b1',
+  batchNo: 7,
   partnerId: 'p1',
+  gameId: 'g1',
   gameTitle: 'Tajemství katova klíče',
   partnerName: 'Demo partner',
   quantity: 100,
   validityHours: 5,
   multiSession: false,
+  free: false,
   note: 'Sezóna 2027 — tisk 1',
-  unitPriceCzk: 150,
   createdAt: '2026-10-01T10:00:00Z',
   handedOverAt: '2026-10-05T10:00:00Z',
   activatedCount: 12,
   notActivatedCount: 88,
+  printedAt: '2026-10-02T10:00:00Z',
+  templateVersion: 1,
 }
 
 const batchInProduction: BatchSummary = {
@@ -60,6 +68,9 @@ const batchInProduction: BatchSummary = {
   activatedCount: 0,
   notActivatedCount: 50,
   quantity: 50,
+  batchNo: 8,
+  printedAt: null,
+  templateVersion: null,
 }
 
 const summary: Summary = {
@@ -105,6 +116,22 @@ const castleSummary: Summary = {
       cardsInProduction: 0,
       activatedLast28Days: 1,
       stockDays: 784,
+    },
+  ],
+}
+
+const partnerSummary: Summary = {
+  ...summary,
+  games: [
+    castleSummary.games[0],
+    {
+      ...castleSummary.games[1],
+      cardsInStock: 5,
+      cardsInStockComputed: 6,
+      stockCountedAt: '2026-10-31T16:30:00Z',
+      cardsInProduction: 50,
+      activatedLast28Days: 14,
+      stockDays: 10,
     },
   ],
 }
@@ -192,6 +219,9 @@ const partnerStats: PartnerStats[] = [
 const gameStats: GameStats = {
   gameId: 'g1',
   gameTitle: 'Tajemství katova klíče',
+  language: 'cs',
+  mainGameId: 'g1',
+  mainGameTitle: 'Tajemství katova klíče',
   partnerName: 'Demo partner',
   started: 10,
   completed: 6,
@@ -227,6 +257,25 @@ const gameStats: GameStats = {
   ],
 }
 
+const germanGameStats: GameStats = {
+  ...gameStats,
+  gameId: 'g1-de',
+  gameTitle: 'Das Geheimnis des Henkerschlüssels',
+  language: 'de',
+  started: 5,
+  stations: [],
+}
+
+const otherGameStats: GameStats = {
+  ...gameStats,
+  gameId: 'g2',
+  gameTitle: 'Bílá paní',
+  mainGameId: 'g2',
+  mainGameTitle: 'Bílá paní',
+  started: 4,
+  stations: [],
+}
+
 const partnerUser = {
   id: 'u1',
   username: 'hrad',
@@ -241,6 +290,88 @@ const partnerUser = {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
+
+const gamePrices: GamePrices = {
+  gameId: 'g1',
+  gameTitle: 'Tajemství katova klíče',
+  currentPriceCzk: 249,
+  prices: [
+    { id: 'gp1', validFrom: '2026-01-01', priceCzk: 249 },
+    { id: 'gp2', validFrom: '2099-01-01', priceCzk: 269 },
+  ],
+}
+
+function billingOf(month: string, invoiced: boolean): MonthBilling {
+  return {
+    month,
+    ended: true,
+    games: [
+      {
+        gameId: 'g1',
+        gameTitle: 'Tajemství katova klíče',
+        prices: [69],
+        amounts: { activatedCount: 100, revenueCzk: 6900, partnerShareCzk: 2070, operatorCzk: 4830 },
+      },
+      {
+        gameId: 'g2',
+        gameTitle: 'Bílá paní',
+        prices: [49],
+        amounts: { activatedCount: 10, revenueCzk: 490, partnerShareCzk: 147, operatorCzk: 343 },
+      },
+    ],
+    total: { activatedCount: 110, revenueCzk: 7390, partnerShareCzk: 2217, operatorCzk: 5173 },
+    invoice: invoiced ? { invoicedOn: todayInPrague(), amountCzk: 5173 } : null,
+    uninvoicedMonths: invoiced ? [] : ['2026-07', month],
+  }
+}
+
+const cardTemplate: CardTemplate = {
+  id: 't1',
+  gameId: 'g1',
+  version: 1,
+  layout: {
+    widthMm: 90,
+    heightMm: 50,
+    bleedMm: 3,
+    qrXMm: 5,
+    qrYMm: 13,
+    qrSizeMm: 24,
+    qrWhiteBox: true,
+    codeXMm: 57,
+    codeYMm: 27,
+    codeFontPt: 16,
+    codeAlign: 'CENTER',
+    codeColor: '#000000',
+    serialXMm: 57,
+    serialYMm: 44,
+    serialFontPt: 7,
+  },
+  front: { id: 'f1', fileName: 'predni.pdf', contentType: 'application/pdf', sizeBytes: 120_000 },
+  back: { id: 'f2', fileName: 'zadni.pdf', contentType: 'application/pdf', sizeBytes: 90_000 },
+  note: 'první tisk',
+  createdAt: '2026-10-01T09:00:00Z',
+  batchCount: 1,
+}
+
+const printStatus: PrintStatus = {
+  batchId: 'b2',
+  batchNo: 8,
+  gameId: 'g1',
+  gameTitle: 'Tajemství katova klíče',
+  partnerId: 'p1',
+  partnerName: 'Demo partner',
+  quantity: 50,
+  multiSession: false,
+  free: false,
+  sharedCode: null,
+  handedOverAt: null,
+  printedAt: null,
+  template: null,
+  latestTemplate: cardTemplate,
+  exports: [],
+}
+
+const preview = (warnings: string[] = []) => ({ image: 'data:image/png;base64,iVBORw0KGgo=', warnings })
 
 function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
   let session = loggedIn === 'partner' ? partnerSession : loggedIn ? adminSession : anonymous
@@ -257,7 +388,7 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
       session = anonymous
       return new Response(null, { status: 204 })
     }
-    if (path.startsWith('/api/v1/admin/dashboard?year=')) return json(summary)
+    if (path.startsWith('/api/v1/admin/dashboard?year=')) return json(path.includes('partnerId=') ? partnerSummary : summary)
     if (path === '/api/v1/admin/partners' && method === 'GET') return json([demoPartner])
     if (path === '/api/v1/admin/partners' && method === 'POST') {
       return json({ ...demoPartner, ...body(), id: 'p2', shares: [] }, 201)
@@ -285,12 +416,34 @@ function mockAdminApi(loggedIn: boolean | 'partner', loginAs = adminSession) {
     }
     if (path.startsWith('/api/v1/admin/reports/monthly-activations?year=')) return json([reportRow])
     if (path.startsWith('/api/v1/admin/reports/partners?year=')) return json(partnerStats)
-    if (path.startsWith('/api/v1/admin/reports/gameplay?year=')) return json([gameStats])
+    if (path.startsWith('/api/v1/admin/reports/gameplay?year=')) return json([gameStats, germanGameStats, otherGameStats])
     if (path.startsWith('/api/v1/partner/summary?year=')) return json(castleSummary)
     if (path === '/api/v1/partner/batches') return json([deliveredBatch])
     if (path === '/api/v1/partner/shares') return json(demoPartner.shares)
+    if (path === '/api/v1/partner/game-prices') return json([gamePrices])
+    const billing = path.match(/^\/api\/v1\/admin\/partners\/p1\/billing\/(\d{4}-\d{2})(\/invoice)?$/)
+    if (billing) return json(billingOf(billing[1], method === 'PUT'))
+    if (path === '/api/v1/admin/partners/p1/game-prices') return json([gamePrices])
+    if (path.startsWith('/api/v1/admin/games/g1/prices')) return json(gamePrices)
     if (path.startsWith('/api/v1/partner/reports/monthly-activations?year=')) return json([reportRow])
     if (path === '/api/v1/partner/password' && method === 'POST') return new Response(null, { status: 204 })
+    if (path === '/api/v1/admin/batches/b2/print') return json(printStatus)
+    if (path.startsWith('/api/v1/admin/batches/b2/print/preview?side=')) return json(preview())
+    if (path === '/api/v1/admin/batches/b2/print/back.pdf' && method === 'POST') {
+      return new Response('%PDF-1.7', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="storyhold_hra_D8_zadni_50ks.pdf"',
+        },
+      })
+    }
+    if (path === '/api/v1/admin/games/g1/card-template/versions') return json([cardTemplate])
+    if (path.startsWith('/api/v1/admin/games/g1/card-template/preview?side=')) {
+      return json(preview(path.endsWith('BACK') ? ['QR kód leží blíž než 3 mm od okraje kartičky.'] : []))
+    }
+    if (path === '/api/v1/admin/games/g1/card-template' && method === 'POST') {
+      return json({ template: { ...cardTemplate, id: 't2', version: 2 }, warnings: [] }, 201)
+    }
     if (path.startsWith('/api/v1/partner/stock-count?year=') && method === 'POST') {
       return json({ ...castleSummary, stockCountedAt: '2026-10-31T10:00:00Z' })
     }
@@ -379,6 +532,7 @@ describe('AdminPage — operator', () => {
     renderAdmin()
 
     const game = await screen.findByRole('article', { name: 'Tajemství katova klíče' })
+    expect(screen.queryByRole('article', { name: 'Bílá paní' })).not.toBeInTheDocument()
     expect(within(game).getByText('Dohráno').parentElement).toHaveTextContent('75 % ze skončených her')
     expect(within(game).getByText('Doba hraní').parentElement).toHaveTextContent('52 minpolovina týmů 40 min až 1 h 15 min')
     const station = within(game).getByRole('cell', { name: '2. Hladomorna' }).closest('tr') as HTMLElement
@@ -391,6 +545,18 @@ describe('AdminPage — operator', () => {
       '1,6',
       '67 %',
     ])
+
+    // The German version of the game is under the same tab, the figures of one language at a time
+    expect(screen.getAllByRole('tab')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'čeština 10 (67 %)' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'němčina 5 (33 %)' }))
+    expect(screen.getByRole('article', { name: 'Das Geheimnis des Henkerschlüssels' })).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Tajemství katova klíče' })).not.toBeInTheDocument()
+
+    // One game at a time: the other one is behind its tab
+    await userEvent.click(screen.getByRole('tab', { name: 'Bílá paní · Demo partner' }))
+    expect(await screen.findByRole('article', { name: 'Bílá paní' })).toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Tajemství katova klíče' })).not.toBeInTheDocument()
   })
 
   it('lists castles in the left menu and opens one', async () => {
@@ -470,6 +636,21 @@ describe('AdminPage — operator', () => {
     expect(await screen.findByRole('article', { name: 'Tajemství katova klíče' })).not.toHaveTextContent('Demo partner')
   })
 
+  it('lists the partner’s games with the cards for sale and when they run out', async () => {
+    mockAdminApi(true)
+    renderAdmin('/admin/partneri/p1')
+
+    const section = (await screen.findByRole('heading', { name: 'Kartičky po hrách' })).closest('section')!
+    const rows = within(await within(section).findByRole('table')).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('Tajemství katova klíče60')
+    expect(rows[1]).toHaveTextContent('asi 420 dní')
+    expect(rows[1]).not.toHaveClass('bg-amber-50')
+    expect(rows[2]).toHaveTextContent('Bílá paní5inventura')
+    expect(rows[2]).toHaveTextContent('asi 10 dní')
+    expect(rows[2]).toHaveClass('bg-amber-50')
+    expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent(/^\d{1,2}\. \d{1,2}\. \d{4}$/)
+  })
+
   it('generates codes for the partner’s games and marks a printed batch as handed over', async () => {
     const fetchMock = mockAdminApi(true)
     renderAdmin('/admin/partneri/p1?sekce=kody')
@@ -483,13 +664,49 @@ describe('AdminPage — operator', () => {
     expect(within(delivered).getByText(/^Předáno/)).toBeInTheDocument()
     expect(within(delivered).getByText('88')).toBeInTheDocument()
     expect(within(delivered).queryByRole('button', { name: 'Vrátit předání' })).not.toBeInTheDocument()
-    expect(within(delivered).getByRole('link', { name: 'CSV pro tisk' })).toHaveAttribute(
+    expect(within(delivered).getByRole('link', { name: 'CSV kódů' })).toHaveAttribute(
       'href',
       '/api/v1/admin/batches/b1/codes.csv',
     )
+    expect(within(delivered).getByText('šablona v1')).toBeInTheDocument()
+    expect(within(inProduction).getByText('netištěno')).toBeInTheDocument()
+    expect(within(inProduction).getByRole('link', { name: 'Tisk' })).toHaveAttribute('href', '/admin/batches/b2/tisk')
 
     await userEvent.click(within(inProduction).getByRole('button', { name: 'Označit jako předané' }))
     expect(calls(fetchMock, '/api/v1/admin/batches/b2/handover', 'POST')).toHaveLength(1)
+  })
+
+  it('prints a batch with the latest template and downloads the back sides', async () => {
+    const fetchMock = mockAdminApi(true)
+    const createObjectURL = vi.fn(() => 'blob:pdf')
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }))
+    renderAdmin('/admin/batches/b2/tisk')
+
+    expect(await screen.findByRole('heading', { name: 'Tisk dávky D8: Tajemství katova klíče' })).toBeInTheDocument()
+    expect(screen.getByText(/první stažení ji přiváže k/)).toBeInTheDocument()
+    expect(await screen.findByAltText('Náhled: zadní strana')).toHaveAttribute('src', preview().image)
+
+    await userEvent.click(screen.getByLabelText('Ořezové značky'))
+    await userEvent.click(screen.getByRole('button', { name: 'Zadní strana (PDF, 50 stran)' }))
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalled())
+    const exported = calls(fetchMock, '/api/v1/admin/batches/b2/print/back.pdf', 'POST')[0]?.[1]
+    expect(JSON.parse(String(exported?.body))).toEqual({ cropMarks: true, serials: null, copies: null })
+  })
+
+  it('edits the card template with a live preview and saves a new version', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin/games/g1/karticka')
+
+    expect(await screen.findByRole('heading', { name: 'Šablona kartičky: Tajemství katova klíče' })).toBeInTheDocument()
+    expect(await screen.findByText('QR kód leží blíž než 3 mm od okraje kartičky.')).toBeInTheDocument()
+    expect(screen.getByText(/predni\.pdf .*z verze 1/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByLabelText('na výšku'))
+    await userEvent.click(screen.getByRole('button', { name: 'Uložit jako verzi 2' }))
+
+    expect(await screen.findByText('Uložena verze 2.')).toBeInTheDocument()
+    const saved = JSON.parse(String(calls(fetchMock, '/api/v1/admin/games/g1/card-template', 'POST')[0]?.[1]?.body))
+    expect(saved).toMatchObject({ frontFileId: null, backFileId: null, layout: { widthMm: 50, heightMm: 90, qrXMm: 13 } })
   })
 
   it('creates a batch for the selected partner game', async () => {
@@ -505,10 +722,32 @@ describe('AdminPage — operator', () => {
     expect(await screen.findByText(/je vytvořená \(ve výrobě\)/)).toBeInTheDocument()
     expect(JSON.parse(String(calls(fetchMock, '/api/v1/admin/batches', 'POST')[0]?.[1]?.body))).toEqual({
       gameId: 'g1',
+      kind: 'SALE',
       quantity: 250,
       validityHours: 5,
       note: null,
-      unitPriceCzk: null,
+      code: null,
+    })
+  })
+
+  it('creates a shared demo code with its own code', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin/partneri/p1?sekce=kody')
+
+    await screen.findByRole('option', { name: 'Tajemství katova klíče' })
+    await userEvent.click(screen.getByRole('radio', { name: /Demo kód/ }))
+    expect(screen.queryByLabelText('Počet kódů')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText(/Vlastní kód/), 'demo-kata')
+    await userEvent.click(screen.getByRole('button', { name: 'Vygenerovat kódy' }))
+
+    await screen.findByText(/je vytvořená \(ve výrobě\)/)
+    expect(JSON.parse(String(calls(fetchMock, '/api/v1/admin/batches', 'POST')[0]?.[1]?.body))).toEqual({
+      gameId: 'g1',
+      kind: 'DEMO',
+      quantity: null,
+      validityHours: null,
+      note: null,
+      code: 'DEMO-KATA',
     })
   })
 
@@ -534,6 +773,53 @@ describe('AdminPage — operator', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Smazat podíl od 1. 1. 2099' }))
     expect(calls(fetchMock, '/api/v1/admin/partners/p1/shares/s2', 'DELETE')).toHaveLength(1)
+  })
+
+  it('shows the invoicing of the last ended month by games and marks it as invoiced', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin/partneri/p1')
+    const lastMonth = addMonths(todayInPrague().slice(0, 7), -1)
+
+    const section = (await screen.findByRole('heading', { name: 'Fakturace' })).closest('section') as HTMLElement
+    const rows = within(await within(section).findByRole('table')).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent(/Tajemství katova klíče\s*100\s*69\sKč\s*6\s900,00\sKč\s*2\s070,00\sKč\s*4\s830,00\sKč/)
+    expect(rows[3]).toHaveTextContent(/Celkem\s*110/)
+    expect(within(section).getByText(/K fakturaci hradu/)).toHaveTextContent(/5\s173,00\sKč/)
+    expect(within(section).getByText('k fakturaci')).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: 'Další měsíc' })).toBeEnabled()
+
+    await userEvent.click(within(section).getByRole('checkbox', { name: 'Vyfakturováno' }))
+    expect(JSON.parse(String(calls(fetchMock, `/api/v1/admin/partners/p1/billing/${lastMonth}/invoice`, 'PUT')[0]?.[1]?.body))).toEqual({
+      invoicedOn: todayInPrague(),
+    })
+    expect(await within(section).findByText('vyfakturováno')).toBeInTheDocument()
+    expect(within(section).getByRole('checkbox', { name: 'Vyfakturováno' })).toBeChecked()
+
+    // An older month not invoiced yet is offered, the arrows move by one month
+    await userEvent.click(within(section).getByRole('button', { name: 'Předchozí měsíc' }))
+    expect(calls(fetchMock, `/api/v1/admin/partners/p1/billing/${addMonths(lastMonth, -1)}`)).toHaveLength(1)
+    await userEvent.click(await within(section).findByRole('button', { name: /červenec 2026/ }))
+    expect(calls(fetchMock, '/api/v1/admin/partners/p1/billing/2026-07')).toHaveLength(1)
+  })
+
+  it('plans the price of a game from the first of next month', async () => {
+    const fetchMock = mockAdminApi(true)
+    renderAdmin('/admin/partneri/p1?sekce=ceny')
+
+    const game = await screen.findByRole('article', { name: 'Tajemství katova klíče' })
+    expect(within(game).getByRole('heading')).toHaveTextContent('dnes 249 Kč')
+    expect(within(game).getByText('platí dnes')).toBeInTheDocument()
+    expect(within(game).getByText('naplánováno')).toBeInTheDocument()
+    expect(within(game).getByLabelText('Platí od')).toHaveValue(firstOfNextMonth(todayInPrague()))
+    await userEvent.type(within(game).getByLabelText('Cena (Kč)'), '279')
+    await userEvent.click(within(game).getByRole('button', { name: 'Přidat cenu' }))
+    expect(JSON.parse(String(calls(fetchMock, '/api/v1/admin/games/g1/prices', 'POST')[0]?.[1]?.body))).toEqual({
+      validFrom: firstOfNextMonth(todayInPrague()),
+      priceCzk: 279,
+    })
+
+    await userEvent.click(within(game).getByRole('button', { name: 'Smazat cenu od 1. 1. 2099' }))
+    expect(calls(fetchMock, '/api/v1/admin/games/g1/prices/gp2', 'DELETE')).toHaveLength(1)
   })
 
   it('edits company details', async () => {
@@ -603,6 +889,11 @@ describe('AdminPage — castle', () => {
     expect(within(delivery).getByText('88')).toBeInTheDocument()
     expect(within(delivery).queryByRole('link', { name: 'CSV pro tisk' })).not.toBeInTheDocument()
     expect(await screen.findByText(/Váš podíl z tržby:/)).toHaveTextContent('25 % (od 1. 1. 2026)')
+    // The prices only to read
+    expect((await screen.findByText('Tajemství katova klíče:')).parentElement).toHaveTextContent(
+      'Tajemství katova klíče: 249 Kč (od 1. 1. 2026) · od 1. 1. 2099: 269 Kč',
+    )
+    expect(screen.queryByRole('button', { name: 'Přidat cenu' })).not.toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Hrady' })).not.toBeInTheDocument()
 
     const adminCalls = fetchMock.mock.calls

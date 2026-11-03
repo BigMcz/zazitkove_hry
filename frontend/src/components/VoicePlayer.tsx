@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useGameTexts } from '../i18n/gameTexts.ts'
 import { voicePreference } from './audioPreference.ts'
 
 interface VoicePlayerProps {
@@ -19,6 +20,7 @@ export default function VoicePlayer({ src, autoPlay = true, onUnavailable }: Voi
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(() => voicePreference.isMuted())
   const [unavailable, setUnavailable] = useState(false)
+  const texts = useGameTexts()
 
   useEffect(() => {
     const element = audio.current
@@ -78,7 +80,7 @@ export default function VoicePlayer({ src, autoPlay = true, onUnavailable }: Voi
         className="inline-flex min-h-11 items-center gap-2 rounded-full bg-stone-900 px-4 font-semibold text-white hover:bg-stone-700"
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
-        {playing ? 'Pozastavit' : 'Poslechnout'}
+        {playing ? texts.pause : texts.play}
       </button>
       <button
         type="button"
@@ -86,7 +88,7 @@ export default function VoicePlayer({ src, autoPlay = true, onUnavailable }: Voi
         aria-pressed={muted}
         className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-stone-700 underline underline-offset-4 hover:text-stone-950"
       >
-        {muted ? 'Zapnout hlas' : 'Ztlumit'}
+        {muted ? texts.unmute : texts.mute}
       </button>
     </div>
   )

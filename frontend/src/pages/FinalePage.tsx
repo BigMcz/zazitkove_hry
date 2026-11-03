@@ -3,7 +3,6 @@ import Diploma from '../components/Diploma.tsx'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { formatDuration } from '../components/formatDuration.ts'
 import Page from '../components/Page.tsx'
-import { praiseForHints } from '../components/praiseForHints.ts'
 import StoryImage from '../components/StoryImage.tsx'
 import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
@@ -11,16 +10,16 @@ import { buttonPrimary, card } from '../components/ui.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 
 export default function FinalePage() {
-  const { query, loadError, leaveGame } = usePlaySession()
+  const { query, loadError, leaveGame, texts } = usePlaySession()
   const state = query.data
 
   if (!state) {
     return (
-      <Page>
+      <Page texts={texts}>
         {loadError ? (
-          <ErrorBanner message={loadError.message} onRetry={() => void query.refetch()} />
+          <ErrorBanner message={texts.error(loadError)} onRetry={() => void query.refetch()} />
         ) : (
-          <p role="status">Načítám…</p>
+          <p role="status">{texts.loading}</p>
         )}
       </Page>
     )
@@ -33,19 +32,19 @@ export default function FinalePage() {
   const { finale } = state
 
   return (
-    <Page>
+    <Page texts={texts}>
       <header className="flex flex-col gap-1">
-        <p className="text-sm font-semibold tracking-wide text-emerald-800 uppercase">Hra dokončena</p>
+        <p className="text-sm font-semibold tracking-wide text-emerald-800 uppercase">{texts.gameCompleted}</p>
         <h1 className="font-serif text-3xl font-bold text-stone-950">{state.game.title}</h1>
       </header>
 
       {finale.outroImageUrl && <StoryImage src={finale.outroImageUrl} alt="" />}
 
       <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 p-5">
-        <p className="font-serif text-2xl font-bold text-emerald-900">Gratulujeme!</p>
+        <p className="font-serif text-2xl font-bold text-emerald-900">{texts.congratulations}</p>
         <p className="mt-1 text-lg text-stone-900">
-          Vyřešili jste všech {state.progress.total} úkolů.
-          {!state.game.forChildren && ` ${praiseForHints(finale.hintsUsed)}`}
+          {texts.allTasksSolved(state.progress.total)}
+          {!state.game.forChildren && ` ${texts.praise(finale.hintsUsed)}`}
         </p>
       </div>
 
@@ -66,21 +65,21 @@ export default function FinalePage() {
       ) : (
       <section aria-labelledby="summary-heading" className={card}>
         <h2 id="summary-heading" className="mb-3 text-xl font-bold">
-          {state.teamName ? `Výsledek týmu ${state.teamName}` : 'Tvůj výsledek'}
+          {state.teamName ? texts.teamResult(state.teamName) : texts.yourResult}
         </h2>
         <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-lg">
-          <dt className="text-stone-700">Celkový čas</dt>
+          <dt className="text-stone-700">{texts.totalTime}</dt>
           <dd className="text-right font-bold">{formatDuration(finale.totalSeconds)}</dd>
-          <dt className="text-stone-700">Z toho penalizace</dt>
+          <dt className="text-stone-700">{texts.penaltyPart}</dt>
           <dd className="text-right font-semibold">{formatDuration(state.penaltySeconds)}</dd>
-          <dt className="text-stone-700">Použité nápovědy</dt>
+          <dt className="text-stone-700">{texts.hintsUsed}</dt>
           <dd className="text-right font-semibold">{finale.hintsUsed}</dd>
         </dl>
       </section>
       )}
 
       <button type="button" onClick={() => leaveGame()} className={buttonPrimary}>
-        Zpět na začátek
+        {texts.backToStart}
       </button>
     </Page>
   )

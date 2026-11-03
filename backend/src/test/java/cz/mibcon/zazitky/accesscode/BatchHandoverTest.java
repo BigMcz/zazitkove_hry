@@ -161,6 +161,7 @@ class BatchHandoverTest {
         jdbc.update("INSERT INTO location (id, partner_id, name) VALUES (?, ?, 'Hrad')", location, partner);
         jdbc.update("INSERT INTO game (id, location_id, slug, title, intro_text, outro_text, status)"
                 + " VALUES (?, ?, ?, 'Hra', 'Intro', 'Outro', 'PUBLISHED')", game, location, "hra-" + suffix);
+        jdbc.update("INSERT INTO game_price (game_id, valid_from, price_czk) VALUES (?, DATE '2020-01-01', 200)", game);
         jdbc.update("INSERT INTO station (game_id, order_no, title, story_text, task_text, task_type, reward_text)"
                 + " VALUES (?, 1, 'S', 'Příběh', 'Úkol', 'TEXT', 'Odměna')", game);
         String username = "pokladna-" + suffix;
@@ -173,7 +174,7 @@ class BatchHandoverTest {
         String body = body(mvc.perform(post("/api/v1/admin/batches").with(admin()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"gameId\":\"" + gameId + "\",\"quantity\":" + quantity
-                                + ",\"validityHours\":5,\"unitPriceCzk\":200}"))
+                                + ",\"validityHours\":5}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.handedOverAt").isEmpty()));
         return UUID.fromString(JsonPath.read(body, "$.id"));

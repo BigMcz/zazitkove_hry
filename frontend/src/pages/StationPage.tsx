@@ -16,6 +16,7 @@ import StoryText from '../components/StoryText.tsx'
 import VoicePlayer from '../components/VoicePlayer.tsx'
 import { playOnce } from '../components/playOnce.ts'
 import { buttonSecondary, linkSubtle } from '../components/ui.ts'
+import { type GameTexts, useGameTexts } from '../i18n/gameTexts.ts'
 import { usePlaySession } from '../session/usePlaySession.ts'
 
 export interface RewardLocationState {
@@ -26,16 +27,16 @@ export interface RewardLocationState {
 }
 
 export default function StationPage() {
-  const { token, query, loadError, leaveGame, handleError } = usePlaySession()
+  const { token, query, loadError, leaveGame, handleError, texts } = usePlaySession()
   const state = query.data
 
   if (!state) {
     return (
-      <Page>
+      <Page texts={texts}>
         {loadError ? (
-          <ErrorBanner message={loadError.message} onRetry={() => void query.refetch()} />
+          <ErrorBanner message={texts.error(loadError)} onRetry={() => void query.refetch()} />
         ) : (
-          <p role="status">Načítám hru…</p>
+          <p role="status">{texts.loadingGame}</p>
         )}
       </Page>
     )
@@ -46,7 +47,7 @@ export default function StationPage() {
   }
 
   if (state.status !== 'IN_PROGRESS' || !state.currentStation) {
-    return <GameEnded onLeave={() => leaveGame()} />
+    return <GameEnded texts={texts} onLeave={() => leaveGame()} />
   }
 
   return (
@@ -56,6 +57,7 @@ export default function StationPage() {
       token={token}
       state={state}
       station={state.currentStation}
+      texts={texts}
       onLeave={leaveGame}
       onError={handleError}
     />
@@ -66,11 +68,12 @@ interface StationViewProps {
   token: string | null
   state: SessionState
   station: CurrentStation
+  texts: GameTexts
   onLeave: (message?: string) => void
   onError: (error: Error) => string | null
 }
 
-function StationView({ token, state, station, onLeave, onError }: StationViewProps) {
+function StationView({ token, state, station, texts, onLeave, onError }: StationViewProps) {
   const navigate = useNavigate()
   const submitAnswer = useSubmitAnswer(token)
   const revealHint = useRevealHint(token)
@@ -94,7 +97,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
             }
             navigate('/play/reward', { state: rewardState })
           } else {
-            setFeedback(result.message ?? 'To není ono. Zkus to znovu.')
+            setFeedback(result.message ?? texts.wrongAnswer)
             if (result.messageAudioUrl) {
               playOnce(result.messageAudioUrl)
             }
@@ -114,18 +117,18 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
     if (token) {
       await api.abandon(token).catch(() => undefined)
     }
-    onLeave('Hra byla ukončena. Můžeš začít novou.')
+    onLeave(texts.gameLeft)
   }
 
   return (
-    <Page>
+    <Page texts={texts}>
       <header className="flex flex-col gap-3">
         <p className="text-sm font-semibold text-stone-600">{state.game.title}</p>
         <ProgressBar current={station.orderNo} total={state.progress.total} />
         <OfflineStatus token={token} />
         {state.puzzle && <PuzzleLetters puzzle={state.puzzle} />}
         {state.penaltySeconds > 0 && (
-          <p className="text-sm text-stone-700">Penalizace za nápovědy: +{formatDuration(state.penaltySeconds)}</p>
+          <p className="text-sm text-stone-700">{texts.hintPenalty(formatDuration(state.penaltySeconds))}</p>
         )}
       </header>
 
@@ -136,7 +139,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
 
       <section aria-labelledby="task-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">
         <h2 id="task-heading" className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
-          Úkol
+          {texts.task}
         </h2>
         <p className="mt-1 text-lg font-semibold text-stone-950">{station.taskText}</p>
       </section>
@@ -167,16 +170,16 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
       <footer className="mt-6 border-t border-stone-300 pt-4">
         {!confirmLeave ? (
           <button type="button" onClick={() => setConfirmLeave(true)} className={linkSubtle}>
-            Opustit hru
+            {texts.leaveGame}
           </button>
         ) : (
           <div className="flex flex-col gap-3">
-            <p className="text-base">Opravdu chceš hru ukončit? Postup se ztratí.</p>
+            <p className="text-base">{texts.leaveConfirm}</p>
             <button type="button" onClick={() => void handleLeave()} className={buttonSecondary}>
-              Ano, ukončit hru
+              {texts.leaveYes}
             </button>
             <button type="button" onClick={() => setConfirmLeave(false)} className={linkSubtle}>
-              Ne, hrát dál
+              {texts.leaveNo}
             </button>
           </div>
         )}
@@ -192,6 +195,7 @@ function StationView({ token, state, station, onLeave, onError }: StationViewPro
 function Story({ station }: { station: CurrentStation }) {
   const [audioMissing, setAudioMissing] = useState(false)
   const [transcriptShown, setTranscriptShown] = useState(false)
+  const texts = useGameTexts()
   const hasAudio = station.storyAudioUrl !== null && !audioMissing
   const textHidden = station.listenOnly && hasAudio && !transcriptShown
 
@@ -202,9 +206,9 @@ function Story({ station }: { station: CurrentStation }) {
       )}
       {textHidden ? (
         <div className="flex flex-col gap-2 rounded-xl bg-stone-100 p-4">
-          <p className="text-base text-stone-800">Poslechni si, co se tu říká. Odpověď zazní v nahrávce.</p>
+          <p className="text-base text-stone-800">{texts.listenTask}</p>
           <button type="button" onClick={() => setTranscriptShown(true)} className={linkSubtle}>
-            Zobrazit přepis
+            {texts.showTranscript}
           </button>
         </div>
       ) : (
@@ -214,12 +218,12 @@ function Story({ station }: { station: CurrentStation }) {
   )
 }
 
-function GameEnded({ onLeave }: { onLeave: () => void }) {
+function GameEnded({ texts, onLeave }: { texts: GameTexts; onLeave: () => void }) {
   return (
-    <Page>
-      <ErrorBanner tone="info" message="Tato hra už není rozehraná." />
+    <Page texts={texts}>
+      <ErrorBanner tone="info" message={texts.gameNotRunning} />
       <button type="button" onClick={onLeave} className={buttonSecondary}>
-        Zpět na začátek
+        {texts.backToStart}
       </button>
     </Page>
   )

@@ -218,6 +218,20 @@ Nápovědy mají penalizaci 60 s (první) a 120 s (druhá), pokud není uvedeno 
 
 ---
 
+## Německá verze „Die Pflicht des Henkers“
+
+Jazyková verze stejné hry (Q5, V17): hráč si po zadání kódu z kartičky vybere češtinu nebo němčinu, kartičky jsou stejné. Texty, nápovědy, přijímané odpovědi a volby jsou v seedu `R__demo_game.sql` (slug `demo-katova-povinnost-de`), obrázky stejné, nahrávky ve `frontend/public/audio/demo-de/` (podklad pro ElevenLabs v `audio/katova-povinnost-de/nahravky-elevenlabs.md`).
+
+| Česky | Německy |
+|---|---|
+| Loket, Cheb, řeka Ohře, Kynžvart | Elbogen, Eger, Fluss Eger, Königswart |
+| Tajenka POVINNOST | Rätselwort PFLICHTEN (také 9 písmen; přijímá se i „Pflicht“) |
+| Krok 1: jméno podle ohybu řeky jako lokte | Elbogen = Ellbogen, otázka uvádí i české Loket |
+| Krok 4: „obraz Spasitele“ | „Bild des Erlösers“ (přijímá se i Bild, Erlöser, Heiland, Christus, Jesus, také s „oe“ místo „ö“) |
+| Zlaté a krejcary | Gulden Conventionsmünze a Kreuzer |
+
+Hussovy a Hainsovy repliky jsou v dobové třetí osobě („Hat Er sich … vorbereitet?“), jak se tehdy v němčině oslovovalo; Huss psal kroniku německy. Překlad je potřeba před ostrým provozem nechat zkontrolovat rodilým mluvčím.
+
 ## Co je pravda a co fikce
 
 | Doloženo (zdroj) | Herní fikce |

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -13,9 +14,11 @@ import java.util.stream.Collectors;
 import cz.mibcon.zazitky.accesscode.AccessCodeService;
 import cz.mibcon.zazitky.accesscode.CodeExpiredException;
 import cz.mibcon.zazitky.accesscode.domain.AccessCode;
+import cz.mibcon.zazitky.common.BadRequestException;
 import cz.mibcon.zazitky.common.InvalidStateException;
 import cz.mibcon.zazitky.common.NotFoundException;
 import cz.mibcon.zazitky.game.domain.Game;
+import cz.mibcon.zazitky.game.domain.GameStatus;
 import cz.mibcon.zazitky.game.domain.Hint;
 import cz.mibcon.zazitky.game.domain.Station;
 import cz.mibcon.zazitky.game.domain.StationChoice;
@@ -51,6 +54,11 @@ public class SessionService {
 
     static final String WRONG_ANSWER_MESSAGE = "To není ono. Zkus to znovu.";
     static final String NOT_A_NUMBER_MESSAGE = "Odpověď musí obsahovat číslo.";
+    // The same texts in the language versions (also in the frontend localGame)
+    private static final Map<String, String> WRONG_ANSWER_MESSAGES = Map.of(
+            "de", "Das ist es nicht. Versuch es noch einmal.");
+    private static final Map<String, String> NOT_A_NUMBER_MESSAGES = Map.of(
+            "de", "Die Antwort muss eine Zahl enthalten.");
 
     private final AccessCodeService accessCodes;
     private final GameSessionRepository sessions;
@@ -74,9 +82,12 @@ public class SessionService {
 
     /**
      * Starts a game with an access code. A code already in use continues its game (also on another
-     * device) unless that game was abandoned or the batch starts a new game on every entry.
+     * device, in the language chosen then) unless that game was abandoned or the batch starts a new game on
+     * every entry.
+     *
+     * @param language language version to play, null = the main game of the code
      */
-    public StartResult start(String rawCode, String teamName) {
+    public StartResult start(String rawCode, String teamName, String language) {
         AccessCode code = accessCodes.findPlayable(rawCode);
         Instant now = clock.instant();
         accessCodes.activateIfNew(code, now);
@@ -89,7 +100,7 @@ public class SessionService {
             }
         }
 
-        Game game = code.getBatch().getGame();
+        Game game = languageVersion(code.getBatch().getGame(), language);
         Station firstStation = game.getStations().stream().findFirst()
                 .orElseThrow(() -> new InvalidStateException("Hra nemá žádná stanoviště."));
         Instant expiresAt = now.plus(Duration.ofHours(game.getSessionValidityHours()));
@@ -111,6 +122,17 @@ public class SessionService {
     }
 
     public record StartResult(SessionState state, boolean created) {
+    }
+
+    private static Game languageVersion(Game mainGame, String language) {
+        if (language == null || language.equals(mainGame.getLanguage())) {
+            return mainGame;
+        }
+        return mainGame.getLanguageVersions().stream()
+                .filter(version -> version.getStatus() == GameStatus.PUBLISHED)
+                .filter(version -> version.getLanguage().equals(language))
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("Hra v tomto jazyce není."));
     }
 
     private static boolean isResumable(GameSession session, Instant now) {
@@ -153,11 +175,13 @@ public class SessionService {
 
         if (!evaluation.correct()) {
             boolean missingNumber = station.getTaskType() == TaskType.NUMBER && evaluation.normalizedAnswer().isEmpty();
-            if (missingNumber) {
-                return AnswerResult.wrong(NOT_A_NUMBER_MESSAGE, null);
-            }
             Game game = session.getGame();
-            return AnswerResult.wrong(Objects.requireNonNullElse(game.getWrongAnswerText(), WRONG_ANSWER_MESSAGE),
+            if (missingNumber) {
+                return AnswerResult.wrong(NOT_A_NUMBER_MESSAGES.getOrDefault(game.getLanguage(), NOT_A_NUMBER_MESSAGE),
+                        null);
+            }
+            String defaultMessage = WRONG_ANSWER_MESSAGES.getOrDefault(game.getLanguage(), WRONG_ANSWER_MESSAGE);
+            return AnswerResult.wrong(Objects.requireNonNullElse(game.getWrongAnswerText(), defaultMessage),
                     game.getWrongAnswerAudioUrl());
         }
 
@@ -352,7 +376,7 @@ public class SessionService {
         return new SessionState(
                 includeToken ? session.getToken() : null,
                 session.getStatus(),
-                new GameRef(game.getId(), game.getTitle(), game.isForChildren()),
+                new GameRef(game.getId(), game.getTitle(), game.isForChildren(), game.getLanguage()),
                 session.getTeamName(),
                 session.getStartedAt(),
                 session.getPenaltySeconds(),

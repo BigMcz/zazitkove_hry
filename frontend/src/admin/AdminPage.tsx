@@ -5,6 +5,8 @@ import logoUrl from '../assets/storyhold.svg'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { buttonPrimary, input } from '../components/ui.ts'
 import { adminApi, type AdminSession } from './adminApi.ts'
+import BatchPrint from './BatchPrint.tsx'
+import CardTemplateEditor from './CardTemplateEditor.tsx'
 import CastleOverview from './CastleOverview.tsx'
 import Dashboard from './Dashboard.tsx'
 import PartnerDetail from './PartnerDetail.tsx'
@@ -93,6 +95,8 @@ function Content({ session }: { session: AdminSession }) {
           <Routes>
             <Route index element={<Dashboard />} />
             <Route path="partneri/:partnerId" element={<PartnerDetail />} />
+            <Route path="batches/:batchId/tisk" element={<BatchPrint />} />
+            <Route path="games/:gameId/karticka" element={<CardTemplateEditor />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </div>

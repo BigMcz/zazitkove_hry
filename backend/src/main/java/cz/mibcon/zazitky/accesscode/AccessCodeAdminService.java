@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchKind;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.BatchSummary;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.CreateBatchRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.GameCount;
@@ -76,24 +77,36 @@ public class AccessCodeAdminService {
     /**
      * New codes are NEW and the batch is "in production": the codes do not work until the printed
      * cards are handed over to the partner ({@link #handOver}). A code counts as sold when activated.
+     * Free batches are left out of the money and the stock; a demo batch has one shared code that never expires
+     * and starts a new game on every entry.
      */
     public BatchSummary createBatch(CreateBatchRequest request) {
         Game game = games.findById(request.gameId())
                 .orElseThrow(() -> new NotFoundException("Hra nebyla nalezena."));
+        if (game.getMainGame() != null) {
+            throw new BadRequestException("Kódy se vytvářejí pro hlavní hru, jazykovou verzi si hráč vybere sám.");
+        }
+        BatchKind kind = request.kindOrSale();
+        String demoCode = kind == BatchKind.DEMO ? demoCode(request.code()) : null;
+        if (kind != BatchKind.DEMO && (request.quantity() == null || request.validityHours() == null)) {
+            throw new BadRequestException("Zadejte počet kódů a platnost od aktivace.");
+        }
 
         AccessCodeBatch batch = new AccessCodeBatch();
         batch.setGame(game);
         batch.setPartner(game.getLocation().getPartner());
-        batch.setQuantity(request.quantity());
-        batch.setValidityHours(request.validityHours());
+        batch.setQuantity(kind == BatchKind.DEMO ? 1 : request.quantity());
+        batch.setValidityHours(kind == BatchKind.DEMO ? null : request.validityHours());
+        batch.setMultiSession(kind == BatchKind.DEMO);
+        batch.setFree(kind == BatchKind.FREE);
         batch.setNote(request.note() == null || request.note().isBlank() ? null : request.note().strip());
-        batch.setUnitPriceCzk(request.unitPriceCzk());
         batches.save(batch);
 
-        List<AccessCode> newCodes = new ArrayList<>(request.quantity());
-        for (String value : uniqueNewCodes(request.quantity())) {
+        List<AccessCode> newCodes = new ArrayList<>(batch.getQuantity());
+        for (String value : demoCode != null ? Set.of(demoCode) : uniqueNewCodes(batch.getQuantity())) {
             AccessCode code = new AccessCode();
             code.setBatch(batch);
+            code.setSerialNo(newCodes.size() + 1);
             code.setCode(value);
             newCodes.add(code);
         }
@@ -101,6 +114,21 @@ public class AccessCodeAdminService {
         codes.flush();
 
         return summaryOf(batch.getId());
+    }
+
+    /** Own demo code (DEMO-KATA → DEMOKATA): 8 letters or digits, not used yet; null or empty = generated. */
+    private String demoCode(String requested) {
+        if (requested == null || requested.isBlank()) {
+            return uniqueNewCodes(1).iterator().next();
+        }
+        String code = AccessCodeFormat.normalize(requested);
+        if (code.length() != AccessCodeFormat.LENGTH) {
+            throw new BadRequestException("Demo kód musí mít 8 písmen nebo číslic, např. DEMO-KATA.");
+        }
+        if (!codes.findExistingCodes(Set.of(code)).isEmpty()) {
+            throw new BadRequestException("Kód " + AccessCodeFormat.format(code) + " už existuje, zvolte jiný.");
+        }
+        return code;
     }
 
     /** The printed cards were handed over to the partner: from now on the codes work and the partner sees them. */
@@ -236,7 +264,7 @@ public class AccessCodeAdminService {
                        count(c.id) FILTER (WHERE b.handed_over_at > l.counted_at) AS delivered_since,
                        count(c.id) FILTER (WHERE c.activated_at > l.counted_at) AS activated_since
                 FROM partner p
-                LEFT JOIN access_code_batch b ON b.partner_id = p.id AND NOT b.multi_session
+                LEFT JOIN access_code_batch b ON b.partner_id = p.id AND NOT b.multi_session AND NOT b.free
                 LEFT JOIN game g ON g.id = b.game_id
                 LEFT JOIN access_code c ON c.batch_id = b.id
                 LEFT JOIN LATERAL (
@@ -301,23 +329,34 @@ public class AccessCodeAdminService {
                 .orElseThrow(() -> new NotFoundException("Dávka nebyla nalezena."));
     }
 
-    /** CSV for the card printer (UTF-8 with BOM, ";" as in Czech Excel): code and a link with the code prefilled (for a QR code). */
+    /**
+     * CSV for the card printer (UTF-8 with BOM, ";" as in Czech Excel): code and a link with the code prefilled (for a
+     * QR code), in the order of the batch; with {@code withSerial} also the position printed on the card.
+     */
     @Transactional(readOnly = true)
-    public String exportCsv(UUID batchId, String publicUrl) {
+    public String exportCsv(UUID batchId, String publicUrl, boolean withSerial) {
         findBatch(batchId);
-        String base = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
-
-        StringBuilder csv = new StringBuilder("﻿kod;odkaz\r\n");
-        for (AccessCode code : codes.findByBatchIdOrderByCode(batchId)) {
-            String printed = AccessCodeFormat.format(code.getCode());
-            csv.append(printed).append(';').append(base).append("/?kod=").append(printed).append("\r\n");
+        StringBuilder csv = new StringBuilder(withSerial ? "﻿poradi;kod;odkaz\r\n" : "﻿kod;odkaz\r\n");
+        for (AccessCode code : codes.findByBatchIdOrderBySerialNo(batchId)) {
+            if (withSerial) {
+                csv.append(code.getSerialNo()).append(';');
+            }
+            csv.append(AccessCodeFormat.format(code.getCode())).append(';').append(codeLink(publicUrl, code.getCode()))
+                    .append("\r\n");
         }
         return csv.toString();
     }
 
+    /** Link with the code prefilled, as in the QR code on the card. */
+    public static String codeLink(String publicUrl, String code) {
+        String base = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
+        return base + "/?kod=" + AccessCodeFormat.format(code);
+    }
+
     /**
-     * Activated codes per month, partner and game; development (multi-session) batches are left out.
-     * The partner's share of each code is the one valid on the day of its activation (partner_share).
+     * Activated codes per month, partner and game; development (multi-session) and free batches are left out.
+     * The price of each code is the price of the game valid on the day of its activation (game_price), the partner's
+     * share the one valid on that day (partner_share).
      *
      * @param partnerId only this partner; null = all
      */
@@ -331,12 +370,20 @@ public class AccessCodeAdminService {
                        p.name AS partner_name,
                        g.title AS game_title,
                        count(*) AS activated_count,
-                       sum(b.unit_price_czk) AS revenue_czk,
-                       round(sum(b.unit_price_czk * s.share_pct / 100), 2) AS partner_share_czk
+                       sum(gp.price_czk) AS revenue_czk,
+                       round(sum(gp.price_czk * s.share_pct / 100), 2) AS partner_share_czk
                 FROM access_code c
                 JOIN access_code_batch b ON b.id = c.batch_id
                 JOIN partner p ON p.id = b.partner_id
                 JOIN game g ON g.id = b.game_id
+                LEFT JOIN LATERAL (
+                    SELECT price.price_czk
+                    FROM game_price price
+                    WHERE price.game_id = b.game_id
+                      AND price.valid_from <= (c.activated_at AT TIME ZONE 'Europe/Prague')::date
+                    ORDER BY price.valid_from DESC
+                    LIMIT 1
+                ) gp ON TRUE
                 LEFT JOIN LATERAL (
                     SELECT ps.share_pct
                     FROM partner_share ps
@@ -345,7 +392,7 @@ public class AccessCodeAdminService {
                     ORDER BY ps.valid_from DESC
                     LIMIT 1
                 ) s ON TRUE
-                WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session
+                WHERE c.activated_at >= ? AND c.activated_at < ? AND NOT b.multi_session AND NOT b.free
                   AND (CAST(? AS uuid) IS NULL OR p.id = ?)
                 GROUP BY month, p.id, p.name, g.title
                 ORDER BY month, p.name, g.title

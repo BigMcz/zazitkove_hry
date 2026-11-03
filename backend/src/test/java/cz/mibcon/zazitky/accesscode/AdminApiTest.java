@@ -86,7 +86,7 @@ class AdminApiTest {
         String body = mvc.perform(post("/api/v1/admin/batches").with(admin()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"quantity\":25,\"validityHours\":5,"
-                                + "\"note\":\"Sezóna 2027 — tisk 1\",\"unitPriceCzk\":150}").getBytes(StandardCharsets.UTF_8)))
+                                + "\"note\":\"Sezóna 2027 — tisk 1\"}").getBytes(StandardCharsets.UTF_8)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.quantity").value(25))
                 .andExpect(jsonPath("$.partnerName").value("Demo partner"))
@@ -109,7 +109,9 @@ class AdminApiTest {
         List<String> lines = csv.lines().toList();
         assertThat(lines.getFirst()).isEqualTo("﻿kod;odkaz");
         assertThat(lines).hasSize(26);
-        String first = AccessCodeFormat.format(codes.stream().sorted().findFirst().orElseThrow());
+        // In the order of the batch, as the serial numbers on the cards
+        String first = AccessCodeFormat.format(jdbc.queryForObject(
+                "SELECT code FROM access_code WHERE batch_id = ? AND serial_no = 1", String.class, batchId));
         assertThat(lines.get(1)).isEqualTo(first + ";http://localhost/?kod=" + first);
     }
 
@@ -143,7 +145,7 @@ class AdminApiTest {
 
         String body = mvc.perform(post("/api/v1/admin/batches").with(admin()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"quantity\":3,\"validityHours\":5,\"unitPriceCzk\":200}"))
+                        .content("{\"gameId\":\"" + DEMO_GAME_ID + "\",\"quantity\":3,\"validityHours\":5}"))
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         UUID batchId = UUID.fromString(JsonPath.read(body, "$.id"));
         mvc.perform(post("/api/v1/admin/batches/{id}/handover", batchId).with(admin()).with(csrf()))

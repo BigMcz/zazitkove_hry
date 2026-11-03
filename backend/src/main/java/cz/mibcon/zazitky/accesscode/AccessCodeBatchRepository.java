@@ -16,17 +16,19 @@ public interface AccessCodeBatchRepository extends JpaRepository<AccessCodeBatch
      */
     @Query("""
             select new cz.mibcon.zazitky.accesscode.AdminBatchDtos$BatchSummary(
-                b.id, p.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.note, b.unitPriceCzk,
-                b.createdAt, b.handedOverAt, count(c.activatedAt),
-                count(case when c.status = cz.mibcon.zazitky.accesscode.domain.AccessCodeStatus.NEW then 1 end))
+                b.id, b.batchNo, p.id, g.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.free,
+                b.note, b.createdAt, b.handedOverAt, count(c.activatedAt),
+                count(case when c.status = cz.mibcon.zazitky.accesscode.domain.AccessCodeStatus.NEW then 1 end),
+                b.printedAt, t.version)
             from AccessCodeBatch b
             join b.game g
             join b.partner p
             left join AccessCode c on c.batch = b
+            left join cz.mibcon.zazitky.cardprint.domain.CardTemplate t on t.id = b.cardTemplateId
             where (:partnerId is null or p.id = :partnerId)
               and (:handedOverOnly = false or b.handedOverAt is not null)
-            group by b.id, p.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession, b.note, b.unitPriceCzk,
-                b.createdAt, b.handedOverAt
+            group by b.id, b.batchNo, p.id, g.id, g.title, p.name, b.quantity, b.validityHours, b.multiSession,
+                b.free, b.note, b.createdAt, b.handedOverAt, b.printedAt, t.version
             order by b.createdAt desc
             """)
     List<BatchSummary> findSummaries(UUID partnerId, boolean handedOverOnly);

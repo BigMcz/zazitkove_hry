@@ -40,7 +40,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 ├── ZazitkyApplication.java
 ├── common/                  # ApiExceptionHandler (ProblemDetail), ApiException + NotFound/InvalidState,
 │                            # TextNormalizer, ClockConfig (Clock bean), SpaWebConfig (frontend), SpaPages (routy aplikace, 404),
-│                            # RateLimiter + RateLimitConfig, TooManyRequestsException (429)
+│                            # RateLimiter + RateLimitConfig, TooManyRequestsException (429), PublicUrl (odkazy na kartičkách)
 ├── admin/                   # přístupy do administrace
 │   ├── domain/              # PartnerUser (účet správy hradu)
 │   ├── AdminSecurityConfig  # Spring Security: role ADMIN (konfigurace) a PARTNER (DB)
@@ -69,6 +69,14 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
     ├── AccessCodeController # /api/v1/access-codes/check
     ├── AccessCodeAdminService + AccessCodeAdminController # dávky, předání, CSV, měsíční přehled, souhrn (/api/v1/admin/**)
     └── InvalidCodeException (404), CodeExpiredException (410)
+└── cardprint/               # tisk kartiček (docs/07-tisk-karticek.md)
+    ├── domain/              # CardTemplate (verze šablony), CardTemplateFile (grafika), CodeAlign
+    ├── CardLayout           # rozměr a pozice QR, kódu a pořadového čísla (mm, pt)
+    ├── CardPdfRenderer      # bez DB: šablona + grafika + kódy → PDF / PNG náhled / testovací A4 (PDFBox, ZXing)
+    ├── CardTemplateService + CardTemplateAdminController # nahrání grafiky, verze, validace, náhled editoru
+    ├── CardPrintService + CardPrintAdminController # tisk dávky: přivázání verze, exporty, audit, Semaphore(1)
+    ├── SerialSelection      # výběr pro dotisk "42, 57, 100-110"
+    └── PrintBusyException (503)
 ```
 
 ### Vrstvy uvnitř feature
@@ -77,7 +85,7 @@ cz.mibcon.zazitky            # (název balíčku lze upravit)
 
 ### Herní logika (`SessionService`)
 
-1. **start(code, teamName)** — `AccessCodeService` ověří kód (neznámý/zrušený, dávka ještě nepředaná partnerovi, nebo hra není `PUBLISHED` → 404 `invalid-code`, vypršelý → 410 `code-expired`) a při prvním použití ho aktivuje (`ACTIVATED`, `activated_at`, `valid_until = activated_at + batch.validity_hours`). Pokud kód už má rozehranou (`IN_PROGRESS`, nevypršelou) nebo dokončenou relaci, vrátí ji i s tokenem (pokračování na jiném zařízení) — kromě dávek s `multi_session`, kde každé zadání založí novou hru. Jinak vytvoří `game_session` (`IN_PROGRESS`, `token = UUID.randomUUID()`, `expires_at = min(now + session_validity_hours, valid_until kódu)`) a `session_progress` pro první stanoviště (`ACTIVE`). Opuštěnou hru (`ABANDONED`) lze během platnosti kódu začít znovu.
+1. **start(code, teamName, language)** — `AccessCodeService` ověří kód (neznámý/zrušený, dávka ještě nepředaná partnerovi, nebo hra není `PUBLISHED` → 404 `invalid-code`, vypršelý → 410 `code-expired`) a při prvním použití ho aktivuje (`ACTIVATED`, `activated_at`, `valid_until = activated_at + batch.validity_hours`). Pokud kód už má rozehranou (`IN_PROGRESS`, nevypršelou) nebo dokončenou relaci, vrátí ji i s tokenem (pokračování na jiném zařízení) — kromě dávek s `multi_session`, kde každé zadání založí novou hru. Jinak vybere jazykovou verzi hlavní hry kódu podle `language` (chybí nebo jazyk hlavní hry → hlavní hra, neznámý jazyk → 400) a vytvoří `game_session` (`IN_PROGRESS`, `game_id` = hraná verze, `token = UUID.randomUUID()`, `expires_at = min(now + session_validity_hours, valid_until kódu)`) a `session_progress` pro první stanoviště (`ACTIVE`). Opuštěnou hru (`ABANDONED`) lze během platnosti kódu začít znovu.
 2. **getState(token)** — vrátí aktuální stav; pokud je relace `IN_PROGRESS` a `expires_at <= now`, nastaví `EXPIRED` a vrátí 410 (změna stavu se uloží, `noRollbackFor`).
 3. **submitAnswer(token, stationId, answer)** — v transakci:
    - stanoviště musí být aktuálně `ACTIVE` v dané relaci (jinak 409);
@@ -117,6 +125,7 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Admin/partner API bez přihlášení / špatné heslo nebo zablokovaný účet | 401 | `unauthorized` / `invalid-credentials` |
 | Hrad (role `PARTNER`) volá API správce, nebo správce API hradu | 403 | `forbidden` |
 | Admin API bez platného CSRF tokenu | 403 | `forbidden` |
+| Generování tisku kartiček čeká déle než 30 s na jiné | 503 | `print-busy` |
 
 `type` je relativní URI `/problems/<suffix>` (např. `/problems/not-found`), `title` a `detail` jsou česky. Validační chyby těla požadavku obsahují navíc pole `errors: [{ "field", "message" }]`. Neznámá hra nebo nepublikovaná hra vrací 404.
 
@@ -156,7 +165,10 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
   "code": "ABCD-2345",
   "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "subtitle": "…", "introText": "Píše se rok 1625…",
             "introAudioUrl": "/audio/demo/intro.mp3", "coverImageUrl": "/images/demo/cover.webp",
-            "estimatedMinutes": 45, "stationCount": 5, "forChildren": false },
+            "estimatedMinutes": 45, "stationCount": 5, "forChildren": false, "language": "cs" },
+  "languageVersions": [       // stejná hra v dalších jazycích (stejná struktura), [] = jen jeden jazyk
+    { "id": "9d1e…", "title": "Die Pflicht des Henkers", "language": "de", … }
+  ],
   "resumesGame": false,       // true = kód už je použitý, POST /sessions vrátí jeho rozehranou hru
   "validUntil": null          // po aktivaci konec platnosti; null i u vývojového kódu bez expirace
 }
@@ -166,10 +178,10 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| POST | `/sessions` | Zahájit hru kódem. Body: `{ "code": "ABCD-2345", "teamName": "Kuchtovi" }` → `201` + stav relace včetně `token`; když kód pokračuje v existující hře, `200` + její stav a token (`teamName` se ignoruje) |
+| POST | `/sessions` | Zahájit hru kódem. Body: `{ "code": "ABCD-2345", "teamName": "Kuchtovi", "language": "de" }` (`language` nepovinný, dvě malá písmena; jazyková verze z `languageVersions`) → `201` + stav relace včetně `token`; když kód pokračuje v existující hře, `200` + její stav a token (`teamName` i `language` se ignorují, hra pokračuje v jazyce zvoleném při startu) |
 | GET | `/sessions/current` | Aktuální stav relace (pro obnovu i po každém kroku) |
 | POST | `/sessions/current/sync` | Akce zahrané v telefonu (offline), v pořadí: `{ "events": [ { "id": "<uuid z telefonu>", "type": "ANSWER", "stationId": "…", "answer": "…", "at": "2026-10-31T10:05:00Z" }, { "id": "…", "type": "HINT", "stationId": "…", "at": "…" } ] }` → stav relace. Stejná pravidla jako jednotlivé požadavky, ale v čase hraní; už přijatá akce (stejné `id`) se přeskočí, akce, kterou pravidla už nedovolí (stanoviště vyřešené jinde, žádná další nápověda), se zapíše bez účinku. Čas se drží mezi startem hry a přijetím a nejde zpět. Akce z doby platnosti kódu platí i po jejím vypršení; když hra ani tak není dokončená, odpověď je `410` (akce zůstanou zapsané). Max. 500 akcí |
-| GET | `/sessions/current/package` | Offline balíček rozehrané hry (`SessionPackage`): první stanoviště otevřeně, ostatní obsah zašifrovaný odpověďmi, klíče už vyřešených stanovišť, pořadí tajenky, seznam obrázků a zvuků, údaje relace (název hry, `forChildren`, `wrongAnswerText`, tým, start, platnost). Bez přijímaných odpovědí. Hra mimo `IN_PROGRESS` a `COMPLETED` → `409` |
+| GET | `/sessions/current/package` | Offline balíček rozehrané hry (`SessionPackage`): první stanoviště otevřeně, ostatní obsah zašifrovaný odpověďmi, klíče už vyřešených stanovišť, pořadí tajenky, seznam obrázků a zvuků, údaje relace (název hry, `forChildren`, `language`, `wrongAnswerText`, tým, start, platnost). Bez přijímaných odpovědí. Hra mimo `IN_PROGRESS` a `COMPLETED` → `409` |
 | POST | `/sessions/current/stations/{stationId}/answers` | Odeslat odpověď. Body: `{ "answer": "1625" }` |
 | POST | `/sessions/current/stations/{stationId}/hints` | Odkrýt další nápovědu → odkryté nápovědy a nová penalizace |
 | POST | `/sessions/current/abandon` | Opustit hru → `204` (opakované volání je bez efektu) |
@@ -179,8 +191,9 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 {
   "token": "e3f1…",            // jen v odpovědi na POST /sessions
   "status": "IN_PROGRESS",
-  "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "forChildren": false },
+  "game": { "id": "4b0c…", "title": "Prokletí loketského kata", "forChildren": false, "language": "cs" },
                               // forChildren: hra pro děti (tajenka v pořadí, nápovědy bez penalizace, finále s diplomem)
+                              // language: jazyk hrané verze, celá hra (i ovládání) se zobrazí v něm
   "teamName": "Kuchtovi",
   "startedAt": "2026-10-28T10:15:00Z",
   "penaltySeconds": 60,
@@ -250,19 +263,34 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
 | GET | `/admin/dashboard?year=2026[&partnerId=…]` | Souhrn za rok (všechny hrady nebo jeden): `activatedThisMonth`, `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (= tržba − podíl hradů), `revenueThisMonthCzk`, `partnerShareThisMonthCzk`, `profitThisMonthCzk` (aktuální měsíc i při jiném zvoleném roce; hrad dostane bez zisku), `cardsInStock` (podle inventur hradů, jinak předané a neaktivované), `cardsInStockComputed`, `stockCountedAt` (jen pro jednoho partnera), `cardsInProduction`, `cardsDelivered`; vývojové dávky se nepočítají |
-| GET | `/admin/batches[?partnerId=…]` | Dávky kódů: `handedOverAt` (null = ve výrobě), `activatedCount`, `notActivatedCount` |
-| POST | `/admin/batches` | Nová dávka: `gameId`, `quantity` (1–5000), `validityHours` (1–24, v UI předvyplněno 5), `note`, `unitPriceCzk` → `201`; partner se doplní ze hry; dávka je **ve výrobě** — kódy nefungují |
+| GET | `/admin/batches[?partnerId=…]` | Dávky kódů: `batchNo` (D12), `gameId`, `multiSession` (demo kód), `free` (zdarma), `handedOverAt` (null = ve výrobě), `activatedCount`, `notActivatedCount`, `printedAt` (první export zadních stran), `templateVersion` (verze šablony kartičky, null = zatím nepřivázaná) |
+| POST | `/admin/batches` | Nová dávka: `gameId`, `kind` (`SALE` prodejní = výchozí, `FREE` zdarma: jednorázové kódy mimo tržbu, fakturaci a sklad, `DEMO`: jeden sdílený kód bez expirace, každé zadání = nová hra, mimo tržbu a statistiky), `quantity` (1–5000) a `validityHours` (1–24, v UI předvyplněno 5) jen pro `SALE`/`FREE`, `code` jen pro `DEMO` (vlastní kód z 8 písmen nebo číslic, např. `DEMO-KATA`; obsazený → `400`; chybí = vygeneruje se), `note` → `201` (cena je u hry, ne u dávky); partner se doplní ze hry; dávka je **ve výrobě** — kódy nefungují |
 | POST | `/admin/batches/{id}/handover` | Kartičky byly předány partnerovi → od teď kódy fungují a partner dávku vidí |
 | DELETE | `/admin/batches/{id}/handover` | Vrátit předání (omyl) — jen dokud z dávky nikdo nic nepoužil, jinak `409` |
-| GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR) |
-| GET | `/admin/reports/monthly-activations?year=2026[&partnerId=…]` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerId`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
+| GET | `/admin/batches/{id}/codes.csv` | CSV pro tiskárnu kartiček: UTF-8 s BOM, oddělovač `;`, sloupce `kod;odkaz` (`<PUBLIC_URL>/?kod=ABCD-2345` pro QR), v pořadí kódů v dávce |
+| POST | `/admin/card-template-files` | Nahrání grafiky kartičky (multipart `file`, PDF/PNG/JPG, max. 20 MB) → `201` |
+| GET | `/admin/games/{gameId}/card-template[/versions]` | Poslední verze šablony kartičky hry (`404` bez šablony) / všechny verze s počtem dávek |
+| POST | `/admin/games/{gameId}/card-template` | Nová verze šablony `{ layout, frontFileId, backFileId, note }` → `201` `{ template, warnings }` |
+| POST | `/admin/games/{gameId}/card-template/preview?side=FRONT\|BACK` | Náhled editoru → `{ image (PNG data URL), warnings }` |
+| GET | `/admin/card-templates/{id}/files/{FRONT\|BACK}`, `/admin/card-templates/{id}/test-print.pdf` | Původní grafika; testovací tisk A4 s náhodným neuloženým kódem |
+| GET | `/admin/batches/{id}/print` | Stav tisku dávky: přivázaná a poslední verze šablony, `printedAt`, posledních 20 stažení |
+| POST | `/admin/batches/{id}/print/template` | `{ templateId }` přiváže dávku k verzi; předaná dávka → `409` |
+| POST | `/admin/batches/{id}/print/preview?side=…` | Náhled s prvním kódem dávky |
+| POST | `/admin/batches/{id}/print/front.pdf`, `back.pdf`, `all.zip` | `{ cropMarks, serials, copies }` (`copies` 1–1000 jen u demo dávky: na kolik kartiček se sdílený kód vytiskne) → PDF / ZIP (obě PDF + `codes.csv` se sloupcem `poradi`); první export přiváže poslední verzi, zadní strana nastaví `printedAt`, každé stažení se zapíše do `card_print_export`; `Cache-Control: no-store`. Podrobně `docs/07-tisk-karticek.md` |
+| GET | `/admin/reports/monthly-activations?year=2026[&partnerId=…]` | Aktivované kódy po měsících (Europe/Prague), partnerech a hrách: `month`, `partnerId`, `partnerName`, `gameTitle`, `activatedCount`, `revenueCzk` (součet cen hry platných v den aktivace kódu, `game_price`), `partnerShareCzk` (součet cena × podíl platný v den aktivace kódu); vývojové dávky se nepočítají |
 | GET | `/admin/reports/partners?year=2026` | Srovnání všech hradů: `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (jako měsíční přehled), `cardsDelivered`, `cardsInStock` (podle inventury hradu), `cardsInStockComputed`, `stockCountedAt`, `cardsInProduction`, `activatedLast28Days`, `stockDays` (hra, které kartičky dojdou nejdřív) a `games[]` (totéž po hrách) (na kolik dní vydrží kartičky u hradu při tempu posledních 28 dní, `null` bez prodeje); i hrady bez kartiček; vývojové dávky se nepočítají |
-| GET | `/admin/reports/gameplay?year=2026[&partnerId=…]` | Jak se hraje: hry spuštěné v roce (Europe/Prague) kódy z prodaných kartiček, po hrách: `started`, `completed`, `unfinished` (opuštěné nebo vypršelé), `playing`, doba hraní dohraných her v sekundách (`durationP25Seconds`, `durationMedianSeconds`, `durationP75Seconds`, `durationWithPenaltyMedianSeconds`) a `stations[]` (`reached`, `solved`, `stoppedHere`, `medianSeconds` od odemčení po vyřešení, `wrongAttempts`, `teamsWithHint`). Jen pro správce, hrad vidí jen prodej |
+| GET | `/admin/reports/gameplay?year=2026[&partnerId=…]` | Jak se hraje: hry spuštěné v roce (Europe/Prague) kódy z prodaných kartiček, po jazykových verzích her (`language`, `mainGameId` a `mainGameTitle` hlavní hry; administrace je ukazuje pod jednou záložkou s počtem her v každém jazyce): `started`, `completed`, `unfinished` (opuštěné nebo vypršelé), `playing`, doba hraní dohraných her v sekundách (`durationP25Seconds`, `durationMedianSeconds`, `durationP75Seconds`, `durationWithPenaltyMedianSeconds`) a `stations[]` (`reached`, `solved`, `stoppedHere`, `medianSeconds` od odemčení po vyřešení, `wrongAttempts`, `teamsWithHint`). Jen pro správce, hrad vidí jen prodej |
 | GET | `/admin/partners`, `/admin/partners/{id}` | Partneři (hrady): `id`, `name`, `companyId` (IČ), `vatId` (DIČ), `contactEmail`, `contactPerson`, `phone`, `currentSharePct` (platný dnes), `shares` (`id`, `validFrom`, `sharePct`, včetně naplánovaných) |
 | POST | `/admin/partners` | Přidat partnera: `name` (povinné), `companyId` (8 číslic, unikátní), `vatId` (např. CZ12345678), `contactEmail`, `contactPerson`, `phone` → `201`; podíl se nastaví zvlášť |
 | PUT | `/admin/partners/{id}` | Upravit firemní údaje (stejná pole jako POST) → `200` |
 | POST | `/admin/partners/{id}/shares` | Podíl od data: `validFrom` (YYYY-MM-DD), `sharePct` (0–100, max. 2 desetinná místa) → `200` + hrad; stejné datum nahradí existující podíl; datum v minulosti změní vyúčtování už aktivovaných kódů (UI upozorní) |
 | DELETE | `/admin/partners/{id}/shares/{shareId}` | Smazat podíl (např. chybně naplánovaný) → `200` + hrad |
+| GET | `/admin/partners/{id}/billing/{month}` | Fakturace hradu za měsíc (`YYYY-MM`): `ended` (měsíc skončil, lze fakturovat), `games[]` (hlavní hry hradu i bez aktivací: `prices` ceny aktivovaných kódů, bez aktivací cena platná na konci měsíce; `amounts`: `activatedCount`, `revenueCzk`, `partnerShareCzk`, `operatorCzk` = tržba − podíl hradu), `total` (totéž za všechny hry; `operatorCzk` = částka k fakturaci), `invoice` (`invoicedOn`, `amountCzk` při označení; `null` = nevyfakturováno), `uninvoicedMonths` (skončené měsíce s aktivacemi bez označení). Každý kód cenou hry a podílem platnými v den aktivace, bez vývojových dávek |
+| PUT | `/admin/partners/{id}/billing/{month}/invoice` | Označit měsíc jako vyfakturovaný: `invoicedOn` (YYYY-MM-DD, nejdřív první den následujícího měsíce, ne v budoucnosti; neskončený měsíc → `400`) → `200` + fakturace měsíce; znovu = změna data, částka se uloží aktuální |
+| DELETE | `/admin/partners/{id}/billing/{month}/invoice` | Zrušit označení → `200` + fakturace měsíce |
+| GET | `/admin/partners/{id}/game-prices` | Hlavní hry hradu s cenami: `gameId`, `gameTitle`, `currentPriceCzk` (platná dnes, `null` = nenastavená), `prices[]` (`id`, `validFrom`, `priceCzk`) včetně naplánovaných |
+| POST | `/admin/games/{gameId}/prices` | Cena kartičky od data: `validFrom` (YYYY-MM-DD), `priceCzk` (celé Kč, 0–100 000) → `200` + ceny hry; stejné datum nahradí existující cenu; jazyková verze → `400` (sdílí cenu hlavní hry); datum v minulosti změní tržbu už aktivovaných kódů (UI upozorní) |
+| DELETE | `/admin/games/{gameId}/prices/{priceId}` | Smazat cenu → `200` + ceny hry |
 | GET | `/admin/partner-users` | Účty hradů (`username`, `displayName`, `partnerName`, `enabled`, `createdAt`, `lastLoginAt`) |
 | POST | `/admin/partner-users` | Nový účet: `partnerId`, `username` (3–100, písmena bez diakritiky, číslice, `._@-`; ukládá se malými písmeny), `displayName`, `password` (min. 10 znaků) → `201`; obsazené jméno nebo jméno správce → `400` |
 | POST | `/admin/partner-users/{id}/password` | Nové heslo `{ "password" }` → `204` |
@@ -277,6 +305,7 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | POST | `/partner/stock-count?year=2026` | Inventura po hrách: `{ "games": [{ "gameId", "cardsInStock" }] }` = kolik kartiček každé hry hrad opravdu má (prodané neaktivované už ne) → aktualizovaný souhrn; víc než `cardsInStockComputed` hry nebo hra bez převzatých kartiček → `400`. Dál se počítá od inventury hry (+ předané, − aktivované po ní, nejvýš počet podle aktivací); vyúčtování se nemění |
 | GET | `/partner/batches` | Převzaté dávky (jen předané, bez vývojových): datum předání, kusů, aktivováno, zbývá (`notActivatedCount`) — podklad pro inventuru kartiček |
 | GET | `/partner/shares` | Vlastní podíly včetně naplánovaných (`validFrom`, `sharePct`) |
+| GET | `/partner/game-prices` | Ceny vlastních her včetně naplánovaných, jen ke čtení (struktura jako `/admin/partners/{id}/game-prices`) |
 | POST | `/partner/password` | Změna vlastního hesla `{ "currentPassword", "newPassword" }` → `204`; špatné současné heslo → `400` |
 
 `choices` u typu `CHOICE` je seznam textů k výběru (které z nich jsou správné, klient nezjistí).
@@ -319,6 +348,8 @@ frontend/src/
 | `/play/finale` | Finále |
 | `/admin` | Administrace — správce: dashboard; hrad: přehled hradu |
 | `/admin/partneri/:partnerId` | Detail hradu (jen správce) |
+| `/admin/batches/:batchId/tisk` | Tisk dávky kódů: verze šablony, náhled s prvním kódem, stažení PDF a ZIP, dotisk, historie stažení (jen správce) |
+| `/admin/games/:gameId/karticka` | Editor šablony kartičky hry s živým náhledem, verze a testovací tisk A4 (jen správce) |
 
 Navigace ve hře je řízená stavem ze serveru — klient nikdy sám nerozhoduje, které stanoviště je odemčené.
 

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { partnerApi } from './adminApi.ts'
 import BatchList from './BatchList.tsx'
+import GamePrices from './GamePrices.tsx'
 import { formatDate, formatPercent, todayInPrague } from './format.ts'
 import MonthlyReport from './MonthlyReport.tsx'
 import StatCards from './StatCards.tsx'
@@ -19,6 +20,7 @@ export default function CastleOverview() {
         <YearSelect year={year} onChange={setYear} />
       </div>
       <StatCards scope="partner" year={year} />
+      <GamePrices />
       <BatchList scope="partner" />
       <MonthlyReport scope="partner" year={year} />
     </>

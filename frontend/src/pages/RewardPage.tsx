@@ -9,18 +9,18 @@ import { usePlaySession } from '../session/usePlaySession.ts'
 import type { RewardLocationState } from './StationPage.tsx'
 
 export default function RewardPage() {
-  const { query, loadError } = usePlaySession()
+  const { query, loadError, texts } = usePlaySession()
   const location = useLocation()
   const fromAnswer = location.state as RewardLocationState | null
   const state = query.data
 
   if (!state) {
     return (
-      <Page>
+      <Page texts={texts}>
         {loadError ? (
-          <ErrorBanner message={loadError.message} onRetry={() => void query.refetch()} />
+          <ErrorBanner message={texts.error(loadError)} onRetry={() => void query.refetch()} />
         ) : (
-          <p role="status">Načítám…</p>
+          <p role="status">{texts.loading}</p>
         )}
       </Page>
     )
@@ -38,13 +38,13 @@ export default function RewardPage() {
   const completed = state.status === 'COMPLETED' || fromAnswer?.gameCompleted === true
 
   return (
-    <Page>
+    <Page texts={texts}>
       <header className="flex flex-col gap-1">
         <p className="text-sm font-semibold tracking-wide text-emerald-800 uppercase">
-          Vyřešeno {state.progress.solved} / {state.progress.total}
+          {texts.solved(state.progress.solved, state.progress.total)}
         </p>
         <h1 className="font-serif text-3xl font-bold text-stone-950">
-          {completed ? 'Poslední stopa!' : 'Stopa nalezena'}
+          {completed ? texts.lastClue : texts.clueFound}
         </h1>
       </header>
 
@@ -62,14 +62,14 @@ export default function RewardPage() {
       {nextText && !completed && (
         <section aria-labelledby="next-heading" className="rounded-xl border-l-4 border-amber-600 bg-white p-4 shadow-sm">
           <h2 id="next-heading" className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
-            Kam dál
+            {texts.whereNext}
           </h2>
           <p className="mt-1 text-lg font-semibold text-stone-950">{nextText}</p>
         </section>
       )}
 
       <Link to={completed ? '/play/finale' : '/play'} replace className={buttonPrimary}>
-        {completed ? 'Na závěr příběhu' : 'Na další stanoviště'}
+        {completed ? texts.toFinale : texts.toNextStation}
       </Link>
     </Page>
   )

@@ -9,6 +9,8 @@ import cz.mibcon.zazitky.accesscode.AdminBatchDtos.StockCountRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
 import cz.mibcon.zazitky.admin.PartnerUserDtos.ChangeOwnPasswordRequest;
 import cz.mibcon.zazitky.admin.PartnerAdminDtos.ShareDto;
+import cz.mibcon.zazitky.game.GamePriceDtos.GamePricesDto;
+import cz.mibcon.zazitky.game.GamePriceService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -33,12 +35,14 @@ public class PartnerPortalController {
     private final AccessCodeAdminService accessCodes;
     private final PartnerUserService partnerUsers;
     private final PartnerAdminService partners;
+    private final GamePriceService gamePrices;
 
     public PartnerPortalController(AccessCodeAdminService accessCodes, PartnerUserService partnerUsers,
-            PartnerAdminService partners) {
+            PartnerAdminService partners, GamePriceService gamePrices) {
         this.accessCodes = accessCodes;
         this.partnerUsers = partnerUsers;
         this.partners = partners;
+        this.gamePrices = gamePrices;
     }
 
     @GetMapping("/reports/monthly-activations")
@@ -70,6 +74,12 @@ public class PartnerPortalController {
     public Summary stockCount(@AuthenticationPrincipal PartnerUserDetails partner,
             @RequestParam @Min(2020) @Max(2100) int year, @Valid @RequestBody StockCountRequest request) {
         return accessCodes.recordStockCount(partner.partnerId(), partner.userId(), request.games(), year);
+    }
+
+    /** Selling prices of the own games including planned changes. */
+    @GetMapping("/game-prices")
+    public List<GamePricesDto> gamePrices(@AuthenticationPrincipal PartnerUserDetails partner) {
+        return gamePrices.listForPartner(partner.partnerId());
     }
 
     /** Own share history including planned changes. */

@@ -27,6 +27,10 @@ public class AccessCode {
     @JoinColumn(name = "batch_id", nullable = false)
     private AccessCodeBatch batch;
 
+    /** Position in the batch 1…N, printed on the card. */
+    @Column(nullable = false)
+    private int serialNo;
+
     @Column(nullable = false, unique = true, length = 20)
     private String code;
 
@@ -50,6 +54,14 @@ public class AccessCode {
 
     public void setBatch(AccessCodeBatch batch) {
         this.batch = batch;
+    }
+
+    public int getSerialNo() {
+        return serialNo;
+    }
+
+    public void setSerialNo(int serialNo) {
+        this.serialNo = serialNo;
     }
 
     public String getCode() {

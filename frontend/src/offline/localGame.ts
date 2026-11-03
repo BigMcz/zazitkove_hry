@@ -6,6 +6,7 @@ import type {
   SessionState,
   SolvedStation,
 } from '../api/types.ts'
+import { gameTexts } from '../i18n/gameTexts.ts'
 import { openStation, solveStation } from './packageCrypto.ts'
 import type { LocalProgress } from './storage.ts'
 import { normalize, normalizeNumber } from './textNormalizer.ts'
@@ -17,8 +18,8 @@ import type { GamePackage, StationContent, Unlocked } from './types.ts'
  */
 
 // The same texts as the backend SessionService
-export const WRONG_ANSWER_MESSAGE = 'To není ono. Zkus to znovu.'
-export const NOT_A_NUMBER_MESSAGE = 'Odpověď musí obsahovat číslo.'
+export const WRONG_ANSWER_MESSAGE = gameTexts('cs').wrongAnswer
+export const NOT_A_NUMBER_MESSAGE = gameTexts('cs').notANumber
 
 /** The game opened as far as the progress goes: content of every reached station and what the solved ones revealed. */
 interface OpenedGame {
@@ -112,7 +113,12 @@ export async function localState(pack: GamePackage, progress: LocalProgress, now
 
   return {
     status: finished ? 'COMPLETED' : expired ? 'EXPIRED' : 'IN_PROGRESS',
-    game: { id: pack.gameId, title: pack.session.gameTitle, forChildren: pack.session.forChildren ?? false },
+    game: {
+      id: pack.gameId,
+      title: pack.session.gameTitle,
+      forChildren: pack.session.forChildren ?? false,
+      language: pack.session.language ?? 'cs',
+    },
     teamName: pack.session.teamName,
     startedAt: pack.session.startedAt,
     penaltySeconds: penalty,
@@ -169,12 +175,13 @@ export async function localAnswer(
   const sealed = pack.stations.find((candidate) => candidate.id === stationId)
   const solved = sealed && normalized !== '' ? await solveStation(sealed, normalized, pack.kdfIterations) : null
   if (!solved) {
+    const texts = gameTexts(pack.session.language)
     const result: AnswerResult =
       isNumber && normalized === ''
-        ? { correct: false, message: NOT_A_NUMBER_MESSAGE }
+        ? { correct: false, message: texts.notANumber }
         : {
             correct: false,
-            message: pack.session.wrongAnswerText ?? WRONG_ANSWER_MESSAGE,
+            message: pack.session.wrongAnswerText ?? texts.wrongAnswer,
             messageAudioUrl: pack.session.wrongAnswerAudioUrl ?? undefined,
           }
     return { result, solved: null, finished: false }

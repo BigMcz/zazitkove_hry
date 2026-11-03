@@ -22,7 +22,7 @@ async function downloaded() {
 function serverState(solved: string[]): SessionState {
   return {
     status: 'IN_PROGRESS',
-    game: { id: 'g1', title: 'Testovací hra', forChildren: false },
+    game: { id: 'g1', title: 'Testovací hra', forChildren: false, language: 'cs' },
     teamName: null,
     startedAt: '2026-10-31T10:00:00Z',
     penaltySeconds: 0,

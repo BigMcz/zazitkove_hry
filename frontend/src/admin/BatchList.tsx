@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, partnerApi, type BatchSummary } from './adminApi.ts'
-import { formatDateTime, formatMoney, formatNumber } from './format.ts'
+import { formatDateTime, formatNumber } from './format.ts'
 import Section from './Section.tsx'
 import { adminKeys, invalidateAdminData, linkButton, useLoggedOutOn401, type Scope } from './shared.ts'
 
@@ -12,8 +13,7 @@ interface BatchListProps {
 }
 
 /**
- * Operator: batches of a partner with their state (in production / handed over), CSV for printing and
- * the handover. Castle: deliveries of cards it received, with how many are still unused.
+ * Operator: batches of a partner with their state (in production / handed over), printing and the handover. Castle: deliveries of cards it received, with how many are still unused.
  */
 export default function BatchList({ scope, partnerId }: BatchListProps) {
   const isAdmin = scope === 'admin'
@@ -27,7 +27,8 @@ export default function BatchList({ scope, partnerId }: BatchListProps) {
     <Section title={isAdmin ? 'Dávky kódů' : 'Převzaté kartičky'}>
       {isAdmin ? (
         <p className="text-stone-700">
-          Postup: vygenerovat → stáhnout CSV a nechat vyrobit → po předání hradu <strong>označit jako předané</strong>.
+          Postup: vygenerovat → <strong>Tisk</strong> (PDF pro tiskárnu) a nechat vyrobit → po předání hradu{' '}
+          <strong>označit jako předané</strong>.
           Do té doby kódy nefungují (nikdo je nemůže použít, ani ve výrobě) a hrad dávku nevidí.
         </p>
       ) : (
@@ -44,6 +45,7 @@ export default function BatchList({ scope, partnerId }: BatchListProps) {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-stone-300 text-stone-700">
               <tr>
+                {isAdmin && <th className="py-2 pr-3">Dávka</th>}
                 <th className="py-2 pr-3">{isAdmin ? 'Vytvořeno' : 'Převzato'}</th>
                 <th className="py-2 pr-3">Hra</th>
                 {isAdmin && <th className="py-2 pr-3">Stav</th>}
@@ -51,8 +53,8 @@ export default function BatchList({ scope, partnerId }: BatchListProps) {
                 <th className="py-2 pr-3 text-right">Aktivováno</th>
                 <th className="py-2 pr-3 text-right">Zbývá</th>
                 {isAdmin && <th className="py-2 pr-3">Platnost</th>}
+                {isAdmin && <th className="py-2 pr-3">Tisk</th>}
                 <th className="py-2 pr-3">Poznámka</th>
-                {isAdmin && <th className="py-2 pr-3 text-right">Cena</th>}
                 {isAdmin && <th className="py-2">Akce</th>}
               </tr>
             </thead>
@@ -80,6 +82,7 @@ function BatchRow({ batch, isAdmin }: { batch: BatchSummary; isAdmin: boolean })
   const inProduction = batch.handedOverAt === null
   return (
     <tr className="border-b border-stone-200 align-top">
+      {isAdmin && <td className="py-2 pr-3 font-semibold whitespace-nowrap">D{batch.batchNo}</td>}
       <td className="py-2 pr-3 whitespace-nowrap">
         {formatDateTime(isAdmin ? batch.createdAt : (batch.handedOverAt ?? batch.createdAt))}
       </td>
@@ -93,7 +96,8 @@ function BatchRow({ batch, isAdmin }: { batch: BatchSummary; isAdmin: boolean })
               Předáno {formatDateTime(batch.handedOverAt as string)}
             </span>
           )}
-          {batch.multiSession && <span className="block text-stone-600">vývojový</span>}
+          {batch.multiSession && <span className="block text-stone-600">demo kód</span>}
+          {batch.free && <span className="block text-stone-600">zdarma</span>}
         </td>
       )}
       <td className="py-2 pr-3 text-right">{formatNumber(batch.quantity)}</td>
@@ -104,13 +108,27 @@ function BatchRow({ batch, isAdmin }: { batch: BatchSummary; isAdmin: boolean })
           {batch.validityHours === null ? 'bez expirace' : `${batch.validityHours} h`}
         </td>
       )}
+      {isAdmin && (
+        <td className="py-2 pr-3 whitespace-nowrap">
+          {batch.printedAt ? (
+            <>
+              {formatDateTime(batch.printedAt)}
+              <span className="block text-stone-600">šablona v{batch.templateVersion}</span>
+            </>
+          ) : (
+            <span className="text-stone-600">netištěno</span>
+          )}
+        </td>
+      )}
       <td className="py-2 pr-3">{batch.note ?? '—'}</td>
-      {isAdmin && <td className="py-2 pr-3 text-right whitespace-nowrap">{formatMoney(batch.unitPriceCzk)}</td>}
       {isAdmin && (
         <td className="py-2">
           <div className="flex flex-col items-start gap-1">
+            <Link to={`/admin/batches/${batch.id}/tisk`} className={`${linkButton} inline-flex items-center`}>
+              Tisk
+            </Link>
             <a href={adminApi.codesCsvUrl(batch.id)} download className={`${linkButton} inline-flex items-center`}>
-              CSV pro tisk
+              CSV kódů
             </a>
             {(inProduction || batch.activatedCount === 0) && (
               <button

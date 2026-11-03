@@ -15,6 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Generated;
 
 @Entity
 @Table(name = "access_code_batch")
@@ -23,6 +24,11 @@ public class AccessCodeBatch {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    /** Short number for people (D12), assigned by the database. */
+    @Generated
+    @Column(nullable = false, insertable = false, updatable = false)
+    private Integer batchNo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "partner_id", nullable = false)
@@ -35,8 +41,6 @@ public class AccessCodeBatch {
     @Column(nullable = false)
     private int quantity;
 
-    private Integer unitPriceCzk;
-
     @Column(length = 300)
     private String note;
 
@@ -47,11 +51,21 @@ public class AccessCodeBatch {
     @Column(nullable = false)
     private boolean multiSession;
 
+    /** Cards given away: not counted in the revenue, invoicing or stock of the castle. */
+    @Column(nullable = false)
+    private boolean free;
+
     /**
      * When the printed cards were handed over to the partner. Until then the codes are in production
      * and cannot be used; the partner sees only handed-over batches.
      */
     private Instant handedOverAt;
+
+    /** Version of the card template the batch is printed with (card_template); set by the first print export. */
+    private UUID cardTemplateId;
+
+    /** First export of the back sides (the codes); only informative. */
+    private Instant printedAt;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -59,6 +73,10 @@ public class AccessCodeBatch {
 
     public UUID getId() {
         return id;
+    }
+
+    public Integer getBatchNo() {
+        return batchNo;
     }
 
     public Partner getPartner() {
@@ -85,14 +103,6 @@ public class AccessCodeBatch {
         this.quantity = quantity;
     }
 
-    public Integer getUnitPriceCzk() {
-        return unitPriceCzk;
-    }
-
-    public void setUnitPriceCzk(Integer unitPriceCzk) {
-        this.unitPriceCzk = unitPriceCzk;
-    }
-
     public String getNote() {
         return note;
     }
@@ -117,12 +127,36 @@ public class AccessCodeBatch {
         this.multiSession = multiSession;
     }
 
+    public boolean isFree() {
+        return free;
+    }
+
+    public void setFree(boolean free) {
+        this.free = free;
+    }
+
     public Instant getHandedOverAt() {
         return handedOverAt;
     }
 
     public void setHandedOverAt(Instant handedOverAt) {
         this.handedOverAt = handedOverAt;
+    }
+
+    public UUID getCardTemplateId() {
+        return cardTemplateId;
+    }
+
+    public void setCardTemplateId(UUID cardTemplateId) {
+        this.cardTemplateId = cardTemplateId;
+    }
+
+    public Instant getPrintedAt() {
+        return printedAt;
+    }
+
+    public void setPrintedAt(Instant printedAt) {
+        this.printedAt = printedAt;
     }
 
     public Instant getCreatedAt() {

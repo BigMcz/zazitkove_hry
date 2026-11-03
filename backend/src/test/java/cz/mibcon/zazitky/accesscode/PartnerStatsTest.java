@@ -71,16 +71,18 @@ class PartnerStatsTest {
     private UUID game(UUID partnerId) {
         UUID location = jdbc.queryForObject("INSERT INTO location (partner_id, name) VALUES (?, 'Hrad') RETURNING id",
                 UUID.class, partnerId);
-        return jdbc.queryForObject("""
+        UUID gameId = jdbc.queryForObject("""
                 INSERT INTO game (location_id, slug, title, intro_text, outro_text)
                 VALUES (?, ?, 'Hra', 'Úvod', 'Závěr') RETURNING id
                 """, UUID.class, location, "partner-stats-" + UUID.randomUUID());
+        jdbc.update("INSERT INTO game_price (game_id, valid_from, price_czk) VALUES (?, DATE '2020-01-01', 100)", gameId);
+        return gameId;
     }
 
     private UUID batch(UUID partnerId, UUID gameId, int quantity, boolean handedOver, boolean development) {
         UUID batchId = jdbc.queryForObject("""
-                INSERT INTO access_code_batch (partner_id, game_id, quantity, unit_price_czk, multi_session, handed_over_at)
-                VALUES (?, ?, ?, 100, ?, CASE WHEN ? THEN now() END) RETURNING id
+                INSERT INTO access_code_batch (partner_id, game_id, quantity, multi_session, handed_over_at)
+                VALUES (?, ?, ?, ?, CASE WHEN ? THEN now() END) RETURNING id
                 """, UUID.class, partnerId, gameId, quantity, development, handedOver);
         for (int i = 0; i < quantity; i++) {
             jdbc.update("INSERT INTO access_code (batch_id, code) VALUES (?, ?)", batchId,

@@ -13,6 +13,11 @@ public final class GameplayStatsDtos {
      * Games started in a year (Europe/Prague); development codes are left out. Durations are in seconds
      * from the start to the last solved station, only of completed games; null when no game was completed.
      *
+     * One row per language version actually played: the versions of a game share {@code mainGameId}.
+     *
+     * @param language      language the games were played in
+     * @param mainGameId    the main game (its own id for the main game), codes and sales belong to it
+     * @param mainGameTitle title of the main game
      * @param started    every started game, also one started again after leaving the previous one
      * @param unfinished left by the players or expired before the end
      * @param playing    still running and valid
@@ -20,6 +25,9 @@ public final class GameplayStatsDtos {
     public record GameStats(
             UUID gameId,
             String gameTitle,
+            String language,
+            UUID mainGameId,
+            String mainGameTitle,
             String partnerName,
             long started,
             long completed,

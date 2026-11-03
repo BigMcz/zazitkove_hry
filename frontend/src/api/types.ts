@@ -17,13 +17,18 @@ export interface GameDetail {
   stationCount: number
   /** A game for children: the start asks for the name on the diploma instead of a team name. */
   forChildren: boolean
+  /** Language of the texts and recordings, e.g. cs or de. */
+  language: string
 }
 
 /** Result of checking an access code typed by the player. */
 export interface CodeCheck {
   /** Printed form, e.g. ABCD-2345. */
   code: string
+  /** The main game of the code. */
   game: GameDetail
+  /** The same game in other languages to choose from before the start. */
+  languageVersions: GameDetail[]
   /** The code is already in use: starting with it continues the existing game. */
   resumesGame: boolean
   validUntil: string | null
@@ -89,8 +94,11 @@ export interface SessionState {
   /** Only in the response to POST /sessions. */
   token?: string
   status: SessionStatus
-  /** forChildren: puzzle letters in order, no time or penalties shown, a diploma at the end. */
-  game: { id: string; title: string; forChildren: boolean }
+  /**
+   * forChildren: puzzle letters in order, no time or penalties shown, a diploma at the end;
+   * language: the whole game is shown in it.
+   */
+  game: { id: string; title: string; forChildren: boolean; language: string }
   teamName: string | null
   startedAt: string
   penaltySeconds: number

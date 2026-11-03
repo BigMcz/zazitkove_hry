@@ -4,6 +4,11 @@ spring:
   autoconfigure:
     # Účty má jen administrace (AdminSecurityConfig), výchozí účet Spring Bootu s heslem v logu je zbytečný
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  servlet:
+    multipart:
+      # Grafika kartiček (docs/07-tisk-karticek.md)
+      max-file-size: 20MB
+      max-request-size: 21MB
   jpa:
     open-in-view: false
     hibernate:

@@ -91,6 +91,16 @@ public class Game {
     @Column(nullable = false, length = 5)
     private String language = "cs";
 
+    /** The game this one is a language version of; null = a main game. Codes always belong to the main game. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_game_id")
+    private Game mainGame;
+
+    /** Versions of this main game in other languages. */
+    @OneToMany(mappedBy = "mainGame")
+    @OrderBy("language")
+    private List<Game> languageVersions = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private GameStatus status = GameStatus.DRAFT;
@@ -263,6 +273,18 @@ public class Game {
 
     public void setLanguage(String language) {
         this.language = language;
+    }
+
+    public Game getMainGame() {
+        return mainGame;
+    }
+
+    public void setMainGame(Game mainGame) {
+        this.mainGame = mainGame;
+    }
+
+    public List<Game> getLanguageVersions() {
+        return languageVersions;
     }
 
     public GameStatus getStatus() {

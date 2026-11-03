@@ -39,7 +39,7 @@ class PartnerAdminTest {
     JdbcTemplate jdbc;
 
     @Test
-    void eachActivationIsSettledWithTheShareValidOnItsDay() throws Exception {
+    void eachActivationIsSettledWithThePriceAndShareValidOnItsDay() throws Exception {
         String name = "Hrad " + UUID.randomUUID().toString().substring(0, 8);
         UUID partnerId = UUID.randomUUID();
         UUID gameId = createPartnerWithGame(partnerId, name);
@@ -48,6 +48,11 @@ class PartnerAdminTest {
         setShare(partnerId, "2026-05-01", "30")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.shares[*].validFrom").value(contains("2026-01-01", "2026-05-01")));
+
+        setPrice(gameId, "2026-01-01", 200).andExpect(status().isOk());
+        setPrice(gameId, "2026-05-20", 300)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.prices[*].priceCzk").value(contains(200, 300)));
 
         UUID batch = createBatch(gameId, 4);
         List<UUID> codes = jdbc.queryForList("SELECT id FROM access_code WHERE batch_id = ? ORDER BY code", UUID.class, batch);
@@ -60,7 +65,10 @@ class PartnerAdminTest {
                 .with(admin())));
         assertThat(shareFor(report, name, "2026-03")).isEqualTo(50.0);  // 200 × 25 %
         assertThat(shareFor(report, name, "2026-04")).isEqualTo(50.0);  // 200 × 25 %
-        assertThat(shareFor(report, name, "2026-05")).isEqualTo(120.0); // 2 × 200 × 30 %
+        assertThat(shareFor(report, name, "2026-05")).isEqualTo(150.0); // 200 × 30 % + 300 × 30 % (new price)
+        List<Number> mayRevenue = JsonPath.read(report,
+                "$[?(@.partnerName == '" + name + "' && @.month == '2026-05')].revenueCzk");
+        assertThat(mayRevenue).singleElement().satisfies(revenue -> assertThat(revenue.intValue()).isEqualTo(500));
         List<Number> mayCount = JsonPath.read(report,
                 "$[?(@.partnerName == '" + name + "' && @.month == '2026-05')].activatedCount");
         assertThat(mayCount).singleElement().satisfies(count -> assertThat(count.intValue()).isEqualTo(2));
@@ -165,7 +173,7 @@ class PartnerAdminTest {
         String body = body(mvc.perform(post("/api/v1/admin/batches").with(admin()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"gameId\":\"" + gameId + "\",\"quantity\":" + quantity
-                                + ",\"validityHours\":5,\"unitPriceCzk\":200}"))
+                                + ",\"validityHours\":5}"))
                 .andExpect(status().isCreated()));
         return UUID.fromString(JsonPath.read(body, "$.id"));
     }
@@ -180,6 +188,12 @@ class PartnerAdminTest {
                 "$[?(@.partnerName == '" + partnerName + "' && @.month == '" + month + "')].partnerShareCzk");
         assertThat(values).as("report row %s %s", partnerName, month).hasSize(1);
         return values.getFirst().doubleValue();
+    }
+
+    private ResultActions setPrice(UUID gameId, String validFrom, int priceCzk) throws Exception {
+        return mvc.perform(post("/api/v1/admin/games/{id}/prices", gameId).with(admin()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"validFrom\":\"" + validFrom + "\",\"priceCzk\":" + priceCzk + "}"));
     }
 
     private ResultActions setShare(UUID partnerId, String validFrom, String sharePct) throws Exception {

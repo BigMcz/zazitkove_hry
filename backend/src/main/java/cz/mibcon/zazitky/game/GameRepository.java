@@ -15,6 +15,13 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
 
     Optional<Game> findByIdAndStatus(UUID id, GameStatus status);
 
-    @Query("select g from Game g join fetch g.location l join fetch l.partner order by g.title")
-    List<Game> findAllWithPartner();
+    List<Game> findByMainGameIdAndStatusOrderByLanguage(UUID mainGameId, GameStatus status);
+
+    /** Main games of the partner by title. */
+    @Query("select g from Game g join g.location l where l.partner.id = :partnerId and g.mainGame is null order by g.title")
+    List<Game> findMainByPartnerId(UUID partnerId);
+
+    /** Main games only: codes are made for them, the language versions share them. */
+    @Query("select g from Game g join fetch g.location l join fetch l.partner where g.mainGame is null order by g.title")
+    List<Game> findAllMainWithPartner();
 }

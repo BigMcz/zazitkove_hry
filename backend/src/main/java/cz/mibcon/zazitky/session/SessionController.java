@@ -45,7 +45,7 @@ public class SessionController {
     @PostMapping
     public ResponseEntity<SessionState> start(@Valid @RequestBody StartSessionRequest request, HttpServletRequest http) {
         codeRateLimiter.acquire(http.getRemoteAddr());
-        StartResult result = sessionService.start(request.code(), request.teamName());
+        StartResult result = sessionService.start(request.code(), request.teamName(), request.language());
         if (!result.created()) {
             return ResponseEntity.ok(result.state());
         }

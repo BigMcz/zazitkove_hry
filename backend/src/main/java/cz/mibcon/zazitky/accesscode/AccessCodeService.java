@@ -37,7 +37,8 @@ public class AccessCodeService {
         AccessCode code = findPlayable(rawCode);
         boolean resumes = code.getStatus() == AccessCodeStatus.ACTIVATED && !code.getBatch().isMultiSession();
         GameDetailDto game = gameService.getPublished(code.getBatch().getGame().getId());
-        return new CodeCheckDto(AccessCodeFormat.format(code.getCode()), game, resumes, code.getValidUntil());
+        return new CodeCheckDto(AccessCodeFormat.format(code.getCode()), game,
+                gameService.getPublishedLanguageVersions(game.id()), resumes, code.getValidUntil());
     }
 
     /**

@@ -11,6 +11,7 @@ import cz.mibcon.zazitky.session.domain.SessionStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -22,9 +23,11 @@ public final class SessionDtos {
     private SessionDtos() {
     }
 
+    /** @param language language version of the game to play, e.g. {@code de}; null = the main game */
     public record StartSessionRequest(
             @NotBlank @Size(max = 30) String code,
-            @Size(max = 100) String teamName) {
+            @Size(max = 100) String teamName,
+            @Pattern(regexp = "[a-z]{2}") String language) {
     }
 
     public record SubmitAnswerRequest(
@@ -64,8 +67,11 @@ public final class SessionDtos {
             Finale finale) {
     }
 
-    /** @param forChildren puzzle letters in order, no time or penalties shown, a diploma at the end */
-    public record GameRef(UUID id, String title, boolean forChildren) {
+    /**
+     * @param forChildren puzzle letters in order, no time or penalties shown, a diploma at the end
+     * @param language    language of the game the player chose, the whole game is shown in it
+     */
+    public record GameRef(UUID id, String title, boolean forChildren, String language) {
     }
 
     public record Progress(int solved, int total) {

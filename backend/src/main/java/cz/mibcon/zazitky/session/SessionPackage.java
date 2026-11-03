@@ -31,8 +31,9 @@ public record SessionPackage(
     /**
      * @param wrongAnswerText     message after a wrong answer, null = the default one
      * @param wrongAnswerAudioUrl recording of that message, null = text only
+     * @param language            language of the game, the phone shows the whole game in it
      */
-    public record SessionInfo(String gameTitle, boolean forChildren, String wrongAnswerText,
+    public record SessionInfo(String gameTitle, boolean forChildren, String language, String wrongAnswerText,
             String wrongAnswerAudioUrl, String teamName, Instant startedAt, Instant expiresAt) {
     }
 

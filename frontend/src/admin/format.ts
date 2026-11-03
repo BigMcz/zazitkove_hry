@@ -4,6 +4,7 @@ const dateTime = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'short', timeStyl
 const monthName = new Intl.DateTimeFormat('cs-CZ', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 const number = new Intl.NumberFormat('cs-CZ')
 const money = new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 2 })
+const wholeMoney = new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 })
 
 /** Today in the castles' time zone as YYYY-MM-DD. */
 export function todayInPrague(): string {
@@ -15,6 +16,18 @@ export function firstOfNextMonth(isoDate: string): string {
   const [year, month] = isoDate.split('-').map(Number)
   const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 }
   return `${next.year}-${String(next.month).padStart(2, '0')}-01`
+}
+
+/** "2026-11" + -1 → "2026-10" */
+export function addMonths(month: string, months: number): string {
+  const [year, monthNo] = month.split('-').map(Number)
+  return new Date(Date.UTC(year, monthNo - 1 + months, 1)).toISOString().slice(0, 7)
+}
+
+/** "2026-11-02" + 20 → "2026-11-22" */
+export function addDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
 }
 
 /** "2026-12-01" → "1. 12. 2026" */
@@ -63,4 +76,9 @@ export function formatDays(days: number): string {
 
 export function formatMoney(value: number | null): string {
   return value === null ? '—' : money.format(value)
+}
+
+/** Whole crowns, e.g. the price of a card: "249 Kč". */
+export function formatPrice(value: number | null): string {
+  return value === null ? '—' : wholeMoney.format(value)
 }

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, type GameStats } from './adminApi.ts'
 import { formatDuration, formatNumber, formatShare } from './format.ts'
 import Section from './Section.tsx'
+import Tabs from './Tabs.tsx'
 import { adminKeys, useLoggedOutOn401 } from './shared.ts'
 
 interface GameplayStatsProps {
@@ -11,13 +13,48 @@ interface GameplayStatsProps {
   partnerId?: string
 }
 
-/** How the games are played: completion, duration and where the teams struggle. Only for the operator. */
+/** Names of the languages of the games in the administration. */
+const LANGUAGES: Record<string, string> = { cs: 'čeština', de: 'němčina' }
+
+function languageName(language: string): string {
+  return LANGUAGES[language] ?? language
+}
+
+/** The language versions of one game (one card) together. */
+interface MainGame {
+  id: string
+  title: string
+  partnerName: string
+  versions: GameStats[]
+}
+
+function byMainGame(rows: GameStats[]): MainGame[] {
+  const games = new Map<string, MainGame>()
+  for (const row of rows) {
+    const game = games.get(row.mainGameId)
+    if (game) {
+      game.versions.push(row)
+    } else {
+      games.set(row.mainGameId, { id: row.mainGameId, title: row.mainGameTitle, partnerName: row.partnerName, versions: [row] })
+    }
+  }
+  return [...games.values()]
+}
+
+/**
+ * How the games are played: completion, duration and where the teams struggle. Only for the operator.
+ * One game at a time, chosen by a tab; a game played in more languages shows how many games were played in each
+ * and the figures of one language at a time.
+ */
 export default function GameplayStats({ year, partnerId }: GameplayStatsProps) {
   const stats = useQuery({
     queryKey: adminKeys.gameplay(year, partnerId),
     queryFn: () => adminApi.gameplay(year, partnerId),
   })
   useLoggedOutOn401(stats.error)
+  const [selected, setSelected] = useState<string | null>(null)
+  const games = byMainGame(stats.data ?? [])
+  const game = games.find((candidate) => candidate.id === selected) ?? games[0]
 
   return (
     <Section title={`Jak se hraje ${year}`}>
@@ -27,10 +64,52 @@ export default function GameplayStats({ year, partnerId }: GameplayStatsProps) {
       {stats.isPending && <p role="status">Načítám…</p>}
       {stats.isError && <ErrorBanner message={stats.error.message} onRetry={() => void stats.refetch()} />}
       {stats.data?.length === 0 && <p>V roce {year} zatím nikdo nehrál.</p>}
-      {stats.data?.map((game) => (
-        <Game key={game.gameId} game={game} showPartner={!partnerId} />
-      ))}
+      {game && games.length === 1 && <Versions key={game.id} game={game} showPartner={!partnerId} />}
+      {game && games.length > 1 && (
+        <Tabs
+          label="Hry"
+          tabs={games.map((candidate) => ({
+            id: candidate.id,
+            label: partnerId ? candidate.title : `${candidate.title} · ${candidate.partnerName}`,
+          }))}
+          active={game.id}
+          onChange={setSelected}
+        >
+          <Versions key={game.id} game={game} showPartner={false} />
+        </Tabs>
+      )}
     </Section>
+  )
+}
+
+function Versions({ game, showPartner }: { game: MainGame; showPartner: boolean }) {
+  const [language, setLanguage] = useState<string | null>(null)
+  if (game.versions.length === 1) {
+    return <Game game={game.versions[0]} showPartner={showPartner} />
+  }
+  const version = game.versions.find((candidate) => candidate.language === language) ?? game.versions[0]
+  const started = game.versions.reduce((sum, candidate) => sum + candidate.started, 0)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-stone-600">Jazyk hry:</span>
+        {game.versions.map((candidate) => (
+          <button
+            key={candidate.gameId}
+            type="button"
+            aria-pressed={candidate === version}
+            onClick={() => setLanguage(candidate.language)}
+            className={`min-h-9 rounded-full border px-3 text-sm font-semibold ${
+              candidate === version ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 hover:border-stone-500'
+            }`}
+          >
+            {languageName(candidate.language)} {formatNumber(candidate.started)} ({formatShare(candidate.started, started)})
+          </button>
+        ))}
+      </div>
+      <Game game={version} showPartner={showPartner} />
+    </div>
   )
 }
 
@@ -60,7 +139,7 @@ function Game({ game, showPartner }: { game: GameStats; showPartner: boolean }) 
   ]
 
   return (
-    <article aria-label={game.gameTitle} className="flex flex-col gap-3 border-t border-stone-200 pt-4 first-of-type:border-t-0">
+    <article aria-label={game.gameTitle} className="flex flex-col gap-3">
       <h3 className="text-lg font-bold">
         {game.gameTitle}
         {showPartner && <span className="font-normal text-stone-600"> · {game.partnerName}</span>}

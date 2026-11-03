@@ -17,7 +17,7 @@ const TOKEN = '6f1c2a9e-1111-4222-8333-944455556666'
 
 const inProgress: SessionState = {
   status: 'IN_PROGRESS',
-  game: { id: 'g1', title: 'Tajemství katova klíče', forChildren: false },
+  game: { id: 'g1', title: 'Tajemství katova klíče', forChildren: false, language: 'cs' },
   teamName: null,
   startedAt: '2026-10-28T10:00:00Z',
   penaltySeconds: 0,
@@ -53,6 +53,17 @@ const demoGame = {
   estimatedMinutes: 20,
   stationCount: 5,
   forChildren: false,
+  language: 'cs',
+}
+
+const germanGame = {
+  ...demoGame,
+  id: 'g1-de',
+  title: 'Das Geheimnis des Henkerschlüssels',
+  subtitle: null,
+  introText: 'Man schreibt das Jahr 1621.',
+  introAudioUrl: '/audio/demo-de/intro.mp3',
+  language: 'de',
 }
 
 const gamePackage: GamePackage = {
@@ -165,7 +176,51 @@ describe('App', () => {
     await waitFor(() => expect(packageStorage.get(TOKEN)).toEqual(gamePackage))
     expect(await screen.findByText('✓ Hra je stažená, můžete hrát i bez signálu.')).toBeInTheDocument()
     const bodies = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST').map(([, init]) => init?.body)
-    expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi"}'])
+    expect(bodies).toEqual(['{"code":"ABCD-2345"}', '{"code":"ABCD-2345","teamName":"Kuchtovi","language":"cs"}'])
+  })
+
+  it('lets the player choose German before the start and shows the whole game in German', async () => {
+    const germanState: SessionState = {
+      ...inProgress,
+      game: { id: 'g1-de', title: germanGame.title, forChildren: false, language: 'de' },
+      currentStation: { ...inProgress.currentStation!, title: 'Der Burgturm', taskText: 'Wie viele Stufen?' },
+    }
+    const fetchMock = mockApi({
+      'POST /api/v1/access-codes/check': () =>
+        json({ code: 'ABCD-2345', game: demoGame, languageVersions: [germanGame], resumesGame: false, validUntil: null }),
+      'POST /api/v1/sessions': () => json({ ...germanState, token: TOKEN }, 201),
+      'GET /api/v1/sessions/current/package': () => json({ ...gamePackage, gameId: 'g1-de' }),
+      'GET /api/v1/sessions/current': () => json(germanState),
+    })
+    renderApp('/')
+
+    await userEvent.type(screen.getByLabelText('Zadej kód z kartičky'), 'abcd 2345{Enter}')
+    expect(await screen.findByText('Sprache wählen')).toBeInTheDocument()
+    expect(screen.getByText('Vyberte jazyk')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Čeština/ })).toHaveTextContent('Tajemství katova klíče')
+    await userEvent.click(screen.getByRole('button', { name: /Deutsch/ }))
+
+    expect(screen.getByRole('heading', { name: 'Das Geheimnis des Henkerschlüssels' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '🔊 Das Spiel spricht' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('lang', 'de')
+    // Back to the choice of the language and again
+    await userEvent.click(screen.getByRole('button', { name: '← Zurück' }))
+    await userEvent.click(screen.getByRole('button', { name: /Deutsch/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Einleitung abspielen' }))
+    expect(screen.getByText('Man schreibt das Jahr 1621.')).toBeInTheDocument()
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/audio/demo-de/intro.mp3')
+    await userEvent.type(screen.getByLabelText(/Teamname/), 'Müllers')
+    await userEvent.click(screen.getByRole('button', { name: 'Spiel starten' }))
+
+    expect(await screen.findByRole('heading', { name: 'Der Burgturm' })).toBeInTheDocument()
+    expect(screen.getByText('Station 2 / 5')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Aufgabe' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Deine Antwort')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ich brauche einen Hinweis' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Spiel verlassen' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('lang', 'de')
+    const start = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/v1/sessions' && init?.method === 'POST')
+    expect(start?.[1]?.body).toBe('{"code":"ABCD-2345","teamName":"Müllers","language":"de"}')
   })
 
   it('starts the demo game from the games section without a card', async () => {

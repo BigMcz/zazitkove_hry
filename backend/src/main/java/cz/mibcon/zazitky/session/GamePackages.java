@@ -66,7 +66,7 @@ class GamePackages {
             }
         }
 
-        SessionInfo info = new SessionInfo(game.getTitle(), game.isForChildren(), game.getWrongAnswerText(),
+        SessionInfo info = new SessionInfo(game.getTitle(), game.isForChildren(), game.getLanguage(), game.getWrongAnswerText(),
                 game.getWrongAnswerAudioUrl(), session.getTeamName(), session.getStartedAt(), session.getExpiresAt());
         return new SessionPackage(game.getId(), info, PackageCrypto.KDF_ITERATIONS, sealed.firstStation(),
                 sealed.stations(), puzzleSlots, unlockedKeys, sealed.media());

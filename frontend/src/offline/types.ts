@@ -11,6 +11,8 @@ export interface GamePackage {
     gameTitle: string
     /** Missing in packages downloaded before the games for children. */
     forChildren?: boolean
+    /** Missing in packages downloaded before the language versions (= cs). */
+    language?: string
     /** Message after a wrong answer, null = the default one. */
     wrongAnswerText?: string | null
     /** Recording of that message, null = text only. */

@@ -55,6 +55,10 @@ Karl Huss opravdu žil. Psal kroniku a staral se o muzeum na zámku Kynžvart. K
         '/audio/deti/intro.mp3', '/audio/deti/zaver.mp3', '/images/deti/cover.webp', 'Pomocník kronikáře',
         '/images/deti/diplom.webp', '/images/deti/zaver.webp');
 
+-- Prodejní cena kartičky (V18)
+INSERT INTO game_price (game_id, valid_from, price_czk)
+VALUES ('00000000-0000-0001-0000-000000000003', DATE '2026-01-01', 149);
+
 -- ---------------------------------------------------------
 -- Kroky (stanoviště)
 -- ---------------------------------------------------------

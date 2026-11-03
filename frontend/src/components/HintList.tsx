@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { RevealedHint } from '../api/types.ts'
+import { useGameTexts } from '../i18n/gameTexts.ts'
 import { formatDuration } from './formatDuration.ts'
 import { buttonPrimary, buttonSecondary } from './ui.ts'
 
@@ -23,6 +24,7 @@ export default function HintList({
   onReveal,
 }: HintListProps) {
   const [confirming, setConfirming] = useState(false)
+  const texts = useGameTexts()
 
   if (revealedHints.length === 0 && hintsAvailable === 0) {
     return null
@@ -31,7 +33,7 @@ export default function HintList({
   return (
     <section aria-labelledby="hints-heading" className="flex flex-col gap-3">
       <h2 id="hints-heading" className="text-lg font-bold text-stone-900">
-        Nápovědy
+        {texts.hints}
       </h2>
 
       {revealedHints.length > 0 && (
@@ -39,7 +41,7 @@ export default function HintList({
           {revealedHints.map((hint) => (
             <li key={hint.orderNo} className="rounded-xl bg-amber-50 p-4 text-base text-stone-900">
               <span className="block text-sm font-semibold text-stone-700">
-                Nápověda {hint.orderNo}
+                {texts.hint(hint.orderNo)}
                 {!withoutPenalty && ` · +${formatDuration(hint.penaltySeconds)}`}
               </span>
               {hint.text}
@@ -48,7 +50,7 @@ export default function HintList({
         </ol>
       )}
 
-      {hintsAvailable === 0 && <p className="text-base text-stone-700">Další nápověda už není.</p>}
+      {hintsAvailable === 0 && <p className="text-base text-stone-700">{texts.noMoreHints}</p>}
 
       {hintsAvailable > 0 && !confirming && (
         <button
@@ -57,14 +59,14 @@ export default function HintList({
           onClick={() => (withoutPenalty ? onReveal() : setConfirming(true))}
           className={buttonSecondary}
         >
-          {revealedHints.length === 0 ? 'Potřebuju nápovědu' : 'Další nápověda'}
+          {revealedHints.length === 0 ? texts.needHint : texts.nextHint}
         </button>
       )}
 
       {hintsAvailable > 0 && confirming && (
         <div className="flex flex-col gap-3 rounded-xl border-2 border-stone-900 bg-white p-4">
           <p className="text-base text-stone-900">
-            Nápověda ti k celkovému času přičte{' '}
+            {texts.hintCosts}{' '}
             <strong>+{formatDuration(nextHintPenaltySeconds ?? 0)}</strong>.
           </p>
           <button
@@ -76,10 +78,10 @@ export default function HintList({
             }}
             className={buttonPrimary}
           >
-            Ano, ukaž nápovědu
+            {texts.showHint}
           </button>
           <button type="button" onClick={() => setConfirming(false)} className={buttonSecondary}>
-            Zpět
+            {texts.cancel}
           </button>
         </div>
       )}

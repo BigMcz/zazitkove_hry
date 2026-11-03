@@ -1,3 +1,5 @@
+import type { GameTexts } from '../i18n/gameTexts.ts'
+
 /** What the diploma of a game for children says. */
 export interface DiplomaContent {
   name: string | null
@@ -14,14 +16,6 @@ const WIDTH = 1240
 const HEIGHT = 1754
 const TEXT_WIDTH = 1000
 const SERIF = 'Georgia, Cambria, "Times New Roman", serif'
-
-export function diplomaText(tasks: number): string {
-  return `za vyřešení všech ${tasks} hádanek`
-}
-
-export function formatPlayedAt(playedAt: string): string {
-  return new Date(playedAt).toLocaleDateString('cs-CZ')
-}
 
 /** Draws centered text at the largest size up to `size` that fits TEXT_WIDTH. */
 function fitText(ctx: CanvasRenderingContext2D, text: string, y: number, size: number, style: string, color: string) {
@@ -46,13 +40,13 @@ async function loadImage(url: string): Promise<HTMLImageElement | null> {
 }
 
 /** The diploma as a JPEG picture to keep, print or send (a PNG of the painting would have about 2 MB). */
-export async function diplomaImage(content: DiplomaContent): Promise<Blob> {
+export async function diplomaImage(content: DiplomaContent, texts: GameTexts): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')
   if (!ctx) {
-    throw new Error('Diplom se nepodařilo vytvořit.')
+    throw new Error(texts.diplomaCreateFailed)
   }
 
   ctx.fillStyle = '#fffbeb'
@@ -80,7 +74,7 @@ export async function diplomaImage(content: DiplomaContent): Promise<Blob> {
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
-  fitText(ctx, 'DIPLOM', y, 130, 'bold', '#1c1917')
+  fitText(ctx, texts.diploma.toUpperCase(), y, 130, 'bold', '#1c1917')
   y += 80
   if (content.title) {
     fitText(ctx, content.title.toUpperCase(), y, 48, 'bold', '#92400e')
@@ -92,14 +86,14 @@ export async function diplomaImage(content: DiplomaContent): Promise<Blob> {
     fitText(ctx, content.name, y, 100, 'bold', '#78350f')
     y += 100
   }
-  fitText(ctx, diplomaText(content.tasks), y, 44, '', '#1c1917')
+  fitText(ctx, texts.diplomaFor(content.tasks), y, 44, '', '#1c1917')
   y += 64
-  fitText(ctx, `ve hře ${content.gameTitle}`, y, 44, 'bold', '#1c1917')
-  fitText(ctx, formatPlayedAt(content.playedAt), HEIGHT - 150, 36, '', '#57534e')
+  fitText(ctx, `${texts.inGame} ${content.gameTitle}`, y, 44, 'bold', '#1c1917')
+  fitText(ctx, new Date(content.playedAt).toLocaleDateString(texts.locale), HEIGHT - 150, 36, '', '#57534e')
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('Diplom se nepodařilo vytvořit.'))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(texts.diplomaCreateFailed))),
       'image/jpeg',
       0.9,
     ),
@@ -110,12 +104,12 @@ export async function diplomaImage(content: DiplomaContent): Promise<Blob> {
  * On a phone offers the diploma to share (also "Uložit obrázek"), on a computer downloads it: a desktop browser
  * would open the system share dialog instead of saving the file.
  */
-export async function saveDiploma(content: DiplomaContent): Promise<void> {
-  const file = new File([await diplomaImage(content)], 'diplom.jpg', { type: 'image/jpeg' })
+export async function saveDiploma(content: DiplomaContent, texts: GameTexts): Promise<void> {
+  const file = new File([await diplomaImage(content, texts)], texts.diplomaFile, { type: 'image/jpeg' })
   const phone = window.matchMedia?.('(pointer: coarse)').matches ?? false
   if (phone && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Diplom' })
+      await navigator.share({ files: [file], title: texts.diploma })
       return
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {

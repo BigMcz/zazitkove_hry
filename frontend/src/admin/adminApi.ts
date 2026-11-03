@@ -1,4 +1,4 @@
-import { apiRequest } from '../api/client.ts'
+import { apiDownload, apiRequest } from '../api/client.ts'
 
 // Administration API (docs/02-architektura.md). Two roles share one login: ADMIN (operator,
 // /api/v1/admin/**) and PARTNER (castle staff, /api/v1/partner/**, only their own data).
@@ -51,6 +51,60 @@ export interface PartnerRequest {
   phone: string | null
 }
 
+/** Selling price of a card of the game valid from a day (Europe/Prague) until the next entry. */
+export interface GamePrice {
+  id: string
+  /** YYYY-MM-DD */
+  validFrom: string
+  priceCzk: number
+}
+
+/** A main game of the castle with its prices; language versions share them. */
+export interface GamePrices {
+  gameId: string
+  gameTitle: string
+  /** Price valid today; null when none is set yet. */
+  currentPriceCzk: number | null
+  /** All prices by validFrom, including planned ones. */
+  prices: GamePrice[]
+}
+
+export interface SetPriceRequest {
+  validFrom: string
+  priceCzk: number
+}
+
+/** Each code with the price of its game and the castle's share valid on the day of its activation. */
+export interface BillingAmounts {
+  activatedCount: number
+  revenueCzk: number
+  partnerShareCzk: number
+  /** Revenue minus the castle's share: what the operator invoices. */
+  operatorCzk: number
+}
+
+export interface GameBilling {
+  gameId: string
+  gameTitle: string
+  /** Prices of the activated codes (more when the price changed), else the price at the end of the month; [] = none. */
+  prices: number[]
+  amounts: BillingAmounts
+}
+
+/** What the operator invoices to a castle for a month. */
+export interface MonthBilling {
+  /** YYYY-MM */
+  month: string
+  /** The month is over and can be invoiced. */
+  ended: boolean
+  games: GameBilling[]
+  total: BillingAmounts
+  /** null = not marked as invoiced; amountCzk = the amount when it was marked */
+  invoice: { invoicedOn: string; amountCzk: number } | null
+  /** Ended months with activations not marked as invoiced (YYYY-MM), oldest first. */
+  uninvoicedMonths: string[]
+}
+
 export interface SetShareRequest {
   validFrom: string
   sharePct: number
@@ -87,29 +141,143 @@ export interface AdminGame {
 
 export interface BatchSummary {
   id: string
+  /** Short number for people, D12. */
+  batchNo: number
   partnerId: string
+  gameId: string
   gameTitle: string
   partnerName: string
   quantity: number
-  /** null = codes never expire (development batch) */
+  /** null = codes never expire (demo batch) */
   validityHours: number | null
+  /** Demo batch: one shared code, every entry a new game; not in the money, stock or stats. */
   multiSession: boolean
+  /** Cards given away: not in the money, invoicing or stock. */
+  free: boolean
   note: string | null
-  unitPriceCzk: number | null
   createdAt: string
   /** null = still in production, the codes do not work yet */
   handedOverAt: string | null
   activatedCount: number
   /** Cards not used yet — for a handed-over batch the cards the partner should still have. */
   notActivatedCount: number
+  /** First export of the back sides; null = not printed yet. */
+  printedAt: string | null
+  /** Version of the card template the batch is printed with; null = not tied yet. */
+  templateVersion: number | null
 }
+
+export type CodeAlign = 'LEFT' | 'CENTER' | 'RIGHT'
+
+/**
+ * Size of a card and the layout of its back in millimetres (fonts in points), measured from the top-left corner of
+ * the trim. The serial number is printed only when all three serial fields are set.
+ */
+export interface CardLayout {
+  widthMm: number
+  heightMm: number
+  bleedMm: number
+  qrXMm: number
+  qrYMm: number
+  /** The whole QR square including its white margin. */
+  qrSizeMm: number
+  qrWhiteBox: boolean
+  codeXMm: number
+  /** Baseline of the code. */
+  codeYMm: number
+  codeFontPt: number
+  codeAlign: CodeAlign
+  /** #RRGGBB */
+  codeColor: string
+  serialXMm: number | null
+  serialYMm: number | null
+  serialFontPt: number | null
+}
+
+export interface CardFile {
+  id: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}
+
+export interface CardTemplate {
+  id: string
+  gameId: string
+  version: number
+  layout: CardLayout
+  front: CardFile
+  back: CardFile
+  note: string | null
+  createdAt: string
+  /** Batches printed with this version. */
+  batchCount: number
+}
+
+/** A new version; a missing file id keeps the graphic of the previous version. */
+export interface CardTemplateRequest {
+  layout: CardLayout
+  frontFileId: string | null
+  backFileId: string | null
+  note: string | null
+}
+
+export type CardSide = 'FRONT' | 'BACK'
+
+/** image: PNG as a data URL */
+export interface CardPreview {
+  image: string
+  warnings: string[]
+}
+
+export interface PrintExport {
+  kind: 'FRONT' | 'BACK' | 'ZIP'
+  /** Reprint selection, null = the whole batch. */
+  serials: string | null
+  codesCount: number
+  cropMarks: boolean
+  username: string
+  templateVersion: number
+  createdAt: string
+}
+
+/** Printing of a batch. */
+export interface PrintStatus {
+  batchId: string
+  batchNo: number
+  gameId: string
+  gameTitle: string
+  partnerId: string
+  partnerName: string
+  quantity: number
+  /** Demo batch: one shared code printed on any number of cards. */
+  multiSession: boolean
+  free: boolean
+  /** The shared code of a demo batch; null for other batches. */
+  sharedCode: string | null
+  handedOverAt: string | null
+  printedAt: string | null
+  /** Version the batch is printed with; null = not printed yet, the first export takes the latest. */
+  template: CardTemplate | null
+  /** null = the game has no template yet */
+  latestTemplate: CardTemplate | null
+  exports: PrintExport[]
+}
+
+export type PrintFile = 'front.pdf' | 'back.pdf' | 'all.zip'
+
+/** SALE: cards for sale; FREE: given away, out of the money; DEMO: one shared code on any number of cards. */
+export type BatchKind = 'SALE' | 'FREE' | 'DEMO'
 
 export interface CreateBatchRequest {
   gameId: string
-  quantity: number
-  validityHours: number
+  kind: BatchKind
+  /** SALE and FREE only */
+  quantity: number | null
+  validityHours: number | null
   note: string | null
-  unitPriceCzk: number | null
+  /** DEMO only: own code of 8 letters or digits; null = generated */
+  code: string | null
 }
 
 export interface MonthlyActivation {
@@ -206,9 +374,15 @@ export interface StationStats {
 }
 
 /** Games started in a year with sold cards; durations only of completed games. */
+/** One language version of a game as played; the versions of a game share mainGameId. */
 export interface GameStats {
   gameId: string
   gameTitle: string
+  /** Language the games were played in, e.g. cs or de. */
+  language: string
+  /** The main game (its own id for the main game); codes and sales belong to it. */
+  mainGameId: string
+  mainGameTitle: string
   partnerName: string
   started: number
   completed: number
@@ -235,6 +409,8 @@ const withPartner = (path: string, partnerId?: string) =>
 const partnerPath = (partnerId: string) => `/admin/partners/${encodeURIComponent(partnerId)}`
 
 const batchPath = (batchId: string) => `/admin/batches/${encodeURIComponent(batchId)}`
+
+const cardTemplatePath = (gameId: string) => `/admin/games/${encodeURIComponent(gameId)}/card-template`
 
 export const adminApi = {
   /** Also issues the XSRF-TOKEN cookie needed for the login. */
@@ -299,6 +475,38 @@ export const adminApi = {
       headers: csrfHeader(),
     }),
 
+  billing: (partnerId: string, month: string) =>
+    apiRequest<MonthBilling>(`${partnerPath(partnerId)}/billing/${month}`),
+
+  markInvoiced: (partnerId: string, month: string, invoicedOn: string) =>
+    apiRequest<MonthBilling>(`${partnerPath(partnerId)}/billing/${month}/invoice`, {
+      method: 'PUT',
+      body: { invoicedOn },
+      headers: csrfHeader(),
+    }),
+
+  unmarkInvoiced: (partnerId: string, month: string) =>
+    apiRequest<MonthBilling>(`${partnerPath(partnerId)}/billing/${month}/invoice`, {
+      method: 'DELETE',
+      headers: csrfHeader(),
+    }),
+
+  gamePrices: (partnerId: string) => apiRequest<GamePrices[]>(`${partnerPath(partnerId)}/game-prices`),
+
+  /** A price for an existing date replaces it. */
+  setGamePrice: (gameId: string, request: SetPriceRequest) =>
+    apiRequest<GamePrices>(`/admin/games/${encodeURIComponent(gameId)}/prices`, {
+      method: 'POST',
+      body: request,
+      headers: csrfHeader(),
+    }),
+
+  deleteGamePrice: (gameId: string, priceId: string) =>
+    apiRequest<GamePrices>(`/admin/games/${encodeURIComponent(gameId)}/prices/${encodeURIComponent(priceId)}`, {
+      method: 'DELETE',
+      headers: csrfHeader(),
+    }),
+
   partnerUsers: () => apiRequest<PartnerUser[]>('/admin/partner-users'),
 
   createPartnerUser: (request: CreatePartnerUserRequest) =>
@@ -317,6 +525,68 @@ export const adminApi = {
       body: { enabled },
       headers: csrfHeader(),
     }),
+
+  /** Graphic of a card side (PDF, PNG, JPG); the same file is stored once. */
+  uploadCardFile: (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return apiRequest<CardFile>('/admin/card-template-files', { method: 'POST', body, headers: csrfHeader() })
+  },
+
+  /** All versions, the latest first. */
+  cardTemplates: (gameId: string) => apiRequest<CardTemplate[]>(`${cardTemplatePath(gameId)}/versions`),
+
+  createCardTemplate: (gameId: string, request: CardTemplateRequest) =>
+    apiRequest<{ template: CardTemplate; warnings: string[] }>(cardTemplatePath(gameId), {
+      method: 'POST',
+      body: request,
+      headers: csrfHeader(),
+    }),
+
+  /** The editor before saving, with a sample code on the back. */
+  previewCardTemplate: (gameId: string, side: CardSide, request: CardTemplateRequest) =>
+    apiRequest<CardPreview>(`${cardTemplatePath(gameId)}/preview?side=${side}`, {
+      method: 'POST',
+      body: request,
+      headers: csrfHeader(),
+    }),
+
+  cardTemplateFileUrl: (templateId: string, side: CardSide) =>
+    `/api/v1/admin/card-templates/${encodeURIComponent(templateId)}/files/${side}`,
+
+  testPrintUrl: (templateId: string) => `/api/v1/admin/card-templates/${encodeURIComponent(templateId)}/test-print.pdf`,
+
+  batchPrint: (batchId: string) => apiRequest<PrintStatus>(`${batchPath(batchId)}/print`),
+
+  bindBatchTemplate: (batchId: string, templateId: string) =>
+    apiRequest<PrintStatus>(`${batchPath(batchId)}/print/template`, {
+      method: 'POST',
+      body: { templateId },
+      headers: csrfHeader(),
+    }),
+
+  batchPreview: (batchId: string, side: CardSide) =>
+    apiRequest<CardPreview>(`${batchPath(batchId)}/print/preview?side=${side}`, {
+      method: 'POST',
+      headers: csrfHeader(),
+    }),
+
+  /**
+   * POST because it ties the batch to a template version and is audited.
+   * `copies`: demo batch only, on how many cards its shared code is printed.
+   */
+  exportBatch: (
+    batchId: string,
+    file: PrintFile,
+    cropMarks: boolean,
+    serials: string | null = null,
+    copies: number | null = null,
+  ) =>
+    apiDownload(`${batchPath(batchId)}/print/${file}`, {
+      method: 'POST',
+      body: { cropMarks, serials, copies },
+      headers: csrfHeader(),
+    }),
 }
 
 /** API for castle staff; the server limits everything to the partner of the logged-in account. */
@@ -326,6 +596,8 @@ export const partnerApi = {
   batches: () => apiRequest<BatchSummary[]>('/partner/batches'),
 
   shares: () => apiRequest<PartnerShare[]>('/partner/shares'),
+
+  gamePrices: () => apiRequest<GamePrices[]>('/partner/game-prices'),
 
   /** The castle's own count of the cards in stock per game, each at most its cardsInStockComputed. */
   stockCount: (year: number, games: { gameId: string; cardsInStock: number }[]) =>

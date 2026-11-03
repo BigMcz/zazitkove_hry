@@ -17,7 +17,7 @@ public interface AccessCodeRepository extends JpaRepository<AccessCode, UUID> {
     @Query("select c.code from AccessCode c where c.code in :codes")
     List<String> findExistingCodes(Collection<String> codes);
 
-    List<AccessCode> findByBatchIdOrderByCode(UUID batchId);
+    List<AccessCode> findByBatchIdOrderBySerialNo(UUID batchId);
 
     boolean existsByBatchIdAndStatusNot(UUID batchId, AccessCodeStatus status);
 }

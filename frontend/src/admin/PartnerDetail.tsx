@@ -5,6 +5,9 @@ import ErrorBanner from '../components/ErrorBanner.tsx'
 import { adminApi, type Partner } from './adminApi.ts'
 import BatchList from './BatchList.tsx'
 import { formatPercent } from './format.ts'
+import Billing from './Billing.tsx'
+import GamePrices from './GamePrices.tsx'
+import GameStockTable from './GameStockTable.tsx'
 import GameplayStats from './GameplayStats.tsx'
 import MonthlyReport from './MonthlyReport.tsx'
 import NewBatchForm from './NewBatchForm.tsx'
@@ -17,12 +20,13 @@ import Tabs, { type Tab } from './Tabs.tsx'
 import YearSelect from './YearSelect.tsx'
 import { adminKeys, linkButton, thisYear, useLoggedOutOn401 } from './shared.ts'
 
-type PartnerTab = 'prehled' | 'kody' | 'podily' | 'udaje' | 'ucty'
+type PartnerTab = 'prehled' | 'kody' | 'podily' | 'ceny' | 'udaje' | 'ucty'
 
 const tabs: Tab<PartnerTab>[] = [
   { id: 'prehled', label: 'Přehled' },
   { id: 'kody', label: 'Kódy a předání' },
   { id: 'podily', label: 'Podíl' },
+  { id: 'ceny', label: 'Ceny her' },
   { id: 'udaje', label: 'Údaje firmy' },
   { id: 'ucty', label: 'Přístupy' },
 ]
@@ -78,6 +82,8 @@ function PartnerView({ partner }: { partner: Partner }) {
               <YearSelect year={year} onChange={setYear} />
             </div>
             <StatCards scope="admin" year={year} partnerId={partner.id} />
+            <GameStockTable year={year} partnerId={partner.id} />
+            <Billing partnerId={partner.id} />
             <MonthlyReport scope="admin" year={year} partnerId={partner.id} />
             <GameplayStats year={year} partnerId={partner.id} />
           </>
@@ -89,6 +95,7 @@ function PartnerView({ partner }: { partner: Partner }) {
           </>
         )}
         {active === 'podily' && <ShareHistory partner={partner} />}
+        {active === 'ceny' && <GamePrices partnerId={partner.id} />}
         {active === 'udaje' && (
           <Section title="Údaje firmy">
             <PartnerForm partner={partner} />

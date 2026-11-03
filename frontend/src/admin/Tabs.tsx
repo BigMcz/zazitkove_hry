@@ -7,16 +7,24 @@ export interface Tab<T extends string> {
 
 interface TabsProps<T extends string> {
   tabs: Tab<T>[]
+  /** Name of the tab list for screen readers. */
+  label?: string
   active: T
   onChange: (id: T) => void
   children: ReactNode
 }
 
 /** Simple tabs; the panel content is the children for the active tab. */
-export default function Tabs<T extends string>({ tabs, active, onChange, children }: TabsProps<T>) {
+export default function Tabs<T extends string>({
+  tabs,
+  label = 'Sekce administrace',
+  active,
+  onChange,
+  children,
+}: TabsProps<T>) {
   return (
     <div className="flex flex-col gap-6">
-      <div role="tablist" aria-label="Sekce administrace" className="flex flex-wrap gap-1 border-b-2 border-stone-300">
+      <div role="tablist" aria-label={label} className="flex flex-wrap gap-1 border-b-2 border-stone-300">
         {tabs.map((tab) => {
           const selected = tab.id === active
           return (

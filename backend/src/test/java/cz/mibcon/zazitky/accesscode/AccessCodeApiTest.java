@@ -148,7 +148,7 @@ class AccessCodeApiTest {
     }
 
     private String newCode() {
-        UUID batchId = adminService.createBatch(new CreateBatchRequest(DEMO_GAME_ID, 1, 5, "test", null)).id();
+        UUID batchId = adminService.createBatch(new CreateBatchRequest(DEMO_GAME_ID, 1, 5, "test")).id();
         adminService.handOver(batchId);
         String code = jdbc.queryForObject("SELECT code FROM access_code WHERE batch_id = ?", String.class, batchId);
         return AccessCodeFormat.format(code);

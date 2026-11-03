@@ -182,6 +182,16 @@ Rozhodnuto 2026-11-01: druhá demo hra pro děti od 6 let na stejné lokalitě; 
 - [ ] Krok 4 (volitelně): obrázek u možnosti výběru (`station_choice.image_url`)
 - [ ] Krok 5: vyzkoušet s dítětem na testovacím serveru, s hradem doladit okno s mříží, věž a místo pro truhlu
 
+## F9 — Tisk kartiček (`docs/07-tisk-karticek.md`)
+
+- [x] Migrace V20: šablony kartiček s verzemi, grafika v DB, číslo dávky `D12`, pořadí kódu v dávce, audit stažení
+- [x] Generátor PDF (PDFBox, ZXing): přední strana 1 stránka, zadní co kód, to stránka; QR vektorově a čistou černou; ořezové značky; testovací tisk A4
+- [x] Editor šablony v administraci s živým náhledem (rozměr vizitky, grafika, pozice QR, kódu a pořadového čísla)
+- [x] Stránka tisku dávky: verze šablony, náhled s prvním kódem, PDF a ZIP, dotisk vybraných kartiček, historie stažení; sloupec Tisk v seznamu dávek
+- [ ] Ověření v Docker image na stagingu (náhled, dávka 5 000 kusů)
+- [ ] Ruční tisk na obyčejné tiskárně, načtení QR na iPhonu i Androidu, kontrola rozměru pravítkem
+- [ ] Otázky pro tiskárnu (kap. 10 dokumentu)
+
 ## Další fáze
 
 1. ~~Přístupové kódy~~ — hotovo (F1) včetně přístupu pro hrady

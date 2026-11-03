@@ -30,16 +30,35 @@ export function isSessionGone(error: unknown): error is ApiError {
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
-  /** JSON body, or URLSearchParams sent as a form (admin login). */
+  /** JSON body, URLSearchParams sent as a form (admin login) or FormData with files. */
   body?: unknown
   token?: string | null
   headers?: Record<string, string>
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json', ...options.headers }
+  const response = await send(path, options, 'application/json')
+  if (response.status === 204) {
+    return undefined as T
+  }
+  return (await response.json()) as T
+}
+
+/** A file from the API (e.g. a print PDF) with the name from Content-Disposition. */
+export async function apiDownload(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ blob: Blob; fileName: string | null }> {
+  const response = await send(path, options, '*/*')
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const name = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1] ?? /filename="?([^";]+)"?/i.exec(disposition)?.[1]
+  return { blob: await response.blob(), fileName: name ? decodeURIComponent(name) : null }
+}
+
+async function send(path: string, options: RequestOptions, accept: string): Promise<Response> {
+  const headers: Record<string, string> = { Accept: accept, ...options.headers }
   let body: BodyInit | undefined
-  if (options.body instanceof URLSearchParams) {
+  if (options.body instanceof URLSearchParams || options.body instanceof FormData) {
     body = options.body
   } else if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json'
@@ -69,11 +88,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       problem.type,
     )
   }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
-  return (await response.json()) as T
+  return response
 }
 
 const station = (stationId: string) => `/sessions/current/stations/${encodeURIComponent(stationId)}`
@@ -81,8 +96,9 @@ const station = (stationId: string) => `/sessions/current/stations/${encodeURICo
 export const api = {
   checkCode: (code: string) => apiRequest<CodeCheck>('/access-codes/check', { method: 'POST', body: { code } }),
 
-  startSession: (code: string, teamName: string | null) =>
-    apiRequest<SessionState>('/sessions', { method: 'POST', body: { code, teamName } }),
+  /** `language`: language version of the game, missing = the main game (or the language of a game in progress). */
+  startSession: (code: string, teamName: string | null, language?: string) =>
+    apiRequest<SessionState>('/sessions', { method: 'POST', body: { code, teamName, language } }),
 
   getSession: (token: string) => apiRequest<SessionState>('/sessions/current', { token }),
 

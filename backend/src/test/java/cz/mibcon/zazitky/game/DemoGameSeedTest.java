@@ -23,6 +23,7 @@ class DemoGameSeedTest {
 
     static final UUID DEMO_GAME_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
     static final UUID CHILDREN_GAME_ID = UUID.fromString("00000000-0000-0001-0000-000000000003");
+    static final UUID GERMAN_GAME_ID = UUID.fromString("00000000-0000-0002-0000-000000000003");
 
     @Autowired
     GameRepository games;
@@ -68,13 +69,50 @@ class DemoGameSeedTest {
                 .containsExactly(true, true, true, true, true, true, true, true, true, false);
     }
 
+    /** The German version has the same course as the Czech one: only texts, answers, letters and recordings differ. */
+    @Test
+    void germanVersionFollowsTheMainGame() {
+        Game main = games.findById(DEMO_GAME_ID).orElseThrow();
+        Game german = games.findBySlug("demo-katova-povinnost-de").orElseThrow();
+
+        assertThat(german.getId()).isEqualTo(GERMAN_GAME_ID);
+        assertThat(german.getLanguage()).isEqualTo("de");
+        assertThat(german.getMainGame().getId()).isEqualTo(DEMO_GAME_ID);
+        assertThat(german.getLocation().getId()).isEqualTo(main.getLocation().getId());
+        assertThat(german.getStatus()).isEqualTo(GameStatus.PUBLISHED);
+        assertThat(german.getCoverImageUrl()).isEqualTo(main.getCoverImageUrl());
+        assertThat(german.getStations()).extracting(Station::getTaskType)
+                .containsExactlyElementsOf(main.getStations().stream().map(Station::getTaskType).toList());
+        assertThat(german.getStations()).extracting(Station::getImageUrl)
+                .containsExactlyElementsOf(main.getStations().stream().map(Station::getImageUrl).toList());
+        assertThat(german.getStations()).extracting(Station::isListenOnly)
+                .containsExactlyElementsOf(main.getStations().stream().map(Station::isListenOnly).toList());
+        assertThat(german.getStations()).extracting(station -> station.getHints().size())
+                .containsExactlyElementsOf(main.getStations().stream().map(station -> station.getHints().size()).toList());
+        assertThat(german.getStations()).extracting(station -> station.getNextText() != null)
+                .containsExactly(true, true, true, true, true, true, true, true, true, false);
+        assertThat(german.getStations()).allSatisfy(station -> {
+            assertThat(station.getStoryAudioUrl()).startsWith("/audio/demo-de/");
+            assertThat(station.getRewardAudioUrl()).startsWith("/audio/demo-de/");
+        });
+        // The letters spell the answer of the final step
+        String word = german.getStations().stream()
+                .map(Station::getPuzzleLetter)
+                .filter(letter -> letter != null)
+                .reduce("", String::concat);
+        assertThat(word).isEqualTo("PFLICHTEN");
+        assertThat(german.getStations().getLast().getAcceptedAnswers()).extracting(AcceptedAnswer::getNormalizedValue)
+                .contains("pflichten");
+    }
+
     @Test
     void everyChoiceStationAcceptsOneOfItsChoices() {
-        List<Station> choiceStations = games.findBySlug("demo-katova-povinnost").orElseThrow().getStations().stream()
+        List<Station> choiceStations = games.findAllById(List.of(DEMO_GAME_ID, GERMAN_GAME_ID)).stream()
+                .flatMap(game -> game.getStations().stream())
                 .filter(station -> station.getTaskType() == TaskType.CHOICE)
                 .toList();
 
-        assertThat(choiceStations).hasSize(5).allSatisfy(station -> {
+        assertThat(choiceStations).hasSize(10).allSatisfy(station -> {
             List<String> choices = station.getChoices().stream()
                     .map(StationChoice::getText)
                     .map(TextNormalizer::normalize)

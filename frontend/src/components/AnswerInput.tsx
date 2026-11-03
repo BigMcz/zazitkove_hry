@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { TaskType } from '../api/types.ts'
+import { useGameTexts } from '../i18n/gameTexts.ts'
 import { buttonChoice, buttonPrimary, input } from './ui.ts'
 
 interface AnswerInputProps {
@@ -15,10 +16,11 @@ interface AnswerInputProps {
  */
 export default function AnswerInput({ taskType, choices, disabled = false, onSubmit }: AnswerInputProps) {
   const [value, setValue] = useState('')
+  const texts = useGameTexts()
 
   if (taskType === 'CHOICE') {
     return (
-      <div role="group" aria-label="Vyber odpověď" className="flex flex-col gap-3">
+      <div role="group" aria-label={texts.chooseAnswer} className="flex flex-col gap-3">
         {(choices ?? []).map((choice) => (
           <button
             key={choice}
@@ -46,7 +48,7 @@ export default function AnswerInput({ taskType, choices, disabled = false, onSub
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <label htmlFor="answer" className="text-base font-semibold text-stone-800">
-        Tvoje odpověď
+        {texts.yourAnswer}
       </label>
       <input
         id="answer"
@@ -64,7 +66,7 @@ export default function AnswerInput({ taskType, choices, disabled = false, onSub
         className={input}
       />
       <button type="submit" disabled={disabled || answer === ''} className={buttonPrimary}>
-        Odeslat odpověď
+        {texts.sendAnswer}
       </button>
     </form>
   )

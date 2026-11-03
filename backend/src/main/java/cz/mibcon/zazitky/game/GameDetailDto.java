@@ -15,5 +15,7 @@ public record GameDetailDto(
         Integer estimatedMinutes,
         long stationCount,
         /** A game for children: the start asks for the name on the diploma instead of a team name. */
-        boolean forChildren) {
+        boolean forChildren,
+        /** Language of the texts and recordings, e.g. {@code cs} or {@code de}. */
+        String language) {
 }

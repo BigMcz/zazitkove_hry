@@ -11,10 +11,10 @@ import cz.mibcon.zazitky.accesscode.AdminBatchDtos.CreateBatchRequest;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.MonthlyActivation;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.PartnerStats;
 import cz.mibcon.zazitky.accesscode.AdminBatchDtos.Summary;
+import cz.mibcon.zazitky.common.PublicUrl;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /** Access code administration, only for the admin (see AdminSecurityConfig). */
 @RestController
@@ -35,10 +34,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class AccessCodeAdminController {
 
     private final AccessCodeAdminService adminService;
-    private final String publicUrl;
+    private final PublicUrl publicUrl;
 
-    public AccessCodeAdminController(AccessCodeAdminService adminService,
-            @Value("${app.public-url:}") String publicUrl) {
+    public AccessCodeAdminController(AccessCodeAdminService adminService, PublicUrl publicUrl) {
         this.adminService = adminService;
         this.publicUrl = publicUrl;
     }
@@ -69,9 +67,7 @@ public class AccessCodeAdminController {
 
     @GetMapping("/batches/{batchId}/codes.csv")
     public ResponseEntity<byte[]> exportCodes(@PathVariable UUID batchId) {
-        // Without a configured public URL (local development) the links point to the server the admin uses.
-        String base = publicUrl.isBlank() ? ServletUriComponentsBuilder.fromCurrentContextPath().toUriString() : publicUrl;
-        byte[] csv = adminService.exportCsv(batchId, base).getBytes(StandardCharsets.UTF_8);
+        byte[] csv = adminService.exportCsv(batchId, publicUrl.base(), false).getBytes(StandardCharsets.UTF_8);
         String fileName = "kody-" + LocalDate.now(AccessCodeAdminService.BILLING_ZONE) + "-"
                 + batchId.toString().substring(0, 8) + ".csv";
         return ResponseEntity.ok()

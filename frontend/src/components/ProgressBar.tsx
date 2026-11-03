@@ -1,3 +1,5 @@
+import { useGameTexts } from '../i18n/gameTexts.ts'
+
 interface ProgressBarProps {
   /** Order of the station being played, 1-based. */
   current: number
@@ -5,15 +7,16 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ current, total }: ProgressBarProps) {
+  const texts = useGameTexts()
   const percent = total > 0 ? Math.round((current / total) * 100) : 0
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
-        Stanoviště {current} / {total}
+        {texts.station(current, total)}
       </p>
       <div
         role="progressbar"
-        aria-label="Postup hrou"
+        aria-label={texts.progressLabel}
         aria-valuemin={1}
         aria-valuemax={total}
         aria-valuenow={current}

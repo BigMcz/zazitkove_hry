@@ -18,7 +18,12 @@ export const adminKeys = {
   partners: ['admin', 'partners'] as const,
   partner: (partnerId: string) => ['admin', 'partners', partnerId] as const,
   ownShares: ['admin', 'own-shares'] as const,
+  billing: (partnerId: string, month: string) => ['admin', 'billing', partnerId, month] as const,
+  /** Prices of the games of a castle; without partnerId the castle's own. */
+  gamePrices: (partnerId?: string) => ['admin', 'game-prices', partnerId ?? 'own'] as const,
   partnerUsers: ['admin', 'partner-users'] as const,
+  cardTemplates: (gameId: string) => ['admin', 'card-templates', gameId] as const,
+  batchPrint: (batchId: string) => ['admin', 'batch-print', batchId] as const,
 }
 
 export const thisYear = Number(

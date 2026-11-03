@@ -1,4 +1,5 @@
 import type { Puzzle } from '../api/types.ts'
+import { useGameTexts } from '../i18n/gameTexts.ts'
 
 interface PuzzleLettersProps {
   puzzle: Puzzle
@@ -9,18 +10,19 @@ interface PuzzleLettersProps {
 /** Letters of the final puzzle collected so far; the server sends them scrambled, empty slots are null. */
 export default function PuzzleLetters({ puzzle, highlightLatest = false }: PuzzleLettersProps) {
   const collected = puzzle.slots.filter((letter) => letter !== null).length
+  const texts = useGameTexts()
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-sm font-semibold tracking-wide text-stone-700 uppercase">
-        Tajenka {collected} / {puzzle.slots.length}
+        {texts.puzzle(collected, puzzle.slots.length)}
       </p>
-      <ol aria-label="Tajenka" className="flex flex-wrap gap-1">
+      <ol aria-label={texts.puzzleLabel} className="flex flex-wrap gap-1">
         {puzzle.slots.map((letter, index) => {
           const latest = highlightLatest && index === puzzle.latestSlot
           return (
             <li
               key={index}
-              aria-label={letter ?? 'zatím nic'}
+              aria-label={letter ?? texts.puzzleEmpty}
               aria-current={latest ? 'true' : undefined}
               className={`flex h-10 w-8 items-center justify-center rounded-md border-2 font-serif text-xl font-bold ${
                 letter === null

@@ -21,7 +21,7 @@ public class GameAdminController {
     @GetMapping("/api/v1/admin/games")
     @Transactional(readOnly = true)
     public List<AdminGameDto> games() {
-        return games.findAllWithPartner().stream()
+        return games.findAllMainWithPartner().stream()
                 .map(game -> new AdminGameDto(game.getId(), game.getTitle(), game.getStatus(),
                         game.getLocation().getPartner().getId(), game.getLocation().getPartner().getName()))
                 .toList();

@@ -26,8 +26,16 @@ erDiagram
     partner_user |o--o{ partner_stock_count : "zadal"
     game ||--o{ partner_stock_count : "kartičky hry"
     game ||--o{ access_code_batch : "pro hru"
+    game ||--o{ game_price : "cena od data"
+    partner ||--o{ partner_invoice : "vyfakturované měsíce"
+    game ||--o{ card_template : "šablony kartiček"
+    card_template_file ||--o{ card_template : "přední a zadní grafika"
+    card_template |o--o{ access_code_batch : "tištěno podle"
+    access_code_batch ||--o{ card_print_export : "stažení tisku"
+    card_template ||--o{ card_print_export : "podle šablony"
     access_code_batch ||--o{ access_code : "obsahuje"
     game ||--o{ game_session : "hraná v"
+    game ||--o{ game : "jazyková verze"
     access_code |o--o{ game_session : "spouští"
     game_session ||--o{ session_progress : "postup"
     station ||--o{ session_progress : "stav"
@@ -60,6 +68,65 @@ erDiagram
         uuid partner_id FK
         date valid_from
         numeric share_pct
+        timestamptz created_at
+    }
+    game_price {
+        uuid id PK
+        uuid game_id FK
+        date valid_from
+        int price_czk
+        timestamptz created_at
+    }
+    card_template_file {
+        uuid id PK
+        varchar file_name
+        varchar content_type
+        int size_bytes
+        varchar sha256 UK
+        bytea content
+        timestamptz uploaded_at
+    }
+    card_template {
+        uuid id PK
+        uuid game_id FK
+        int version
+        uuid front_file_id FK
+        uuid back_file_id FK
+        numeric width_mm
+        numeric height_mm
+        numeric bleed_mm
+        numeric qr_x_mm
+        numeric qr_y_mm
+        numeric qr_size_mm
+        boolean qr_white_box
+        numeric code_x_mm
+        numeric code_y_mm
+        numeric code_font_pt
+        varchar code_align
+        varchar code_color
+        numeric serial_x_mm
+        numeric serial_y_mm
+        numeric serial_font_pt
+        varchar note
+        timestamptz created_at
+    }
+    card_print_export {
+        uuid id PK
+        uuid batch_id FK
+        uuid card_template_id FK
+        varchar kind
+        varchar serials
+        int codes_count
+        boolean crop_marks
+        varchar username
+        timestamptz created_at
+    }
+    partner_invoice {
+        uuid id PK
+        uuid partner_id FK
+        date month
+        date invoiced_on
+        numeric amount_czk
         timestamptz created_at
     }
     partner_stock_count {
@@ -99,6 +166,7 @@ erDiagram
         int estimated_minutes
         int session_validity_hours
         varchar language
+        uuid main_game_id FK
         varchar status
         timestamptz created_at
         timestamptz updated_at
@@ -143,19 +211,23 @@ erDiagram
     }
     access_code_batch {
         uuid id PK
+        int batch_no UK
         uuid partner_id FK
         uuid game_id FK
         int quantity
-        int unit_price_czk
         varchar note
         int validity_hours
         boolean multi_session
+        boolean free
+        uuid card_template_id FK
+        timestamptz printed_at
         timestamptz handed_over_at
         timestamptz created_at
     }
     access_code {
         uuid id PK
         uuid batch_id FK
+        int serial_no
         varchar code UK
         varchar status
         timestamptz sold_at
@@ -213,7 +285,7 @@ erDiagram
 | `partner_share` | Podíl partnera z tržby platný od data | `valid_from` (den podle Europe/Prague) — platí do dalšího záznamu; unikátní `(partner_id, valid_from)`; aktivovaný kód se vyúčtuje podle záznamu s nejvyšším `valid_from` ≤ den aktivace; budoucí datum = naplánovaná změna |
 | `partner_stock_count` | Inventura kartiček jedné hry zadaná hradem (V11) | Každá hra má své kartičky, inventura je proto po hrách (`game_id`). Kartička prodaná, ale neaktivovaná se podle aktivací počítá jako skladová, hrad proto může sklad snížit (nikdy zvýšit): `cards_in_stock` ≤ `computed_in_stock` (náš počet kartiček hry v okamžiku inventury). Sklad hry pak = její poslední inventura + kartičky hry předané po ní − aktivované po ní, nejvýš počet podle aktivací. Vyúčtování se nemění, účtují se jen aktivované kartičky; `partner_user_id` = kdo inventuru zadal |
 | `location` | Konkrétní místo (hrad Loket + město) | GPS pro mapu a budoucí ověřování polohy |
-| `game` | Jedna hra (příběh) | `slug` pro hezké URL; `status`: `DRAFT`, `PUBLISHED`, `ARCHIVED`; `language` zatím `cs` |
+| `game` | Jedna hra (příběh) | `slug` pro hezké URL; `status`: `DRAFT`, `PUBLISHED`, `ARCHIVED`; `language` jazyk textů a nahrávek (`cs`, `de`). Jazyková verze (V17) je samostatný řádek s vlastními stanovišti, nápovědami, odpověďmi a nahrávkami a `main_game_id` ukazuje na hlavní hru. Kódy a dávky patří vždy hlavní hře, jazyk si hráč vybere před startem a `game_session.game_id` je verze, kterou opravdu hraje. Jedna verze na jazyk (`uq_game_main_language`) |
 | `station` | Stanoviště hry | Unikátní `(game_id, order_no)`; `task_type`: `TEXT`, `NUMBER`, `CHOICE`; GPS a obrázek volitelné |
 | `hint` | Nápovědy stanoviště v pořadí | Unikátní `(station_id, order_no)`; penalizace v sekundách |
 | `accepted_answer` | Správné varianty odpovědi | `normalized_value` se vyplní aplikací (stejná normalizace jako u vstupu hráče) |
@@ -223,8 +295,13 @@ erDiagram
 
 | Tabulka | Účel | Poznámky |
 |---|---|---|
-| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Cena v celých Kč; poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (vývojové kódy); `handed_over_at` = kdy byly vytištěné kartičky předány partnerovi — do té doby je dávka „ve výrobě“, její kódy nefungují a partner ji nevidí |
-| `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours` |
+| `game_price` | Prodejní cena kartičky hry platná od data (V18) | Celé Kč; `valid_from` (den podle Europe/Prague) platí do dalšího záznamu; unikátní `(game_id, valid_from)`; jen u hlavních her, jazykové verze sdílejí cenu hlavní hry. Tržba za aktivovaný kód = cena s nejvyšším `valid_from` ≤ den aktivace; budoucí datum = naplánovaná změna; bez ceny se kód do tržby nezapočítá |
+| `partner_invoice` | Měsíc hradu označený správcem jako vyfakturovaný (V19) | `month` = první den měsíce, unikátní `(partner_id, month)`; `invoiced_on` nejdřív první den následujícího měsíce (fakturuje se až po skončení měsíce); `amount_czk` = částka k fakturaci v okamžiku označení (tržba pro provozovatele = tržba − podíl hradu), pro kontrolu pozdějších změn ceny nebo podílu |
+| `access_code_batch` | Vygenerovaná dávka kódů pro partnera a hru (tisk na kartičky) | Bez ceny (od V18 je cena u hry, `game_price`); poznámka např. „Sezóna 2027 — tisk 1“; `validity_hours` = platnost kódu od aktivace (výchozí 5, `NULL` = bez expirace); `multi_session` = každé zadání kódu založí novou hru (sdílený demo kód jako `DEMO-KATA`, jeden kód na libovolném počtu kartiček; mimo tržbu, sklad a statistiky hraní); `free` = kartičky zdarma (V21): jednorázové kódy jako u prodeje, ale mimo tržbu, fakturaci a sklad hradu, hrad je vidí (nemůže být zároveň `multi_session`); `handed_over_at` = kdy byly vytištěné kartičky předány partnerovi — do té doby je dávka „ve výrobě“, její kódy nefungují a partner ji nevidí; `batch_no` = krátké číslo pro lidi (`D12`, identity, V20); `card_template_id` = verze šablony kartičky, podle které se dávka tiskne (přiváže se prvním exportem, po předání se nemění); `printed_at` = první export zadních stran |
+| `access_code` | Jednotlivý kód | `code` unikátní, uložený bez pomlčky (`ABCD2345`, tiskne se `ABCD-2345`); `status`: `NEW`, `ACTIVATED`, `EXPIRED`, `CANCELLED` (`SOLD` se nepoužívá — prodej = aktivace); `valid_until` = `activated_at + validity_hours`; `serial_no` = pořadí v dávce 1…N (V20), unikátní `(batch_id, serial_no)`, tiskne se na kartičku (`D12 · 0042`); kód vložený přímo v SQL dostane další číslo triggerem `tg_access_code_serial` |
+| `card_template_file` | Nahraná grafika strany kartičky (V20) | PDF, PNG nebo JPG v `BYTEA` (záloha spolu s DB); `sha256` unikátní, stejný soubor se uloží jednou a sdílí ho víc verzí šablony; nemaže se |
+| `card_template` | Verze šablony kartičky hlavní hry (V20) | Unikátní `(game_id, version)`, platná je nejvyšší; úprava = nová verze, stávající se nemění. Ořez a spadávka v mm, pozice QR, kódu a pořadového čísla od levého horního rohu ořezu, písmo v pt; pořadové číslo jen když jsou vyplněné všechny tři `serial_*`. Podrobně `docs/07-tisk-karticek.md` |
+| `card_print_export` | Audit stažení tiskových podkladů (V20) | `kind`: `FRONT`, `BACK`, `ZIP`; `serials` = výběr pro dotisk (`42,57,100-110`), `NULL` = celá dávka; `username` = kdo stáhl |
 
 ### Přístupy
 
@@ -316,6 +393,7 @@ CREATE TABLE game (
     updated_at              TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_game_location ON game(location_id);
+-- + main_game_id (V17), viz kap. 4
 
 CREATE TABLE station (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -365,7 +443,7 @@ CREATE TABLE access_code_batch (
     partner_id      UUID         NOT NULL REFERENCES partner(id),
     game_id         UUID         NOT NULL REFERENCES game(id),
     quantity        INT          NOT NULL CHECK (quantity > 0),
-    unit_price_czk  INT          CHECK (unit_price_czk >= 0),
+    unit_price_czk  INT          CHECK (unit_price_czk >= 0),  -- zrušeno ve V18, cena je v game_price
     note            VARCHAR(300),
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
@@ -708,12 +786,203 @@ ALTER TABLE game
     ADD COLUMN outro_image_url VARCHAR(500);
 ```
 
+### V17
+
+Soubor `backend/src/main/resources/db/migration/V17__game_language_versions.sql`:
+
+```sql
+-- =========================================================
+-- Jazykové verze hry (Q5): hra v dalším jazyce je samostatný řádek game se svými stanovišti, nápovědami,
+-- odpověďmi a nahrávkami, navázaný na hlavní hru. Kódy a dávky patří vždy hlavní hře, jazyk si hráč
+-- vybere před startem a relace (game_session.game_id) ukazuje na verzi, kterou opravdu hraje.
+-- main_game_id: hlavní hra, NULL = hra sama je hlavní.
+-- =========================================================
+ALTER TABLE game
+    ADD COLUMN main_game_id UUID REFERENCES game(id) ON DELETE CASCADE;
+
+CREATE INDEX ix_game_main_game ON game(main_game_id);
+
+ALTER TABLE game
+    ADD CONSTRAINT uq_game_main_language UNIQUE (main_game_id, language);
+```
+
+### V18
+
+Soubor `backend/src/main/resources/db/migration/V18__game_price.sql`:
+
+```sql
+-- =========================================================
+-- Prodejní cena hry s platností od data (stejně jako podíl hradu, partner_share). Tržba za aktivovaný kód
+-- je cena hlavní hry platná v den aktivace (Europe/Prague); cena na dávce kartiček se ruší.
+-- Ceny ze stávajících dávek se převedou: každá dávka s cenou dá cenu hry platnou ode dne svého vytvoření
+-- (víc dávek téže hry v jeden den: platí cena té poslední).
+-- =========================================================
+CREATE TABLE game_price (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id     UUID        NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    valid_from  DATE        NOT NULL,
+    price_czk   INT         NOT NULL CHECK (price_czk >= 0),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_game_price_game_valid_from UNIQUE (game_id, valid_from)
+);
+
+INSERT INTO game_price (game_id, valid_from, price_czk)
+SELECT DISTINCT ON (b.game_id, (b.created_at AT TIME ZONE 'Europe/Prague')::date)
+       b.game_id, (b.created_at AT TIME ZONE 'Europe/Prague')::date, b.unit_price_czk
+FROM access_code_batch b
+WHERE b.unit_price_czk IS NOT NULL
+ORDER BY b.game_id, (b.created_at AT TIME ZONE 'Europe/Prague')::date, b.created_at DESC;
+
+ALTER TABLE access_code_batch
+    DROP COLUMN unit_price_czk;
+```
+
+### V19
+
+Soubor `backend/src/main/resources/db/migration/V19__partner_invoice.sql`:
+
+```sql
+-- =========================================================
+-- Fakturace hradu po měsících: správce si označí, že měsíc vyfakturoval a kdy. Fakturuje se vždy až po
+-- skončení měsíce (invoiced_on nejdřív první den následujícího měsíce).
+-- month: první den fakturovaného měsíce; amount_czk: částka k fakturaci v okamžiku označení (pro kontrolu,
+-- kdyby se později změnila cena nebo podíl s datem v minulosti).
+-- =========================================================
+CREATE TABLE partner_invoice (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_id   UUID          NOT NULL REFERENCES partner(id) ON DELETE CASCADE,
+    month        DATE          NOT NULL CHECK (extract(DAY FROM month) = 1),
+    invoiced_on  DATE          NOT NULL,
+    amount_czk   NUMERIC(12,2) NOT NULL,
+    created_at   TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    CONSTRAINT uq_partner_invoice_month UNIQUE (partner_id, month),
+    CONSTRAINT ck_partner_invoice_after_month CHECK (invoiced_on >= month + INTERVAL '1 month')
+);
+```
+
+### V20
+
+Soubor `backend/src/main/resources/db/migration/V20__card_print.sql`:
+
+```sql
+-- =========================================================
+-- Tisk kartiček s přístupovými kódy (docs/07-tisk-karticek.md).
+-- Šablona kartičky hry je verzovaná: úprava = nový řádek, vytištěná dávka si drží svou verzi.
+-- Grafika je v DB (záloha spolu s DB), stejný soubor se uloží jednou (sha256) a sdílí ho víc verzí.
+-- =========================================================
+CREATE TABLE card_template_file (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    file_name     VARCHAR(255) NOT NULL,
+    content_type  VARCHAR(100) NOT NULL
+                  CHECK (content_type IN ('application/pdf','image/png','image/jpeg')),
+    size_bytes    INT          NOT NULL CHECK (size_bytes > 0),
+    sha256        VARCHAR(64)  NOT NULL UNIQUE,
+    content       BYTEA        NOT NULL,
+    uploaded_at   TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE card_template (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    game_id         UUID         NOT NULL REFERENCES game(id) ON DELETE CASCADE,
+    version         INT          NOT NULL CHECK (version > 0),
+    front_file_id   UUID         NOT NULL REFERENCES card_template_file(id),
+    back_file_id    UUID         NOT NULL REFERENCES card_template_file(id),
+    -- ořez (hotová kartička) a spadávka v mm; výchozí = vizitka 90 × 50 mm na šířku
+    width_mm        NUMERIC(6,2) NOT NULL DEFAULT 90 CHECK (width_mm BETWEEN 30 AND 300),
+    height_mm       NUMERIC(6,2) NOT NULL DEFAULT 50 CHECK (height_mm BETWEEN 30 AND 300),
+    bleed_mm        NUMERIC(4,2) NOT NULL DEFAULT 3 CHECK (bleed_mm BETWEEN 0 AND 10),
+    -- pozice se měří od levého horního rohu ořezu
+    qr_x_mm         NUMERIC(6,2) NOT NULL,
+    qr_y_mm         NUMERIC(6,2) NOT NULL,
+    qr_size_mm      NUMERIC(6,2) NOT NULL CHECK (qr_size_mm >= 18),   -- včetně bílého okraje (quiet zone)
+    qr_white_box    BOOLEAN      NOT NULL DEFAULT TRUE,
+    code_x_mm       NUMERIC(6,2) NOT NULL,
+    code_y_mm       NUMERIC(6,2) NOT NULL,                             -- účaří
+    code_font_pt    NUMERIC(4,1) NOT NULL DEFAULT 12 CHECK (code_font_pt BETWEEN 6 AND 48),
+    code_align      VARCHAR(6)   NOT NULL DEFAULT 'CENTER'
+                    CHECK (code_align IN ('LEFT','CENTER','RIGHT')),
+    code_color      VARCHAR(7)   NOT NULL DEFAULT '#000000' CHECK (code_color ~ '^#[0-9A-Fa-f]{6}$'),
+    serial_x_mm     NUMERIC(6,2),
+    serial_y_mm     NUMERIC(6,2),
+    serial_font_pt  NUMERIC(4,1) CHECK (serial_font_pt BETWEEN 4 AND 24),
+    note            VARCHAR(300),
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uq_card_template_game_version UNIQUE (game_id, version),
+    CONSTRAINT ck_card_template_serial CHECK (
+        (serial_x_mm IS NULL AND serial_y_mm IS NULL AND serial_font_pt IS NULL)
+        OR (serial_x_mm IS NOT NULL AND serial_y_mm IS NOT NULL AND serial_font_pt IS NOT NULL))
+);
+
+-- Krátké lidské číslo dávky (D12), stávající dávky očíslované podle vytvoření
+ALTER TABLE access_code_batch ADD COLUMN batch_no INT;
+UPDATE access_code_batch b SET batch_no = n.rn
+FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created_at, id) AS rn FROM access_code_batch) n
+WHERE n.id = b.id;
+ALTER TABLE access_code_batch ALTER COLUMN batch_no SET NOT NULL;
+ALTER TABLE access_code_batch ALTER COLUMN batch_no ADD GENERATED BY DEFAULT AS IDENTITY;
+SELECT setval(pg_get_serial_sequence('access_code_batch', 'batch_no'),
+              COALESCE((SELECT MAX(batch_no) FROM access_code_batch), 0) + 1, false);
+ALTER TABLE access_code_batch ADD CONSTRAINT uq_batch_no UNIQUE (batch_no);
+
+ALTER TABLE access_code_batch
+    ADD COLUMN card_template_id UUID REFERENCES card_template(id),
+    ADD COLUMN printed_at       TIMESTAMPTZ;
+
+-- Pořadí kódu v dávce (1…N), tiskne se na kartičku; stávající kódy očíslované podle kódu
+ALTER TABLE access_code ADD COLUMN serial_no INT;
+UPDATE access_code c SET serial_no = n.rn
+FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY batch_id ORDER BY code) AS rn FROM access_code) n
+WHERE n.id = c.id;
+ALTER TABLE access_code ALTER COLUMN serial_no SET NOT NULL;
+ALTER TABLE access_code ADD CONSTRAINT uq_access_code_batch_serial UNIQUE (batch_id, serial_no);
+
+-- Aplikace pořadí přiděluje sama; kód vložený přímo v SQL (seed, ruční oprava) dostane další číslo v dávce
+CREATE FUNCTION access_code_next_serial() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.serial_no IS NULL THEN
+        SELECT COALESCE(MAX(serial_no), 0) + 1 INTO NEW.serial_no FROM access_code WHERE batch_id = NEW.batch_id;
+    END IF;
+    RETURN NEW;
+END
+$$;
+CREATE TRIGGER tg_access_code_serial BEFORE INSERT ON access_code
+    FOR EACH ROW EXECUTE FUNCTION access_code_next_serial();
+
+-- Audit stažení tiskových podkladů (PDF obsahují kódy, které po předání platí)
+CREATE TABLE card_print_export (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    batch_id          UUID         NOT NULL REFERENCES access_code_batch(id) ON DELETE CASCADE,
+    card_template_id  UUID         NOT NULL REFERENCES card_template(id),
+    kind              VARCHAR(10)  NOT NULL CHECK (kind IN ('FRONT','BACK','ZIP')),
+    serials           VARCHAR(1000),           -- výběr pro dotisk, NULL = celá dávka
+    codes_count       INT          NOT NULL CHECK (codes_count >= 0),
+    crop_marks        BOOLEAN      NOT NULL DEFAULT FALSE,
+    username          VARCHAR(100) NOT NULL,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_print_export_batch ON card_print_export(batch_id);
+```
+
+### V21
+
+Soubor `backend/src/main/resources/db/migration/V21__free_batch.sql`:
+
+```sql
+-- =========================================================
+-- Kartičky zdarma: dávka jednorázových kódů, které se nepočítají do tržby, fakturace ani skladu hradu
+-- (dárky, soutěže, novináři). Sdílený demo kód (jeden kód na mnoha kartičkách) je dávka s multi_session.
+-- =========================================================
+ALTER TABLE access_code_batch
+    ADD COLUMN free BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD CONSTRAINT ck_batch_free_not_shared CHECK (NOT (free AND multi_session));
+```
+
 ## 5. Migrace a seed
 
 | Umístění | Soubor | Kdy běží |
 |---|---|---|
 | `db/migration` | `V1__init_schema.sql`, `V2__…` | Všechna prostředí |
-| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) + vývojový účet hradu `hrad` / `hrad-loket`; `R__demo_game_children.sql` (repeatable, běží po něm) — dětská hra na stejné lokalitě + kód `DEMO-DETI` | Jen profil `dev` |
+| `db/seed` | `R__demo_game.sql` (repeatable) — demo hra a její německá verze „Die Pflicht des Henkers“ (ve stejném souboru, protože se maže kaskádně s hlavní hrou) + vývojový kód `DEMO-KATA` (bez expirace, každé zadání = nová hra) + vývojový účet hradu `hrad` / `hrad-loket`; `R__demo_game_children.sql` (repeatable, běží po něm) — dětská hra na stejné lokalitě + kód `DEMO-DETI` | Jen profil `dev` |
 
 - Seed demo hry je **repeatable migrace** — spustí se znovu při každé změně obsahu souboru, takže herní texty lze ladit bez nových verzí schématu. Seed musí být idempotentní: nejprve smaže demo partnera/lokalitu/hru podle pevných UUID (kaskádně i stanoviště a relace), pak je vloží znovu.
 - Pevná UUID v seedu (např. `00000000-0000-0000-0000-00000000000x`) usnadní testy a ladění.
@@ -739,3 +1008,8 @@ ALTER TABLE game
 | V14 | Vlastní obrázek na diplom: `game.diploma_image_url` (NULL = obrázek hry `cover_image_url`) |
 | V15 | Namluvená hláška po špatné odpovědi: `game.wrong_answer_audio_url` (NULL = jen text) |
 | V16 | Obrázek k závěru hry: `game.outro_image_url` (nahoře na stránce finále, NULL = bez obrázku) |
+| V17 | Jazykové verze hry: `game.main_game_id` (hlavní hra, NULL = hlavní), jedna verze na jazyk (`uq_game_main_language`) |
+| V18 | Prodejní cena hry od data: tabulka `game_price` (ceny ze stávajících dávek převedeny); zrušen `access_code_batch.unit_price_czk` |
+| V19 | Fakturace: tabulka `partner_invoice` — měsíce hradu označené jako vyfakturované (den a částka) |
+| V21 | Kartičky zdarma: `access_code_batch.free` (mimo tržbu, fakturaci a sklad) |
+| V20 | Tisk kartiček: tabulky `card_template_file`, `card_template` (verze šablony hry), `card_print_export` (audit); `access_code_batch.batch_no` (D12), `card_template_id`, `printed_at`; `access_code.serial_no` (pořadí v dávce, trigger pro vložení v SQL) |

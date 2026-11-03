@@ -163,8 +163,9 @@ class PartnerAccessTest {
         jdbc.update("INSERT INTO location (id, partner_id, name) VALUES (?, ?, 'Hrad')", location, partner);
         jdbc.update("INSERT INTO game (id, location_id, slug, title, intro_text, outro_text, status)"
                 + " VALUES (?, ?, ?, 'Jiná hra', 'Intro', 'Outro', 'PUBLISHED')", game, location, "jina-hra-" + suffix);
-        jdbc.update("INSERT INTO access_code_batch (id, partner_id, game_id, quantity, unit_price_czk)"
-                + " VALUES (?, ?, ?, 1, 100)", batch, partner, game);
+        jdbc.update("INSERT INTO game_price (game_id, valid_from, price_czk) VALUES (?, DATE '2020-01-01', 100)", game);
+        jdbc.update("INSERT INTO access_code_batch (id, partner_id, game_id, quantity) VALUES (?, ?, ?, 1)",
+                batch, partner, game);
         jdbc.update("INSERT INTO access_code (batch_id, code, status, activated_at) VALUES (?, ?, 'ACTIVATED', now())",
                 batch, ("T" + suffix.toUpperCase()).substring(0, 8));
         return name;

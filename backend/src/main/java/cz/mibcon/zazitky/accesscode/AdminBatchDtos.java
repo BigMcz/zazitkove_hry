@@ -17,32 +17,66 @@ public final class AdminBatchDtos {
     private AdminBatchDtos() {
     }
 
+    /** What the cards of a batch are for. */
+    public enum BatchKind {
+        /** Sold at the castle: unique single-use codes, counted in the revenue and the stock. */
+        SALE,
+        /** Given away (presents, contests): like SALE, but not in the revenue, invoicing or stock. */
+        FREE,
+        /** One shared code on any number of cards (DEMO-KATA): never expires, every entry starts a new game. */
+        DEMO
+    }
+
+    /**
+     * @param kind          null = SALE
+     * @param quantity      SALE and FREE only
+     * @param validityHours hours of validity from activation, SALE and FREE only
+     * @param code          DEMO only: own code of 8 letters or digits (DEMO-KATA); null = generated
+     */
     public record CreateBatchRequest(
             @NotNull UUID gameId,
-            @NotNull @Min(1) @Max(5000) Integer quantity,
-            /** Hours of validity from activation. */
-            @NotNull @Min(1) @Max(24) Integer validityHours,
+            BatchKind kind,
+            @Min(1) @Max(5000) Integer quantity,
+            @Min(1) @Max(24) Integer validityHours,
             @Size(max = 300) String note,
-            @Min(0) Integer unitPriceCzk) {
+            @Size(max = 20) String code) {
+
+        /** A batch for sale. */
+        public CreateBatchRequest(UUID gameId, Integer quantity, Integer validityHours, String note) {
+            this(gameId, BatchKind.SALE, quantity, validityHours, note, null);
+        }
+
+        public BatchKind kindOrSale() {
+            return kind == null ? BatchKind.SALE : kind;
+        }
     }
 
     public record BatchSummary(
             UUID id,
+            /** Short number for people, D12. */
+            int batchNo,
             UUID partnerId,
+            UUID gameId,
             String gameTitle,
             String partnerName,
             int quantity,
             /** Null = codes never expire (development batch). */
             Integer validityHours,
+            /** One shared code, every entry a new game (demo code); not in the revenue, stock or stats. */
             boolean multiSession,
+            /** Cards given away: not in the revenue, invoicing or stock. */
+            boolean free,
             String note,
-            Integer unitPriceCzk,
             Instant createdAt,
             /** Null = still in production, the codes do not work yet. */
             Instant handedOverAt,
             long activatedCount,
             /** Cards not used yet (NEW) — for a handed-over batch the cards the partner should still have. */
-            long notActivatedCount) {
+            long notActivatedCount,
+            /** First export of the back sides; null = not printed yet. */
+            Instant printedAt,
+            /** Version of the card template the batch is printed with; null = not tied yet. */
+            Integer templateVersion) {
     }
 
     /** Activated codes of one game in one month (Europe/Prague), basis for invoicing the partner. */
@@ -52,7 +86,7 @@ public final class AdminBatchDtos {
             String partnerName,
             String gameTitle,
             long activatedCount,
-            /** Sum of the unit prices of the activated codes; null when the batches have no price. */
+            /** Sum of the prices of the game valid on the days of the activations; null when the game has no price. */
             Long revenueCzk,
             /** Partner's share of the revenue; each code by the share valid on the day of its activation. */
             BigDecimal partnerShareCzk) {

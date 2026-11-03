@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { isSessionGone } from '../api/client.ts'
 import { useSessionState } from '../api/queries.ts'
+import { gameTexts } from '../i18n/gameTexts.ts'
 import { useSessionToken } from './sessionTokenContext.ts'
 
 export interface HomeLocationState {
@@ -19,6 +20,9 @@ export function usePlaySession() {
   const navigate = useNavigate()
   const query = useSessionState(token)
   const leaving = useRef(false)
+  // Texts in the language of the game (Czech until it is loaded)
+  const texts = gameTexts(query.data?.game.language)
+  const errorText = texts.error
 
   const leaveGame = useCallback(
     (message?: string) => {
@@ -35,12 +39,12 @@ export function usePlaySession() {
   const handleError = useCallback(
     (error: Error): string | null => {
       if (isSessionGone(error)) {
-        leaveGame(error.message)
+        leaveGame(errorText(error))
         return null
       }
-      return error.message
+      return errorText(error)
     },
-    [leaveGame],
+    [leaveGame, errorText],
   )
 
   useEffect(() => {
@@ -51,12 +55,12 @@ export function usePlaySession() {
 
   useEffect(() => {
     if (isSessionGone(query.error)) {
-      leaveGame(query.error.message)
+      leaveGame(errorText(query.error))
     }
-  }, [query.error, leaveGame])
+  }, [query.error, leaveGame, errorText])
 
   // A gone session redirects home, so it is not shown as an error on the page itself.
   const loadError = query.error && !isSessionGone(query.error) ? query.error : null
 
-  return { token, query, loadError, leaveGame, handleError }
+  return { token, query, loadError, leaveGame, handleError, texts }
 }

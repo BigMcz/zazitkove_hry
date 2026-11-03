@@ -17,7 +17,8 @@ export function useSessionState(token: string | null) {
 export function useStartSession() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ code, teamName }: { code: string; teamName: string | null }) => api.startSession(code, teamName),
+    mutationFn: ({ code, teamName, language }: { code: string; teamName: string | null; language?: string }) =>
+      api.startSession(code, teamName, language),
     onSuccess: (state) => {
       if (state.token) {
         queryClient.setQueryData(queryKeys.session(state.token), state)
