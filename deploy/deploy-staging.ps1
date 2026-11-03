@@ -8,6 +8,8 @@
 param([switch]$SkipBuild)
 
 $ErrorActionPreference = 'Stop'
+# OpenSSH z Windows (používá ssh-agent Windows); spuštěno z Git Bash by se jinak vzalo ssh z Gitu bez agenta
+$env:Path = "$env:SystemRoot\System32\OpenSSH;$env:Path"
 $root = Split-Path -Parent $PSScriptRoot
 $image = 'storyhold-app:staging'
 $tar = Join-Path $env:TEMP 'storyhold-app.tar'
