@@ -15,7 +15,8 @@ server:
   forward-headers-strategy: ${FORWARD_HEADERS_STRATEGY:none}
 
 app:
-  public-url: ${PUBLIC_URL:}
+  # Povinné: bez něj by se adresa v QR kódech kartiček brala z hlavičky Host požadavku
+  public-url: ${PUBLIC_URL}
   admin:
     username: ${ADMIN_USERNAME:admin}
     password: ${ADMIN_PASSWORD:}

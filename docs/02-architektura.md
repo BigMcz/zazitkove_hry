@@ -121,7 +121,7 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | Chybí/nesedí token relace | 401 | `invalid-token` |
 | Neznámý, zrušený nebo ještě nepředaný („ve výrobě“) přístupový kód | 404 | `invalid-code` |
 | Přístupový kód vypršel | 410 | `code-expired` |
-| Příliš mnoho pokusů o kód / přihlášení z jedné IP | 429 | `too-many-requests` |
+| Příliš mnoho pokusů o kód / přihlášení / odpovědí, zamčený účet | 429 | `too-many-requests` |
 | Admin/partner API bez přihlášení / špatné heslo nebo zablokovaný účet | 401 | `unauthorized` / `invalid-credentials` |
 | Hrad (role `PARTNER`) volá API správce, nebo správce API hradu | 403 | `forbidden` |
 | Admin API bez platného CSRF tokenu | 403 | `forbidden` |
@@ -143,7 +143,8 @@ Normalizovaná hodnota se ukládá do `accepted_answer.normalized_value`. **Rozh
 | `SESSION_COOKIE_SECURE` (výchozí `true`) | session cookie administrace jen přes HTTPS; `false` jen pro lokální test |
 | `FORWARD_HEADERS_STRATEGY` (výchozí `none`) | za reverzní proxy `native`, aby limit pokusů počítal skutečné IP hráčů |
 
-- `application.yml` — limity `app.access-code.attempts-per-minute` (10) a `app.admin.login-attempts-per-minute` (5).
+- `application.yml` — limity: `app.access-code.attempts-per-minute` (10 na adresu klienta), `app.access-code.failed-attempts-per-minute` (300 neznámých kódů ze všech adres dohromady), `app.session.actions-per-minute` (30 odpovědí, nápověd a synchronizací na hru), `app.admin.login-attempts-per-minute` (5 na adresu klienta), `app.admin.login-failures-per-account` (10 chybných hesel k účtu za 15 minut, pak je účet do té doby zamčený).
+- `application-prod.yml` — `PUBLIC_URL` je povinné, bez něj aplikace nenastartuje (jinak by se adresa v QR kartiček brala z hlavičky `Host` požadavku).
 - `application-dev.yml` — admin `admin` / `admin` (jen lokálně).
 - Hesla a tajemství nikdy v repozitáři.
 
@@ -157,7 +158,7 @@ Hráč hru nevybírá — hra se pozná podle kódu z kartičky. (Veřejný sezn
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| POST | `/access-codes/check` | Ověřit kód (neaktivuje ho). Body: `{ "code": "abcd 2345" }` — velikost písmen, mezery a pomlčky nehrají roli. Limit 10 pokusů/min na IP (společně s `POST /sessions`). |
+| POST | `/access-codes/check` | Ověřit kód (neaktivuje ho). Body: `{ "code": "abcd 2345" }` — velikost písmen, mezery a pomlčky nehrají roli. Limit 10 pokusů/min na adresu klienta (společně s `POST /sessions`) a 300 neznámých kódů/min celkem. |
 
 ```json
 // POST /access-codes/check → 200
@@ -259,7 +260,7 @@ Přihlášení formulářem (Spring Security), session cookie, CSRF ochrana pro 
 | Metoda | Cesta | Popis |
 |---|---|---|
 | GET | `/admin/session` | `{ "username", "role": "ADMIN" \| "PARTNER", "partnerName" }`, bez přihlášení vše `null`; vydá CSRF cookie |
-| POST | `/admin/login` | Form `username`, `password` → `200` stejné tělo jako `/admin/session` / `401`; limit 5 pokusů/min na IP; platí pro obě role |
+| POST | `/admin/login` | Form `username`, `password` → `200` stejné tělo jako `/admin/session` / `401`; limit 5 pokusů/min na adresu klienta, po 10 chybných heslech účet 15 min zamčený (`429`); platí pro obě role |
 | POST | `/admin/logout` | `204` |
 | GET | `/admin/games` | Hry pro výběr při generování (`id`, `title`, `status`, `partnerName`) |
 | GET | `/admin/dashboard?year=2026[&partnerId=…]` | Souhrn za rok (všechny hrady nebo jeden): `activatedThisMonth`, `activatedInYear`, `revenueCzk`, `partnerShareCzk`, `profitCzk` (= tržba − podíl hradů), `revenueThisMonthCzk`, `partnerShareThisMonthCzk`, `profitThisMonthCzk` (aktuální měsíc i při jiném zvoleném roce; hrad dostane bez zisku), `cardsInStock` (podle inventur hradů, jinak předané a neaktivované), `cardsInStockComputed`, `stockCountedAt` (jen pro jednoho partnera), `cardsInProduction`, `cardsDelivered`; vývojové dávky se nepočítají |
@@ -396,9 +397,12 @@ Hráč musí projít hru i bez signálu (hradby, sklepení, letadlový režim). 
 
 - Správné odpovědi a nápovědy, které hráč ještě neodkryl, nikdy neopouštějí server.
 - Token relace = UUID v4 (122 bitů náhody), jen v hlavičce, ne v URL.
-- Rate limiting odpovědí (ochrana proti hrubé síle u `NUMBER`) — zatím jen záznam pokusů, před ostrým provozem limit např. 10 pokusů/min na relaci (Q11).
-- Přístupové kódy: 8 znaků z abecedy bez zaměnitelných znaků (bez 0/O, 1/I/L) → 31⁸ ≈ 8,5 · 10¹¹ kombinací, generované `SecureRandom`; ukládají se v plném znění (kvůli tisku), ověřování s limitem 10 pokusů/min na IP (v paměti, platí pro jednu instanci aplikace).
-- Administrace: Spring Security, oddělený filter chain pro `/api/v1/admin/**` a `/api/v1/partner/**`, role `ADMIN` a `PARTNER`, hesla hradů BCrypt (session cookie `SameSite=Strict`, v prod `Secure`; CSRF; limit pokusů o přihlášení). Veřejné API je bez cookies (token v hlavičce), proto tam CSRF ani HTTP session nejsou.
+- Limity pokusů (`RateLimiter`, v paměti, platí pro jednu instanci aplikace). Adresa klienta se počítá u IPv4 celá, u IPv6 celá síť /64 (zákazník ji obvykle dostane celou a mohl by adresu měnit při každém pokusu). Při útoku z více než 100 000 adres naráz se nové adresy odmítají, aby limity nezaplnily paměť.
+- Odpovědi: 30 odpovědí, nápověd a synchronizací za minutu na hru (Q11), synchronizace nejvýš 200 akcí najednou.
+- Přístupové kódy: 8 znaků z abecedy bez zaměnitelných znaků (bez 0/O, 1/I/L) → 31⁸ ≈ 8,5 · 10¹¹ kombinací, generované `SecureRandom`; ukládají se v plném znění (kvůli tisku). Ověřování: 10 pokusů/min na adresu klienta a 300 neznámých kódů/min ze všech adres dohromady (`CodeGuessGuard`); při útoku z mnoha adres pak chvíli čekají i hráči s platným kódem.
+- Administrace: Spring Security, oddělený filter chain pro `/api/v1/admin/**` a `/api/v1/partner/**`, role `ADMIN` a `PARTNER`, hesla hradů BCrypt (session cookie `SameSite=Strict`, v prod `Secure`; CSRF). Přihlášení: 5 pokusů/min na adresu klienta, po 10 chybných heslech je účet 15 minut zamčený (i pro správné heslo). Zakázání účtu hradu nebo změna jeho hesla ukončí jeho otevřené přihlášení hned při dalším požadavku (vlastní změna hesla nechá přihlášené jen zařízení, kde se heslo měnilo). Veřejné API je bez cookies (token v hlavičce), proto tam CSRF ani HTTP session nejsou.
+- Nahraná grafika kartiček: jen PDF, PNG a JPG (podle obsahu), nejvýš 20 MB a 10 000 px na stranu.
+- Herní balíček pro offline režim: klíč stanoviště je odvozený ze správné odpovědi, takže u úkolů s volbou nebo krátkou číselnou odpovědí ji jde z balíčku offline vyzkoušet a nápovědy aktuálního stanoviště jsou v balíčku čitelné (Q19).
 - HTTPS v ostrém provozu povinné.
 
 ## 6. Nasazení
@@ -436,10 +440,24 @@ flowchart LR
 Staging (`deploy/staging/`):
 
 - `compose.yaml` — `caddy` (jediná s porty 80/443), `app` (`storyhold-app:staging`, limit 1 GB → heap ~770 MB, healthcheck `/actuator/health`), `db` (`postgres:16-alpine`, limit 512 MB, volume `pgdata`); vše `restart: unless-stopped`. Název projektu `storyhold` drží volume `caddy_data` s certifikáty.
-- `Caddyfile` — `reverse_proxy app:8080`, basic auth se dvěma účty z proměnných (`BASIC_AUTH_*` pro tým, `PRESENTATION_AUTH_*` = `ukazka` pro prezentace), `X-Robots-Tag: noindex, nofollow`.
+- `Caddyfile` — `reverse_proxy app:8080`, basic auth se dvěma účty z proměnných (`BASIC_AUTH_*` pro tým, `PRESENTATION_AUTH_*` = `ukazka` pro prezentace), `X-Robots-Tag: noindex, nofollow`, bezpečnostní hlavičky (`security_headers`: HSTS, CSP jen s vlastními skripty, `Referrer-Policy`, `Permissions-Policy`); stejný blok převezme produkce.
 - Tajemství (`DB_PASSWORD`, `ADMIN_PASSWORD`, hash basic auth) jen v `~/storyhold/.env` na serveru (práva 600), vzor `deploy/staging/.env.example`. Každá služba dostane jen své proměnné.
 - Pevně v `compose.yaml`: `PUBLIC_URL=https://test.storyhold.cz`, `FORWARD_HEADERS_STRATEGY=native`, `SESSION_COOKIE_SECURE=true`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/seed`.
-- Seed na stagingu vytvoří i vývojové kódy `DEMO-KATA` a `DEMO-DETI` (dětská hra, `R__demo_game_children.sql`) a účet hradu `hrad` / `hrad-loket` (heslo je v repozitáři, za basic auth přijatelné). Heslo účtu jde v administraci změnit, ale každá změna `R__demo_game.sql` seed spustí znovu: vrátí heslo, smaže rozehrané hry demo hry a dávky kódů k ní (Q9). Totéž platí pro `R__demo_game_children.sql` a dětskou hru.
+- Seed na stagingu vytvoří i vývojové kódy `DEMO-KATA` a `DEMO-DETI` (dětská hra, `R__demo_game_children.sql`) a účet hradu `hrad` / `hrad-loket` (heslo je v repozitáři, za basic auth přijatelné; komentář v seedu „jen lokální vývoj“ je zastaralý, ale seed se kvůli němu neupravuje, protože každá změna ho na stagingu spustí znovu). Heslo účtu jde v administraci změnit, ale každá změna `R__demo_game.sql` seed spustí znovu: vrátí heslo, smaže rozehrané hry demo hry a dávky kódů k ní (Q9). Totéž platí pro `R__demo_game_children.sql` a dětskou hru.
+
+### Checklist před spuštěním produkce (`storyhold.cz`)
+
+Produkce je na internetu bez basic auth, proto navíc oproti stagingu:
+
+- [ ] Vlastní stack (compose, volume, `.env`) odděleně od stagingu; `.env` s právy 600, silná a jiná hesla než na stagingu (`DB_PASSWORD`, `ADMIN_PASSWORD`, `ADMIN_USERNAME` jiné než `admin`).
+- [ ] **Bez seedu:** `SPRING_FLYWAY_LOCATIONS` nenastavovat (profil `prod` bere jen `db/migration`), takže v produkci není účet `hrad` / `hrad-loket` ani kódy `DEMO-KATA` a `DEMO-DETI`. Demo kód pro prezentace založit v administraci (dávka „Demo kód“).
+- [ ] `db` a `app` bez `ports:`, porty 80/443 jen Caddy (Docker obchází `ufw`); ověřit zvenku, že 5432 a 8080 nejsou dostupné.
+- [ ] `PUBLIC_URL=https://storyhold.cz` (bez něj aplikace nenastartuje), `FORWARD_HEADERS_STRATEGY=native`, `SESSION_COOKIE_SECURE=true`.
+- [ ] Caddy: `import security_headers`, bez `X-Robots-Tag`; po spuštění zkontrolovat v prohlížeči konzoli (CSP nic neblokuje) a hlavičky např. na securityheaders.com. HSTS s `includeSubDomains` až po ověření, že všechny subdomény mají HTTPS.
+- [ ] Kontrola závislostí: `npm audit` ve `frontend/` a kontrola CVE backendu (např. OWASP Dependency-Check), opravit vysoké a kritické.
+- [ ] Rozhodnout Q19 (offline balíček a nápovědy).
+- [ ] Zálohy DB (kap. Provoz) běží a obnova je vyzkoušená.
+- [ ] Účty hradů zakládat se silnými hesly, správce sdílí heslo mimo e-mail.
 
 ### DNS a e-mail (`storyhold.cz`, WEDOS)
 

@@ -149,7 +149,44 @@ class PartnerAccessTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Současné heslo nesouhlasí."));
         changeOwnPassword(session, "Nove-od-admina-1", "Vlastni-heslo-1").andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/partner/batches").session(session)).andExpect(status().isOk());
         login(username, "Vlastni-heslo-1").andExpect(status().isOk());
+    }
+
+    @Test
+    void disablingOrResettingTheAccountEndsItsOpenSession() throws Exception {
+        String username = "odvolany-" + UUID.randomUUID().toString().substring(0, 8);
+        String id = JsonPath.read(body(createUser(username, "Silne-heslo-1")), "$.id");
+        MockHttpSession disabled = session(login(username, "Silne-heslo-1").andExpect(status().isOk()));
+        mvc.perform(get("/api/v1/partner/batches").session(disabled)).andExpect(status().isOk());
+
+        setEnabled(id, false);
+
+        mvc.perform(get("/api/v1/partner/batches").session(disabled))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.type").value("/problems/unauthorized"));
+
+        setEnabled(id, true);
+        MockHttpSession reset = session(login(username, "Silne-heslo-1").andExpect(status().isOk()));
+        mvc.perform(post("/api/v1/admin/partner-users/{id}/password", id).with(admin()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"Nove-od-admina-1\"}"))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/v1/partner/batches").session(reset)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void accountIsLockedForAWhileAfterTooManyWrongPasswords() throws Exception {
+        String username = "hadany-" + UUID.randomUUID().toString().substring(0, 8);
+        createUser(username, "Silne-heslo-1");
+        for (int i = 0; i < 10; i++) {
+            login(username, "spatne-heslo-" + i).andExpect(status().isUnauthorized());
+        }
+
+        login(username, "Silne-heslo-1")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.type").value("/problems/too-many-requests"));
+        login(username.toUpperCase(), "Silne-heslo-1").andExpect(status().isTooManyRequests());
     }
 
     private String createOtherPartnerWithActivatedCode() {

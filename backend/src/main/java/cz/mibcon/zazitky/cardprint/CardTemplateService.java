@@ -62,6 +62,8 @@ public class CardTemplateService {
     static final double SIZE_TOLERANCE_MM = 0.5;
     static final double RATIO_TOLERANCE = 0.01;
     static final int MIN_DPI = 300;
+    /** A card at 1200 DPI is about 4500 px wide; a bigger image would only fill the memory when decoded. */
+    static final int MAX_IMAGE_SIDE_PX = 10_000;
     /** Sample of the editor preview, the code is not valid. */
     static final String SAMPLE_CODE = "ABCD2345";
     static final String SAMPLE_SERIAL = serialLabel(12, 42);
@@ -109,7 +111,11 @@ public class CardTemplateService {
         if (contentType.equals("application/pdf")) {
             checkReadablePdf(content);
         } else {
-            imageSize(content);
+            int[] size = imageSize(content);
+            if (size[0] > MAX_IMAGE_SIDE_PX || size[1] > MAX_IMAGE_SIDE_PX) {
+                throw new BadRequestException("Obrázek má " + size[0] + " × " + size[1] + " px, nejvýš jde "
+                        + MAX_IMAGE_SIDE_PX + " px na každou stranu.");
+            }
         }
         String sha256 = sha256(content);
         Optional<FileInfo> existing = files.findInfoBySha256(sha256);

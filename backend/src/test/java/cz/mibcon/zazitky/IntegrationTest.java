@@ -20,7 +20,9 @@ import org.springframework.context.annotation.Import;
         "app.admin.password=" + IntegrationTest.ADMIN_PASSWORD,
         // all tests come from 127.0.0.1; the limit itself is tested with its own IP address
         "app.access-code.attempts-per-minute=" + IntegrationTest.CODE_ATTEMPTS_PER_MINUTE,
-        "app.admin.login-attempts-per-minute=1000"})
+        "app.access-code.failed-attempts-per-minute=100000",
+        "app.admin.login-attempts-per-minute=1000",
+        "app.session.actions-per-minute=1000"})
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 public @interface IntegrationTest {

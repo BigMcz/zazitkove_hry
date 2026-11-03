@@ -37,8 +37,12 @@ app:
   # Veřejná adresa aplikace pro odkazy v CSV s kódy (QR na kartičce); prázdné = adresa, ze které admin exportuje
   public-url: ""
   access-code:
-    attempts-per-minute: 10
+    attempts-per-minute: 10          # na adresu klienta (IPv6 na celou síť /64)
+    failed-attempts-per-minute: 300  # neznámé kódy ze všech adres dohromady, pak chvíli nikdo
+  session:
+    actions-per-minute: 30           # odpovědi, nápovědy a synchronizace na jednu hru
   admin:
     username: admin
     password: ""   # bez hesla je administrace vypnutá
     login-attempts-per-minute: 5
+    login-failures-per-account: 10   # chybná hesla k jednomu účtu za 15 minut, pak je účet do té doby zamčený

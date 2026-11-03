@@ -2,7 +2,19 @@
 # Jména a hashe hesel dosadí Caddy z prostředí kontejneru (compose.yaml ← .env).
 # Po změně: docker compose exec -w /etc/caddy caddy caddy reload (dělá to i deploy-staging.ps1).
 
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		# Jen vlastní skripty; data: a blob: pro náhled kartičky, stažené soubory a diplom; inline style kvůli atributům style v Reactu
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
+}
+
 test.storyhold.cz {
+	import security_headers
 	header X-Robots-Tag "noindex, nofollow"
 
 	basic_auth {

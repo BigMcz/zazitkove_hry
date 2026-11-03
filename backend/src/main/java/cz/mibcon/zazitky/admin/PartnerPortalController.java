@@ -11,11 +11,16 @@ import cz.mibcon.zazitky.admin.PartnerUserDtos.ChangeOwnPasswordRequest;
 import cz.mibcon.zazitky.admin.PartnerAdminDtos.ShareDto;
 import cz.mibcon.zazitky.game.GamePriceDtos.GamePricesDto;
 import cz.mibcon.zazitky.game.GamePriceService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -91,7 +96,16 @@ public class PartnerPortalController {
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(@AuthenticationPrincipal PartnerUserDetails partner,
-            @Valid @RequestBody ChangeOwnPasswordRequest request) {
-        partnerUsers.changeOwnPassword(partner.userId(), request.currentPassword(), request.newPassword());
+            @Valid @RequestBody ChangeOwnPasswordRequest request, HttpServletRequest http) {
+        String newHash = partnerUsers.changeOwnPassword(partner.userId(), request.currentPassword(),
+                request.newPassword());
+        // This session stays logged in with the new password; sessions on other devices end
+        PartnerUserDetails updated = new PartnerUserDetails(partner.userId(), partner.partnerId(),
+                partner.partnerName(), partner.username(), newHash, partner.enabled());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(updated, null, updated.getAuthorities()));
+        SecurityContextHolder.setContext(context);
+        http.getSession().setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
     }
 }

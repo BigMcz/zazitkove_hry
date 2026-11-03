@@ -3,6 +3,7 @@ package cz.mibcon.zazitky.session;
 import java.net.URI;
 import java.util.UUID;
 
+import cz.mibcon.zazitky.accesscode.CodeGuessGuard;
 import cz.mibcon.zazitky.common.RateLimiter;
 import cz.mibcon.zazitky.session.SessionDtos.AnswerResult;
 import cz.mibcon.zazitky.session.SessionDtos.HintsResult;
@@ -33,19 +34,21 @@ public class SessionController {
     static final String TOKEN_HEADER = "X-Session-Token";
 
     private final SessionService sessionService;
-    private final RateLimiter codeRateLimiter;
+    private final CodeGuessGuard guessGuard;
+    private final RateLimiter actionRateLimiter;
 
-    public SessionController(SessionService sessionService,
-            @Qualifier("accessCodeRateLimiter") RateLimiter codeRateLimiter) {
+    public SessionController(SessionService sessionService, CodeGuessGuard guessGuard,
+            @Qualifier("sessionActionRateLimiter") RateLimiter actionRateLimiter) {
         this.sessionService = sessionService;
-        this.codeRateLimiter = codeRateLimiter;
+        this.guessGuard = guessGuard;
+        this.actionRateLimiter = actionRateLimiter;
     }
 
     /** 201 for a new game, 200 when the code continues its existing game; both include the token. */
     @PostMapping
     public ResponseEntity<SessionState> start(@Valid @RequestBody StartSessionRequest request, HttpServletRequest http) {
-        codeRateLimiter.acquire(http.getRemoteAddr());
-        StartResult result = sessionService.start(request.code(), request.teamName(), request.language());
+        StartResult result = guessGuard.attempt(http.getRemoteAddr(),
+                () -> sessionService.start(request.code(), request.teamName(), request.language()));
         if (!result.created()) {
             return ResponseEntity.ok(result.state());
         }
@@ -65,25 +68,32 @@ public class SessionController {
     @PostMapping("/current/sync")
     public SessionState sync(@RequestHeader(name = TOKEN_HEADER, required = false) String token,
             @Valid @RequestBody SyncRequest request) {
-        return sessionService.sync(parseToken(token), request.events());
+        return sessionService.sync(limited(token), request.events());
     }
 
     @PostMapping("/current/stations/{stationId}/answers")
     public AnswerResult submitAnswer(@RequestHeader(name = TOKEN_HEADER, required = false) String token,
             @PathVariable UUID stationId, @Valid @RequestBody SubmitAnswerRequest request) {
-        return sessionService.submitAnswer(parseToken(token), stationId, request.answer());
+        return sessionService.submitAnswer(limited(token), stationId, request.answer());
     }
 
     @PostMapping("/current/stations/{stationId}/hints")
     public HintsResult revealHint(@RequestHeader(name = TOKEN_HEADER, required = false) String token,
             @PathVariable UUID stationId) {
-        return sessionService.revealHint(parseToken(token), stationId);
+        return sessionService.revealHint(limited(token), stationId);
     }
 
     @PostMapping("/current/abandon")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void abandon(@RequestHeader(name = TOKEN_HEADER, required = false) String token) {
         sessionService.abandon(parseToken(token));
+    }
+
+    /** Actions that write to the game: answers could be guessed online and every attempt is stored. */
+    private UUID limited(String token) {
+        UUID parsed = parseToken(token);
+        actionRateLimiter.acquire(parsed.toString());
+        return parsed;
     }
 
     private static UUID parseToken(String token) {

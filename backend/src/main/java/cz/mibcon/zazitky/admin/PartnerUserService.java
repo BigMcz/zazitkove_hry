@@ -47,6 +47,14 @@ public class PartnerUserService {
                 user.getUsername(), user.getPasswordHash(), user.isEnabled());
     }
 
+    /** The account is still enabled and its password is the one the session logged in with. */
+    @Transactional(readOnly = true)
+    public boolean isStillValid(PartnerUserDetails partner) {
+        return users.findById(partner.userId())
+                .map(user -> user.isEnabled() && user.getPasswordHash().equals(partner.passwordHash()))
+                .orElse(false);
+    }
+
     public void recordLogin(UUID userId) {
         users.findById(userId).ifPresent(user -> user.setLastLoginAt(clock.instant()));
     }
@@ -79,17 +87,19 @@ public class PartnerUserService {
         find(userId).setPasswordHash(passwordEncoder.encode(password));
     }
 
-    /** A disabled account cannot log in; an already open session lasts until it expires or logs out. */
+    /** A disabled account cannot log in, and its open session ends with the next request. */
     public void setEnabled(UUID userId, boolean enabled) {
         find(userId).setEnabled(enabled);
     }
 
-    public void changeOwnPassword(UUID userId, String currentPassword, String newPassword) {
+    /** Returns the new password hash, so that the caller can keep its own session (other sessions end). */
+    public String changeOwnPassword(UUID userId, String currentPassword, String newPassword) {
         PartnerUser user = find(userId);
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new BadRequestException("Současné heslo nesouhlasí.");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        return user.getPasswordHash();
     }
 
     private PartnerUser find(UUID userId) {

@@ -35,7 +35,7 @@ public final class SessionDtos {
     }
 
     /** Actions played in the phone, in the order they were played (docs/02-architektura.md, "Offline režim"). */
-    public record SyncRequest(@NotNull @Size(max = 500) List<@Valid @NotNull SyncEvent> events) {
+    public record SyncRequest(@NotNull @Size(max = 200) List<@Valid @NotNull SyncEvent> events) {
     }
 
     /**

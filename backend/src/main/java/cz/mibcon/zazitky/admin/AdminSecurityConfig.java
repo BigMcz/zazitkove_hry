@@ -1,6 +1,7 @@
 package cz.mibcon.zazitky.admin;
 
 import java.io.IOException;
+import java.util.Locale;
 
 import cz.mibcon.zazitky.common.ApiExceptionHandler;
 import cz.mibcon.zazitky.common.RateLimiter;
@@ -23,12 +24,15 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
@@ -60,7 +64,8 @@ public class AdminSecurityConfig {
     @Bean
     @Order(1)
     SecurityFilterChain adminFilterChain(HttpSecurity http, ObjectMapper json,
-            @Qualifier("adminLoginRateLimiter") RateLimiter loginRateLimiter, PartnerUserService partnerUsers,
+            @Qualifier("adminLoginRateLimiter") RateLimiter loginRateLimiter,
+            @Qualifier("loginFailureLimiter") RateLimiter loginFailures, PartnerUserService partnerUsers,
             PasswordEncoder encoder, @Value("${app.admin.username:admin}") String adminUsername,
             @Value("${app.admin.password:}") String adminPassword) throws Exception {
         DaoAuthenticationProvider adminProvider =
@@ -79,14 +84,17 @@ public class AdminSecurityConfig {
                 .formLogin(form -> form
                         .loginProcessingUrl(LOGIN_URL)
                         .successHandler((request, response, authentication) -> {
+                            loginFailures.reset(accountKey(request));
                             if (authentication.getPrincipal() instanceof PartnerUserDetails partner) {
                                 partnerUsers.recordLogin(partner.userId());
                             }
                             writeJson(response, json, HttpStatus.OK, AdminSessionController.toDto(authentication));
                         })
-                        .failureHandler((request, response, exception) ->
-                                writeProblem(response, json, HttpStatus.UNAUTHORIZED, "invalid-credentials",
-                                        "Nesprávné přihlášení", "Nesprávné jméno nebo heslo.")))
+                        .failureHandler((request, response, exception) -> {
+                            loginFailures.record(accountKey(request));
+                            writeProblem(response, json, HttpStatus.UNAUTHORIZED, "invalid-credentials",
+                                    "Nesprávné přihlášení", "Nesprávné jméno nebo heslo.");
+                        }))
                 .logout(logout -> logout
                         .logoutUrl(LOGOUT_URL)
                         .logoutSuccessHandler((request, response, authentication) ->
@@ -99,8 +107,9 @@ public class AdminSecurityConfig {
                                 writeProblem(response, json, HttpStatus.FORBIDDEN, "forbidden",
                                         "Přístup odepřen", "Požadavek byl odmítnut. Obnov stránku a zkus to znovu.")))
                 .requestCache(cache -> cache.disable())
-                .addFilterBefore(new LoginRateLimitFilter(loginRateLimiter, json),
-                        CsrfFilter.class);
+                .addFilterBefore(new LoginRateLimitFilter(loginRateLimiter, loginFailures, json),
+                        CsrfFilter.class)
+                .addFilterAfter(new RevokedPartnerFilter(partnerUsers, json), AnonymousAuthenticationFilter.class);
         return http.build();
     }
 
@@ -150,14 +159,25 @@ public class AdminSecurityConfig {
         json.writeValue(response.getOutputStream(), body);
     }
 
-    /** Limits login attempts per client IP (password guessing). */
+    /** The account a login attempt is for, as the partner accounts store it. */
+    private static String accountKey(HttpServletRequest request) {
+        String username = request.getParameter("username");
+        return username == null ? "" : username.strip().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Limits login attempts per client address, and locks an account for a while after too many wrong passwords
+     * (password guessing from many addresses). The lock also stops the right password until it passes.
+     */
     static class LoginRateLimitFilter extends OncePerRequestFilter {
 
         private final RateLimiter rateLimiter;
+        private final RateLimiter failures;
         private final ObjectMapper json;
 
-        LoginRateLimitFilter(RateLimiter rateLimiter, ObjectMapper json) {
+        LoginRateLimitFilter(RateLimiter rateLimiter, RateLimiter failures, ObjectMapper json) {
             this.rateLimiter = rateLimiter;
+            this.failures = failures;
             this.json = json;
         }
 
@@ -170,9 +190,43 @@ public class AdminSecurityConfig {
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
             try {
-                rateLimiter.acquire(request.getRemoteAddr());
+                rateLimiter.acquire(RateLimiter.clientKey(request.getRemoteAddr()));
+                failures.check(accountKey(request));
             } catch (TooManyRequestsException e) {
                 writeProblem(response, json, e.getStatus(), e.getTypeSuffix(), e.getTitle(), e.getMessage());
+                return;
+            }
+            chain.doFilter(request, response);
+        }
+    }
+
+    /**
+     * Ends the session of castle staff whose account the admin has disabled or whose password has changed since the
+     * login, so that revoking access takes effect at once and not only when the session expires.
+     */
+    static class RevokedPartnerFilter extends OncePerRequestFilter {
+
+        private final PartnerUserService partnerUsers;
+        private final ObjectMapper json;
+
+        RevokedPartnerFilter(PartnerUserService partnerUsers, ObjectMapper json) {
+            this.partnerUsers = partnerUsers;
+            this.json = json;
+        }
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+                throws ServletException, IOException {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() instanceof PartnerUserDetails partner
+                    && !partnerUsers.isStillValid(partner)) {
+                SecurityContextHolder.clearContext();
+                var session = request.getSession(false);
+                if (session != null) {
+                    session.invalidate();
+                }
+                writeProblem(response, json, HttpStatus.UNAUTHORIZED, "unauthorized", "Nepřihlášeno",
+                        "Přístup k účtu se změnil, přihlas se prosím znovu.");
                 return;
             }
             chain.doFilter(request, response);
